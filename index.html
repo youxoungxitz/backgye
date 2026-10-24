@@ -387,7 +387,7 @@ const ms=(m)=>m*MIN/(fast()?60:1);
 
 /* ---------- 캐릭터 수치 ---------- */
 const EN_MAX=20;
-const enEvery=()=>fast()?10e3:10*MIN;
+const enEvery=()=>fast()?5e3:5*MIN;
 const hasFx=id=>(G.me&&G.me.fx||[]).some(f=>f.id===id&&f.until>T());
 function addFx(id){const m=G.me;m.fx=(m.fx||[]).filter(f=>f.id!==id&&f.until>T());m.fx.push({id,until:T()+ms(FXDEF[id].min)});if(id==='delirium')fakeLog()}
 function clearFx(id){G.me.fx=(G.me.fx||[]).filter(f=>f.id!==id)}
@@ -429,7 +429,7 @@ function give(rw){const m=G.me,out=[];if(!rw)return out;
 function discover(id){const m=G.me;if(m.hidden.includes(id))return false;m.hidden.push(id);toast('수첩에 손글씨가 늘었다.');log(`수첩에 적었다: 「${HIDDEN[id]}」`,'haunt');return true}
 function fearLine(){const f=G.me.fear;return f&&FEAR_LINES[f]?'\n\n'+pick(FEAR_LINES[f]):''}
 function flicker(){if(G.opts.soft)return;document.body.classList.remove('flicker');void document.body.offsetWidth;document.body.classList.add('flicker');setTimeout(()=>document.body.classList.remove('flicker'),6000)}
-function spend(n){const m=G.me;if(G.opts.infEn){m.en=EN_MAX;return true}if(m.en<n){toast(`기력이 모자라요. ${fast()?'10초':'10분'}마다 1씩 차요. 국숫집·차찬텡·옥상 바람·낮잠으로도 채울 수 있어요.`);return false}if(m.en>=EN_MAX)m.enAt=T();m.en-=n;return true}
+function spend(n){const m=G.me;if(G.opts.infEn){m.en=EN_MAX;return true}if(m.en<n){toast(`기력이 모자라요. ${fast()?'5초':'5분'}마다 1씩 차요. 국숫집·차찬텡·옥상 바람·낮잠으로도 채울 수 있어요.`);return false}if(m.en>=EN_MAX)m.enAt=T();m.en-=n;return true}
 function daily(){const d=dayIdx(T());if(!G.me.daily||G.me.daily.d!==d)G.me.daily={d,meal:0,nap:0,stim:0,rest:0};return G.me.daily}
 function ready(){if(!G.me){toast('먼저 캐릭터를 등록해 주세요.');return false}if(G.me.nap){toast(`자는 중이에요. ${dur(G.me.nap.until-T())} 뒤에 깨요.`);return false}if(scene){toast('지금 장면부터 마무리해 주세요.');return false}return true}
 function done(title,text,lines,bad){if(DEX_DN[title])dexAdd('dn:'+title);if(PARTY)lines=partyDone(title,lines);result={title,text,lines:lines||[],bad:!!bad};scene=null;save();render();window.scrollTo({top:0,behavior:'smooth'})}
@@ -440,7 +440,7 @@ function move(k){if(!ready())return;const m=G.me;if(k===m.cell)return;const[d,t]
   m.cell=k;result=null;log(`${DSHORT[d]} ${TIERS[t].n}(으)로 갔다.`,'move');
   if(hasFx('followed'))toast(pick(['뒤에서 발소리가 한 박자 늦게 멈춘다.','계단을 내려오는 발소리가 하나 더 있다.','돌아보면 아무도 없다. 발소리는 계속된다.']));
   if(m.fugitive&&d===1&&chance(.25)){caught('홍등동에 들어서자마자 붉은 등 아래 누군가 내 이름을 불렀다. 붉은 완장을 찬 사내였다.');return}
-  if(isBuild()&&!hasFx('guarded')&&chance(.3)){buildEvent();return}
+  if(isBuild()&&chance(.3)&&!guardUse()){buildEvent();return}
   save();render()}
 
 /* ---------- 탐사: 칸 둘러보기 (문구 묶음) ---------- */
@@ -642,7 +642,7 @@ function playEv(src,id,step,keep){const E=src[id],st=E.s[step||'start'];if(!step
     if(res.bad&&chance(.5))flicker();log(`${E.n}: ${fill(res.t).split('\n')[0]}`,'haunt');done(E.n,fill(res.t)+(res.fear?fearLine():''),[...lines,...give(res.rw)],!!res.bad)}}))},keep)}
 function anomaly(){const m=G.me,[d,t]=cellDT(m.cell);const ok=Object.keys(EV).filter(k=>EV[k].w(d,t)&&k!==m.lastEv);if(!ok.length)return false;const k=pick(ok);m.lastEv=k;playEv(EV,k);return true}
 function explore(){if(!ready())return;const m=G.me;if(!spend(1))return;const[d,t]=cellDT(m.cell);
-  if(isBuild()&&!hasFx('guarded')){buildEvent();return}
+  if(isBuild()&&!guardUse()){buildEvent();return}
   if(m.fugitive&&chance(.08)){chaser();return}
   const r=Math.random();
   if(r<.05){pagerEvent();return}
@@ -791,9 +791,9 @@ const GOAL_EV={blueprint:{n:'설계실',red:1,s:{start:{t:'인쇄소 뒤편, 어
   {l:'빈칸을 들여다본다',s:'sen',dc:12,ok:{t:'빈칸에 아주 작은 글씨로 방 번호가 적혀 있다. 내 방 번호다.\n지우개 자국이 있다. 누가 한 번 적었다가 지운 것이다.',rw:{clue:2,mind:-6}},no:{t:'들여다보는 동안 설계도에 선이 한 줄 늘어난다. 정신을 차리니 내 손에 연필이 쥐여 있다.',rw:{mind:-12,clue:1},bad:1,fear:1}},
   {l:'설계도를 베껴 그린다',s:'agi',dc:11,ok:{t:'손이 떨렸지만 다 베꼈다. 집에 와서 펼쳐 보니 베낀 그림에는 계단이 하나 더 있다.',rw:{clue:1,money:60}},no:{t:'다 베꼈다고 생각했는데, 종이에는 내 이름만 아흔아홉 번 적혀 있다.',rw:{mind:-10},bad:1}},
   {l:'문을 닫고 나온다',r:{t:'문을 닫자 문이 벽이 된다. 망치 소리가 한 번, 아주 가까이서 났다.',rw:{mind:-3}}}]}}}};
+function openBlueprint(){if(!ready())return;const m=G.me;if(m.bpDone||goalStage()<3||m.cell!=='2-2')return;if(!spend(1))return;m.bpDone=true;log('인쇄소 뒤편, 어제 없던 문으로 들어갔다.','haunt');playEv(GOAL_EV,'blueprint')}
 function specialExplore(r){const m=G.me,y=kd(T()).getUTCFullYear();
   if(isGate()){m.gate=m.gate&&m.gate.y===y?m.gate:{y,n:0};if(m.gate.n<3&&r<.4){m.gate.n++;flicker();playEv(GATE_EV,'gate');return true}}
-  if(goalStage()>=3&&!m.bpDone&&cellDT(m.cell)[0]===2&&r<.35){m.bpDone=true;playEv(GOAL_EV,'blueprint');return true}
   return false}
 
 /* 괴담 도감 */
@@ -899,6 +899,7 @@ function radioExtra(){const out=[],m=G.me,day=dayIdx(T()),mid=day*DAY-KST,st=rad
   for(const k of SAMPLE_IDS){const s=SAMPLES[k],d=demo[k];if(s&&d&&s.room==null){s.room=d[0];s.roomNote=d[1];s.clues=d[2]}}})();
 $('btnPager')&&($('btnPager').onclick=openPager);
 
+function guardUse(){if(!hasFx('guarded'))return false;clearFx('guarded');log('망치 소리가 다가오는데 누군가 내 앞을 막아섰다. 소리가 비켜 갔다.','haunt');toast('지켜보는 사람이 증축 피해를 한 번 막아 줬어요. (효과 해제)');return true}
 function buildEvent(){const m=G.me;flicker();const d=dayIdx(T());if(m.buildDay!==d){m.buildDay=d;m.buildN=0;m.tapeGot=false}m.buildN++;
   log('증축 시간에 밖에 있었다. 수칙 1번을 어겼다.','haunt');
   if(m.buildN===1){const tape=!m.tapeGot&&chance(.35);if(tape)m.tapeGot=true;const out=give({mind:-10,item:tape?'tape':null});
@@ -1416,6 +1417,7 @@ function viewMap(){const m=G.me;const here=m?m.cell:null;const nz=nightZone();co
     h('div',{class:'wrap'},h('button',{class:'pri',onclick:explore},'둘러보기 (기력 1)'),
       places.map(p=>PLACES[p].haunt?h('button',{onclick:()=>visit(p)},p==='noodle'?'국숫집 (기력 없이)':`${PLACES[p].n} (기력 1)`):p==='gamble'?[h('button',{onclick:mahjong},'마작 한 판 (기력 없이)'),m.fac==='free'&&!m.fugitive?h('button',{onclick:borrow},'빚을 지러 간다'):m.fac==='red'?h('button',{onclick:()=>payDebt(m.money)},'빚 갚기'):null]:p==='pawn'?h('button',{onclick:openPawn},'전당포'):p==='clinic'?h('button',{onclick:clinic},'삼경 의원'):p==='tea'?h('button',{onclick:openTea},'정문 차찬텡'):p==='fortune'?h('button',{onclick:fortune},'점쟁이 노파 ($5)'):null),
       t===0?h('button',{onclick:breeze},'바람 쐬기 (기력 +2)'):null,
+      here==='2-2'&&goalStage()>=3&&!m.bpDone?h('button',{style:'border-color:var(--tube);color:var(--tube)',onclick:openBlueprint},'인쇄소 뒤편, 어제 없던 문 (기력 1)'):null,
       here===cellKey(nz.d,1)?h('button',{style:'border-color:var(--tube);color:var(--tube)',onclick:enterNight},'새 계단을 오른다 (기력 3)'):null,
       here===homeCell(m)?h('button',{onclick:nap},`낮잠 (${fast()?'1분':'1시간'}, 기력 +6)`):null,
       here===homeCell(m)?h('button',{onclick:openRoom},'내 방'):null,
@@ -1491,7 +1493,7 @@ function renderChat(){const C=$('chatCard'),m=G.me;const ch=sub.chat;
 /* ---------- 도움말 · 설정 ---------- */
 function openHelp(){openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:24px'},'처음 오셨나요?'),h('button',{class:'ghost',onclick:closeModal},'닫기')),
   ...[['하루','실제 시간을 따라 아침, 낮, 저녁, 한밤이 흘러요. 생업에 출근해 두면 4시간 뒤 급여가 들어오고, 의뢰판은 매일 아침 바뀌어요. 매주 월요일 0시에 집세가 나가요.'],
-     ['능력치','근력, 민첩, 감각, 담력, 말빨. 최대 100이에요. 판정에 쓸수록 오르고, 출근하면 생업에 맞는 능력치가 올라요. 낮을 땐 빨리, 높을수록 천천히 올라요.'],['기력','둘러보기, 괴담 장소, 의뢰, 장면, 밤의 구역에 기력이 들어요. 10분마다 1씩 차요. 국숫집 2·7번 자리 식사(+2), 집에서 낮잠(+4), 지인과 쉬는 장면(+1), 각성제(+4, 부작용)로도 채울 수 있어요. 모두 하루 횟수 제한이 있어요.'],['기력 없이','홍등루 마작, 벽 낙서, 무전, 지인과 직접 쓰는 장면은 기력이 들지 않아요.'],
+     ['능력치','근력, 민첩, 감각, 담력, 말빨. 최대 100이에요. 판정에 쓸수록 오르고, 출근하면 생업에 맞는 능력치가 올라요. 낮을 땐 빨리, 높을수록 천천히 올라요.'],['기력','둘러보기, 괴담 장소, 의뢰, 장면, 밤의 구역에 기력이 들어요. 5분마다 1씩 차요. 국숫집 2·7번 자리 식사(+2), 집에서 낮잠(+4), 지인과 쉬는 장면(+1), 각성제(+4, 부작용)로도 채울 수 있어요. 모두 하루 횟수 제한이 있어요.'],['기력 없이','홍등루 마작, 벽 낙서, 무전, 지인과 직접 쓰는 장면은 기력이 들지 않아요.'],
      ['수칙','수칙 탭에 주민 수칙이 있어요. 게임은 어기는 걸 막지 않아요. 어기면 밤물건을 얻기도 하지만, 무슨 일이 생길지는 몰라요. 문서에 없는 수칙도 있어요.'],
      ['괴담 장소','지도에서 청록 점이 있는 칸이에요. 대부분은 평범하고, 가끔 흔적이 남아 있고, 드물게 무언가를 만나요. 흔적을 보고도 다시 가면 만날 확률이 올라가요.'],
      ['증축 시간','실제 새벽 3시대에는 화면이 달라지고, 밖에 나가면 망치 소리를 듣게 돼요.'],
@@ -1706,7 +1708,7 @@ function adminTools(){const o=G.opts;const nt=h('textarea',{id:'noticeIn',maxlen
 function openHelp(){openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:24px'},'처음 오셨나요?'),h('button',{class:'ghost',onclick:closeModal},'닫기')),
   ...[['하루','실제 시간을 따라 아침, 낮, 저녁, 한밤이 흘러요. 생업에 출근해 두면 4시간 뒤 급여가 들어오고, 의뢰판은 매일 아침 바뀌어요. 매주 월요일 0시에 집세가 나가요.'],
      ['능력치','근력, 민첩, 감각, 담력, 말빨. 최대 100이에요. 판정에 쓸수록 오르고, 출근하면 생업에 맞는 능력치가 올라요.'],
-     ['기력','둘러보기, 괴담 장소, 의뢰, 장면, 밤의 구역에 기력이 들어요. 10분마다 1씩 차요. 국숫집 식사, 집에서 낮잠, 지인과 쉬는 장면, 각성제로도 채울 수 있어요.'],
+     ['기력','둘러보기, 괴담 장소, 의뢰, 장면, 밤의 구역에 기력이 들어요. 5분마다 1씩 차요. 국숫집 식사, 집에서 낮잠, 지인과 쉬는 장면, 각성제로도 채울 수 있어요.'],
      ['수칙','수첩에 주민 수칙이 있어요. 게임은 어기는 걸 막지 않아요. 어기면 밤물건을 얻기도 하지만, 무슨 일이 생길지는 몰라요. 문서에 없는 수칙도 있어요.'],
      ['괴담 장소','지도에서 청록 점이 있는 칸이에요. 대부분은 평범하고, 가끔 흔적이 남아 있고, 드물게 무언가를 만나요.'],
      ['사람들','주민증의 지인 코드로 지인을 맺고, 둘만의 장면을 쌓아요. 가까워지면 관계의 이름을 제안할 수 있고, 상대가 받아야 붙어요.'],
