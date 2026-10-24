@@ -1168,9 +1168,12 @@ const SFX={
  bell:t=>{[[220,1],[440*1.19,.5],[661,.35],[871,.25],[1180,.15]].forEach(([f,a])=>tone('sine',f,t,.006,.45*a,3.2))},
  static:t=>{noise(t,1.6,.35,'bandpass',2200,.7);noise(t+.2,1.2,.2,'highpass',4000)},
  flicker:t=>{for(let i=0;i<5;i++){const s=t+i*.09+Math.random()*.05;tone('sawtooth',120,s,.003,.12,.05);noise(s,.03,.25,'highpass',3000)}},
+ flickerFar:t=>{for(let i=0;i<4;i++){const s=t+i*.11+Math.random()*.06;tone('sawtooth',120,s,.003,.04,.05);noise(s,.03,.08,'highpass',3000)}},
+ hammerFar:t=>{for(let i=0;i<3;i++){const s=t+i*.9;tone('sine',90,s,.004,.3,.45,38);noise(s,.18,.12,'lowpass',500)}},
  coin:t=>{tone('square',1320,t,.003,.08,.08);tone('square',1760,t+.07,.003,.08,.12)}};
-function sfx(name){if(!sndOn()||!SFX[name])return;const c=acInit();if(!c||c.state!=='running')return;MASTER.gain.value=sndVol();try{SFX[name](c.currentTime+.02)}catch(e){}}
-const SCENE_SFX={phone:'phone',pager:'pager',well2:'static',myvoice:'static',tv:'static',antenna:'static',knock:'knock',bellfour:'bell',gate:'bell',doorbell2:'knock'};
+const SFX_LAST={};
+function sfx(name){if(!sndOn()||!SFX[name])return;const now=Date.now();if(SFX_LAST[name]&&now-SFX_LAST[name]<600)return;SFX_LAST[name]=now;const c=acInit();if(!c||c.state!=='running')return;MASTER.gain.value=sndVol();try{SFX[name](c.currentTime+.02)}catch(e){}}
+const SCENE_SFX={neon:'flicker',f13:'flicker',dentist:'flicker',hand:'flicker',photo:'flicker',bath:'flicker',phone:'phone',pager:'pager',well2:'static',myvoice:'static',tv:'static',antenna:'static',knock:'knock',bellfour:'bell',gate:'bell',doorbell2:'knock'};
 function sceneSfx(sc){const s=sc&&SCENE_SFX[sc.id];if(s)sfx(s)}
 /* 배경음: 비 오는 날 빗소리, 늘 낮게 깔리는 형광등 소리, 증축 시간의 먼 망치 소리 */
 let RAIN_PREVIEW=0;
@@ -1190,7 +1193,8 @@ function ambUpdate(){if(!AC||AC.state!=='running')return;const want=sndOn()&&G.o
 function drop(t,peak){const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=NOISE;f.type='bandpass';f.frequency.value=900+Math.random()*2200;f.Q.value=.8+Math.random();env(g,t,.003,peak*.8,.015+Math.random()*.02);s.connect(f);f.connect(g);g.connect(MASTER);s.start(t,Math.random()*1.5);s.stop(t+.1)}
 function drip(t){const o=AC.createOscillator(),g=AC.createGain();const f0=700+Math.random()*500;o.type='sine';o.frequency.setValueAtTime(f0*1.25,t);o.frequency.exponentialRampToValueAtTime(f0,t+.05);env(g,t,.002,.05,.18);o.connect(g);g.connect(MASTER);o.start(t);o.stop(t+.3)}
 setInterval(()=>{if(!AMB||!AMB.raining||!AC||AC.state!=='running'||document.hidden)return;const t=AC.currentTime+.05;const n=3+Math.floor(Math.random()*6);for(let i=0;i<n;i++)drop(t+Math.random()*.3,.012+Math.random()*.03);},300);
-setInterval(()=>{ambUpdate();if(sndOn()&&G.opts.amb!==false&&G.me&&isBuild()&&!G.opts.soft&&chance(.25)){if(AC&&AC.state==='running'){const keep=MASTER.gain.value;MASTER.gain.value=keep*.35;sfx('hammer');setTimeout(()=>{MASTER.gain.value=sndVol()},3000)}}},8000);
+setInterval(()=>{if(!sndOn()||G.opts.amb===false||!G.me||!AC||AC.state!=='running'||document.hidden||G.opts.soft)return;if(Math.random()<.3)SFX.flickerFar(AC.currentTime+.05)},15000);
+setInterval(()=>{ambUpdate();if(sndOn()&&G.opts.amb!==false&&G.me&&isBuild()&&!G.opts.soft&&chance(.25)){if(AC&&AC.state==='running')SFX.hammerFar(AC.currentTime+.05)}},8000);
 function soundSettings(){const o=G.opts;const vol=h('input',{type:'range',min:'0',max:'1',step:'0.05',value:String(sndVol()),style:'width:140px',oninput:e=>{o.vol=+e.target.value;if(MASTER)MASTER.gain.value=o.vol;save()},onchange:()=>sfx('pager')});
   return h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},'소리'),
     h('label',{class:'row'},h('span',null,'효과음',h('div',{class:'mute',style:'font-size:12px'},'삐삐, 전화벨, 망치 소리, 종소리 같은 효과음')),h('input',{type:'checkbox',style:'width:auto',checked:sndOn()?true:null,onchange:e=>{o.sound=e.target.checked;save();if(o.sound){acInit();if(AC)AC.resume().then(()=>{sfx('pager');ambUpdate()})}else ambUpdate()}})),
