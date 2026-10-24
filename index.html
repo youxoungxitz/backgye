@@ -899,9 +899,14 @@ function radioExtra(){const out=[],m=G.me,day=dayIdx(T()),mid=day*DAY-KST,st=rad
   for(const k of SAMPLE_IDS){const s=SAMPLES[k],d=demo[k];if(s&&d&&s.room==null){s.room=d[0];s.roomNote=d[1];s.clues=d[2]}}})();
 $('btnPager')&&($('btnPager').onclick=openPager);
 
-function buildEvent(){const m=G.me;flicker();const tape=chance(.35);const out=give({mind:-10,item:tape?'tape':null});
+function buildEvent(){const m=G.me;flicker();const d=dayIdx(T());if(m.buildDay!==d){m.buildDay=d;m.buildN=0;m.tapeGot=false}m.buildN++;
   log('증축 시간에 밖에 있었다. 수칙 1번을 어겼다.','haunt');
-  done('망치 소리',`쿵. 쿵. 쿵.\n벽 안쪽에서 망치 소리가 난다. 콘크리트 굳는 냄새가 복도에 번진다.\n${tape?'카세트 녹음 버튼을 누르고 있었다는 걸 나중에 알았다.':'소리가 멎었을 때, 방금 지나온 복도 끝에 문이 하나 늘어 있었다.'}`+fearLine(),out,true)}
+  if(m.buildN===1){const tape=!m.tapeGot&&chance(.35);if(tape)m.tapeGot=true;const out=give({mind:-10,item:tape?'tape':null});
+    done('망치 소리',`쿵. 쿵. 쿵.\n벽 안쪽에서 망치 소리가 난다. 콘크리트 굳는 냄새가 복도에 번진다.\n${tape?'카세트 녹음 버튼을 누르고 있었다는 걸 나중에 알았다.':'소리가 멎었을 때, 방금 지나온 복도 끝에 문이 하나 늘어 있었다.'}`+fearLine(),out,true);return}
+  if(m.buildN===2){const tape=!m.tapeGot&&chance(.2);if(tape)m.tapeGot=true;const out=give({mind:-14,hp:-8,item:tape?'tape':null});
+    done('망치 소리',`쿵. 쿵. 쿵.\n이번에는 소리가 바로 등 뒤에서 난다. 돌아보면 방금 지나온 복도가 벽으로 막혀 있다. 벽이 아직 축축하다.\n${tape?'카세트에서 테이프가 저절로 감기는 소리가 났다.':'젖은 시멘트가 손바닥에 묻어 있다. 언제 짚었는지 모르겠다.'}`+fearLine(),out,true);return}
+  const out=give({mind:-18,hp:-15});if(m.mind<=0){m.cell=homeCell(m);m.en=Math.max(0,m.en-3);out.push('정신을 잃고 집에서 깨어남','기력 -3');log('증축 시간에 정신을 잃었다. 깨어 보니 내 방이었다.','haunt')}
+  done('망치 소리',`쿵. 쿵. 쿵.\n망치 소리가 내 발밑에서 난다. 벽 속에서 누가 발목을 잡아당긴다. 손가락이 차갑고, 시멘트처럼 굳어 있다.\n「여기도 한 칸 필요해.」`+(m.mind<=0?'\n\n…눈을 뜨니 내 방 천장이다. 발목에 손자국이 남아 있다.':'')+fearLine(),out,true)}
 function chaser(){const m=G.me;openScene({id:'chaser',title:'추격자',red:true,text:'골목 모퉁이에서 붉은 완장을 찬 사내 둘이 걸어온다. 한 명이 종이를 펼쳐 내 얼굴과 비교한다.',
   choices:[{l:'뛴다',s:'agi',run:()=>{const c=chk('agi',12);if(c.ok){done('따돌렸다','수로 쪽으로 뛰어 내려갔다. 발소리가 멀어진다.',[c.txt,...give({en:-1})])}else caught('발이 미끄러졌다. 목덜미를 붙잡혔다.',c.txt)}},
    {l:'모르는 척 지나간다',s:'talk',run:()=>{const c=chk('talk',13);if(c.ok)done('지나쳤다','「사람 잘못 봤소.」 사내들이 고개를 갸웃하더니 지나간다.',[c.txt]);else caught('「맞네.」',c.txt)}}]})}
@@ -1333,6 +1338,7 @@ function openSheet(id){const isMe=id==='me';const p=isMe?G.me:SAMPLES[id];const 
     h('dl',null,rows.filter(x=>x[1]).map(x=>[h('dt',null,x[0]),h('dd',null,x[1])])),
     p.stats?h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},'능력치'),statsEl(p.stats,isMe?p.sxp:null)):null,
     isMe||!p.isNpc?roomEl(p,isMe,id):null,dexTitle(p)||p.dexN?h('div',{class:'mute',style:'font-size:12.5px'},`괴담 도감 ${p.dexN||0}장${dexTitle(p)?' · '+dexTitle(p):''}`):null,
+    !isMe&&typeof openDM==='function'&&!(typeof sameOwner==='function'&&sameOwner(id))?h('button',{class:'pri',onclick:()=>{closeModal();openDM(id)}},'1:1 대화'):null,
     h('button',{onclick:()=>{closeModal();openCard(id)}},'주민증 보기'),
     isMe?h('button',{onclick:()=>openForm(true)},'시트 고치기'):relPanel(id,r));
   openModal(body)}
@@ -1617,16 +1623,17 @@ const chKey=()=>sub.chat==='all'?'all':sub.chat==='ooc'?'ooc':'cell:'+(G.me?G.me
 async function loadChannel(ch){const{data}=await sb.from('messages').select('*').eq('channel',ch).order('created_at',{ascending:false}).limit(60);CHAT[ch]=(data||[]).reverse();if(chKey()===ch)renderChat()}
 async function post(ch,who,text){if(who!=='me'||!G.me)return;const{error}=await sb.from('messages').insert({channel:ch,character_id:G.me.id,text});if(error)toast('보내지 못했어요.')}
 function renderChat(){const C=$('chatCard'),m=G.me;const ch=sub.chat;const list=h('div',{class:'chlist',id:'chlist'});
-  if(ch==='radio'){list.append(h('div',{class:'msg radio'},h('time',null,'00:00'),radioText()));radioExtra().forEach(x=>list.append(x))}
+  if(ch==='dm'){dmListEl().forEach(x=>list.append(x))}
+  else if(ch==='radio'){list.append(h('div',{class:'msg radio'},h('time',null,'00:00'),radioText()));radioExtra().forEach(x=>list.append(x))}
   else{const key=chKey();if(!CHAT[key]){CHAT[key]=[];if(sb&&m)loadChannel(key)}const items=CHAT[key].slice(-80);
     if(isBuild()&&ch==='all')list.append(h('div',{class:'msg hammer'},h('time',null,hm(T())),'쿵 · · · 쿵 · · · 쿵'));
     if(!items.length)list.append(h('div',{class:'mute',style:'font-size:13px'},ch==='cell'?'이 칸은 조용하다.':'아직 조용하다.'));
     items.forEach(x=>{const mine=m&&x.character_id===m.id;const p=mine?m:SAMPLES[x.character_id];const name=p?p.name:'누군가';const t=Date.parse(x.created_at);
       if(ch==='ooc'){list.append(h('div',{class:'msg ooc'},h('time',null,hm(t)),h('span',{class:'who'},mine?'나':`${name} 오너`),x.text));return}
       list.append(h('div',{class:'msg'},h('time',null,hm(t)),h('span',{class:'who',style:`color:${p&&p.color!=='#0B0B0B'?p.color:'#9E9184'}`},mine?name:scramble(name)),x.text,mine||isAdminUser()?h('button',{class:'ghost del sm',style:'font-size:11px;padding:0 4px',onclick:async()=>{await sb.from('messages').delete().eq('id',x.id);CHAT[key]=CHAT[key].filter(y=>y.id!==x.id);renderChat()}},'지우기'):null))})}
-  C.replaceChildren(...[h('div',{class:'row'},h('span',{class:'lbl'},'무전'),h('div',{class:'wrap'},[['cell','현장'],['all','전체'],['ooc','오너'],['radio','자정 라디오']].map(([k,n])=>h('button',{class:'sm'+(ch===k?' pri':''),onclick:()=>{sub.chat=k;renderChat()}},n)))),
-    h('p',{class:'dim',style:'margin:0;font-size:12px'},ch==='cell'?(m?`${CELLS[m.cell].n}에 있는 사람에게만 보여요.`:''):ch==='all'?'성채 전체에 들려요. 캐릭터로 말하는 곳이에요.':ch==='ooc'?'오너끼리 이야기하는 곳이에요 (OOC).':'매일 자정, 누가 송출하는지 모르는 방송.'),
-    list,m&&ch!=='radio'?chatForm:null,hasFx('gum')&&ch!=='radio'&&ch!=='ooc'?h('p',{class:'dim',style:'margin:0;font-size:12px'},'빈 잇몸 때문에 발음이 새요.'):null].filter(Boolean));
+  C.replaceChildren(...[h('div',{class:'row'},h('span',{class:'lbl'},'무전'),h('div',{class:'wrap'},[['cell','현장'],['all','전체'],['ooc','오너'],['dm','1:1'+(dmUnread()?' '+dmUnread():'')],['radio','자정 라디오']].map(([k,n])=>h('button',{class:'sm'+(ch===k?' pri':''),style:k==='dm'&&dmUnread()&&ch!==k?'color:var(--bad);border-color:var(--bad)':'',onclick:()=>{sub.chat=k;renderChat()}},n)))),
+    h('p',{class:'dim',style:'margin:0;font-size:12px'},ch==='cell'?(m?`${CELLS[m.cell].n}에 있는 사람에게만 보여요.`:''):ch==='all'?'성채 전체에 들려요. 캐릭터로 말하는 곳이에요.':ch==='ooc'?'오너끼리 이야기하는 곳이에요 (OOC).':ch==='dm'?'나와 나눈 1:1 대화 목록이에요.':'매일 자정, 누가 송출하는지 모르는 방송.'),
+    list,m&&ch!=='radio'&&ch!=='dm'?chatForm:null,hasFx('gum')&&ch!=='radio'&&ch!=='ooc'?h('p',{class:'dim',style:'margin:0;font-size:12px'},'빈 잇몸 때문에 발음이 새요.'):null].filter(Boolean));
   requestAnimationFrame(()=>{list.scrollTop=list.scrollHeight})}
 function npcChatter(){}
 async function loadWall(k){const{data}=await sb.from('wall_posts').select('*').eq('cell',k).order('created_at',{ascending:false}).limit(20);WALLS[k]=data||[];if(G.me&&G.me.cell===k&&tab==='map')renderView()}
@@ -1649,6 +1656,7 @@ function subscribe(){sb.channel('baekgye').on('postgres_changes',{event:'INSERT'
   .on('postgres_changes',{event:'INSERT',schema:'public',table:'wall_posts'},pl=>{const k=pl.new.cell;if(WALLS[k])loadWall(k)})
   .on('postgres_changes',{event:'*',schema:'public',table:'friend_requests'},()=>{loadRel().then(()=>{render();if(REQ_IN.length)toast('지인 신청이 왔어요. 사람들 탭을 보세요.')})})
   .on('postgres_changes',{event:'*',schema:'public',table:'relations'},()=>{loadRel().then(render)})
+  .on('postgres_changes',{event:'INSERT',schema:'public',table:'direct_messages'},pl=>onDM(pl.new))
   .on('postgres_changes',{event:'INSERT',schema:'public',table:'pages'},pl=>{onPage(pl.new);if(tab==='map')renderView()})
   .on('postgres_changes',{event:'INSERT',schema:'public',table:'notices'},()=>{loadNotices();toast('방주 공지가 올라왔어요.')}).subscribe()}
 
@@ -1678,7 +1686,7 @@ function openSettings(){const o=G.opts;
     h('label',{class:'row'},h('span',null,'공포 연출 약하게',h('div',{class:'mute',style:'font-size:12px'},'화면 깜빡임과 증축 시간 연출을 끕니다')),h('input',{type:'checkbox',style:'width:auto',checked:o.soft?true:null,onchange:e=>{o.soft=e.target.checked;save();render()}})),
     h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},'계정'),h('span',{class:'mute',style:'font-size:13px'},AUTH?AUTH.email:''),h('form',{class:'composer',onsubmit:async e=>{e.preventDefault();if(pw.value.length<8)return toast('8자 이상으로 정해 주세요.');const{error}=await sb.auth.updateUser({password:pw.value});toast(error?'바꾸지 못했어요.':'비밀번호를 바꿨어요.');pw.value=''}},pw,h('button',{type:'submit',class:'sm'},'비밀번호 변경')),
       h('div',{class:'wrap'},h('button',{class:'sm',onclick:async()=>{await flush();closeModal();showSlots()}},'캐릭터 바꾸기'),h('button',{class:'sm',onclick:async()=>{await flush();await sb.auth.signOut();location.reload()}},'로그아웃')))];
-  body.push(suggestEntry());if(isAdminUser())body.push(adminTools(),suggestAdmin());
+  body.push(suggestEntry());if(isAdminUser())body.push(adminTools(),suggestAdmin(),dmAdmin());
   openModal(h('div',{class:'stack'},body))}
 function adminTools(){const o=G.opts;const nt=h('textarea',{id:'noticeIn',maxlength:600,placeholder:'방주 공지 내용'});const ic=h('input',{id:'inviteIn',placeholder:'새 초대 코드 (예: BAAK-0404)',maxlength:30});const iu=h('input',{id:'inviteUses',type:'number',min:'1',value:'1',style:'width:80px'});
   const codes=h('div',{class:'stack',style:'gap:4px;font-size:13px'},h('span',{class:'mute'},'불러오는 중…'));
@@ -1732,7 +1740,7 @@ async function showSlots(){gate(h('div',{class:'card empty'},'성채 명부를 �
   gate(h('div',{class:'stack'},gateHead('누구로 들어갈까요?'),slotCard(1,'본캐'),slotCard(2,'부캐'),isAdminUser()?slotCard(0,'운영자 · 방주'):null,h('div',{class:'wrap',style:'justify-content:center'},h('span',{class:'dim',style:'font-size:12px'},AUTH.email),h('button',{class:'ghost sm',onclick:async()=>{await sb.auth.signOut();location.reload()}},'로그아웃'))))}
 async function playChar(row){G.me=meFromRow(row);lastSaved=JSON.stringify(rowFromMe());try{const{data}=await sb.from('character_secrets').select('secret').eq('character_id',row.id).maybeSingle();G.me.secret=data?data.secret:''}catch(e){}
   if(!G.me.addr)G.me.addr=assignAddr(G.me.fac);if(!G.me.cell)G.me.cell=homeCell(G.me);
-  ungate();scene=null;result=null;CHAT={};WALLS={};PAGES=[];RADIO_AT=0;await Promise.all([loadOthers(),loadRel(),loadNotices(),loadPages()]);tab='map';render();if(!G.intro)openHelp()}
+  ungate();scene=null;result=null;CHAT={};WALLS={};PAGES=[];RADIO_AT=0;DMS=[];DM_OPEN=null;await Promise.all([loadOthers(),loadRel(),loadNotices(),loadPages(),loadDMs()]);tab='map';render();if(!G.intro)openHelp()}
 function genCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let c='#';for(let i=0;i<4;i++)c+=A[Math.floor(Math.random()*A.length)];return c}
 async function createChar(){const m=G.me;const secret=m.secret||'';delete m.secret;let row=null,err=null;
   for(let i=0;i<4&&!row;i++){m.code=genCode();const base=rowFromMe();const{data,error}=await sb.from('characters').insert({owner:AUTH.id,slot:PENDING.slot,is_npc:!!PENDING.npc,code:m.code,...base,icon_url:null,portrait_url:null}).select().single();if(data)row=data;err=error;if(error&&!String(error.message).includes('code'))break}
@@ -1787,6 +1795,39 @@ function suggestAdmin(){const box=h('div',{class:'stack',style:'gap:6px'},h('spa
       h('p',{style:'margin:0;white-space:pre-wrap;line-height:1.6;font-size:13.5px'},x.text),
       h('div',{class:'wrap',style:'gap:4px'},['seen','done'].filter(s=>s!==x.status).map(s=>h('button',{class:'sm',onclick:async()=>{await sb.from('suggestions').update({status:s}).eq('id',x.id);load()}},ST[s]+'으로')),h('button',{class:'sm ghost',onclick:async()=>{await sb.from('suggestions').delete().eq('id',x.id);load()}},'지우기')))):[h('span',{class:'mute',style:'font-size:13px'},'아직 들어온 건의가 없어요.')]))};
   load();return h('details',{class:'card stack',style:'background:var(--sunk)'},h('summary',{style:'cursor:pointer'},h('span',{class:'lbl'},'건의함 (운영자만 보여요)')),box)}
+
+/* ---------- 1:1 대화 ---------- */
+let DMS=[],DM_OPEN=null;
+function normDM(x){return{id:x.id,from:x.from_char,to:x.to_char,text:x.text,read:x.read,t:Date.parse(x.created_at)}}
+async function loadDMs(){if(!G.me||!sb)return;const id=G.me.id;const{data}=await sb.from('direct_messages').select('*').or(`from_char.eq.${id},to_char.eq.${id}`).order('created_at',{ascending:false}).limit(400);DMS=(data||[]).map(normDM);if(sub.chat==='dm')renderChat()}
+const dmPartner=x=>x.from===G.me.id?x.to:x.from;
+function dmUnread(){return G.me?DMS.filter(x=>x.to===G.me.id&&!x.read).length:0}
+function dmThreads(){const by={};for(const x of DMS){const k=dmPartner(x);(by[k]=by[k]||[]).push(x)}return Object.entries(by).map(([k,l])=>({pid:k,last:l[0],unread:l.filter(x=>x.to===G.me.id&&!x.read).length})).sort((a,b)=>b.last.t-a.last.t)}
+function dmName(id){const p=SAMPLES[id];return p?p.name:'떠난 주민'}
+function dmListEl(){const m=G.me;if(!m)return[];const th=dmThreads();
+  const out=[h('p',{class:'dim',style:'margin:0 0 6px;font-size:12px'},'누구와도 캐릭터로 1:1 대화를 할 수 있어요. 사람들 탭에서 캐릭터를 눌러 「1:1 대화」를 시작해요. 운영자(방주)도 읽을 수 있어요.')];
+  if(!th.length)out.push(h('div',{class:'mute',style:'font-size:13px'},'아직 나눈 대화가 없어요.'));
+  th.forEach(t=>{const p=SAMPLES[t.pid];out.push(h('button',{class:'person',style:'width:100%',onclick:()=>openDM(t.pid)},p?avEl(p):h('div',{class:'av',style:'background:#2a2a2a'}),h('span',{style:'min-width:0;flex:1;text-align:left'},h('b',null,dmName(t.pid)),h('div',{class:'mute',style:'font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'},(t.last.from===m.id?'나: ':'')+t.last.text)),t.unread?h('span',{class:'tag red'},String(t.unread)):h('span',{class:'dim num',style:'font-size:11px'},mdhm(t.last.t))))});
+  return out}
+async function dmMarkRead(pid){const ids=DMS.filter(x=>x.from===pid&&x.to===G.me.id&&!x.read).map(x=>x.id);if(!ids.length)return;DMS.forEach(x=>{if(ids.includes(x.id))x.read=true});renderChat();await sb.from('direct_messages').update({read:true}).in('id',ids)}
+function openDM(pid){const m=G.me;if(!m)return;if(typeof sameOwner==='function'&&sameOwner(pid))return toast('내 다른 캐릭터와는 대화할 수 없어요.');const p=SAMPLES[pid];DM_OPEN=pid;
+  const list=h('div',{class:'chlist',id:'dmList',style:'max-height:50vh'});const inp=h('input',{id:'dmIn',maxlength:500,placeholder:`${dmName(pid)}에게`,autocomplete:'off'});
+  const draw=()=>{const msgs=DMS.filter(x=>dmPartner(x)===pid).slice().reverse();list.replaceChildren(...(msgs.length?msgs.map(x=>{const mine=x.from===m.id;return h('div',{class:'msg',style:mine?'text-align:right':''},h('time',null,mdhm(x.t)),h('span',{class:'who',style:`color:${(mine?m:p)&&(mine?m:p).color!=='#0B0B0B'?(mine?m:p).color:'#9E9184'}`},mine?m.name:dmName(pid)),x.text)}):[h('div',{class:'mute',style:'font-size:13px'},'첫 말을 걸어 보세요.')]));requestAnimationFrame(()=>{list.scrollTop=list.scrollHeight})};
+  DM_DRAW=draw;draw();dmMarkRead(pid);
+  openModal(h('div',{class:'stack'},h('div',{class:'row'},h('div',{class:'wrap'},p?avEl(p):null,h('h2',{class:'disp',style:'font-size:22px'},dmName(pid))),h('button',{class:'ghost',onclick:()=>{DM_OPEN=null;closeModal()}},'닫기')),
+    h('p',{class:'dim',style:'margin:0;font-size:12px'},'캐릭터로 나누는 1:1 대화예요. 두 사람과 운영자만 볼 수 있어요.'),list,
+    h('form',{class:'composer',onsubmit:async e=>{e.preventDefault();let v=inp.value.trim();if(!v)return;if(hasFx('gum'))v=gumify(v);inp.value='';
+      const{data,error}=await sb.from('direct_messages').insert({from_char:m.id,to_char:pid,text:v}).select().single();if(error){toast('보내지 못했어요.');inp.value=v;return}
+      if(data&&!DMS.some(x=>x.id===data.id))DMS.unshift(normDM(data));draw();renderChat()}},inp,h('button',{type:'submit',class:'pri'},'보내기'))));setTimeout(()=>inp.focus(),50)}
+let DM_DRAW=null;
+function onDM(x){if(!G.me||(x.to_char!==G.me.id&&x.from_char!==G.me.id)||DMS.some(y=>y.id===x.id))return;const d=normDM(x);DMS.unshift(d);
+  if(d.to===G.me.id){if(DM_OPEN===d.from&&$('dmList')){DM_DRAW&&DM_DRAW();dmMarkRead(d.from)}else toast(`${dmName(d.from)}: ${d.text.slice(0,40)}`)}
+  else if(DM_OPEN===d.to&&$('dmList')&&DM_DRAW)DM_DRAW();
+  if(!SAMPLES[d.from]&&d.from!==G.me.id)loadOthers();renderChat()}
+function dmAdmin(){const box=h('div',{class:'stack',style:'gap:4px'},h('span',{class:'mute',style:'font-size:13px'},'불러오는 중…'));
+  sb.from('direct_messages').select('*').order('created_at',{ascending:false}).limit(150).then(({data,error})=>{if(error){box.replaceChildren(h('span',{class:'mute',style:'font-size:13px'},'1:1 대화 테이블이 아직 없어요. 6_dm.sql을 실행해 주세요.'));return}
+    const rows=data||[];box.replaceChildren(...(rows.length?rows.map(x=>h('div',{style:'font-size:13px;padding:3px 0;border-bottom:1px solid var(--line)'},h('span',{class:'dim num',style:'font-size:11px'},mdhm(Date.parse(x.created_at))+' '),h('b',null,dmName(x.from_char)),' → ',h('b',null,dmName(x.to_char)),': ',x.text,h('button',{class:'ghost sm',style:'font-size:11px;padding:0 4px;margin-left:6px',onclick:async()=>{await sb.from('direct_messages').delete().eq('id',x.id);closeModal();openSettings()}},'지우기'))):[h('span',{class:'mute',style:'font-size:13px'},'아직 대화가 없어요.')]))});
+  return h('details',{class:'card stack',style:'background:var(--sunk)'},h('summary',{style:'cursor:pointer'},h('span',{class:'lbl'},'1:1 대화 열람 (운영자만, 최근 150개)')),box)}
 
 /* ---------- 시작 ---------- */
 async function boot(){
