@@ -411,13 +411,13 @@ function gainStat(stat,n){const m=G.me;m.sxp=m.sxp||{};if(m.stats[stat]>=STAT_MA
   while(m.stats[stat]<STAT_MAX&&m.sxp[stat]>=statNeed(m.stats[stat])){m.sxp[stat]-=statNeed(m.stats[stat]);m.stats[stat]++;up++}
   if(up){const nm=STATS.find(x=>x[0]===stat)[1];log(`${nm}이(가) 올랐다. ${m.stats[stat]-up} → ${m.stats[stat]}`,'life');toast(`${nm} +${up} (${m.stats[stat]})`);return `${nm} +${up}`}return null}
 const dcOf=dc=>dc>=8?Math.round(30+1.24*Math.pow(dc-8,1.7)):30-(8-dc)*3;
-function chk(stat,dc){const m=G.me,sv=Math.max(m.stats[stat],PARTY&&PARTY.stats?(+PARTY.stats[stat]||0):0),D=dcOf(dc),d=ri(1,20)+ri(1,20),pen=(m.mind<30?-6:0)+(hasFx('lucky')?6:0)-(hasFx('unlucky')?6:0),tot=sv+d+pen;const ok=tot>=D;const g=gainStat(stat,ok?3:2);
+function chk(stat,dc){const m=G.me,sv=Math.max(m.stats[stat],PARTY&&PARTY.stats?(+PARTY.stats[stat]||0):0),D=dcOf(dc),d=ri(1,20)+ri(1,20),pen=(m.mind<30?-6:0)+(hasFx('lucky')?6:0)-(hasFx('unlucky')?6:0)-markPen(),tot=sv+d+pen;const ok=tot>=D;const g=gainStat(stat,ok?3:2);
   return{ok,txt:`${STATS.find(s=>s[0]===stat)[1]} ${sv} + 주사위 ${d}${pen?` ${pen}`:''} = ${tot} / 목표 ${D}${g?' · '+g:''}`}}
 function give(rw){const m=G.me,out=[];if(!rw)return out;
   const add=(k,v,label,fmt)=>{if(!v)return;m[k]=(m[k]||0)+v;out.push(fmt?fmt(v):`${label} ${v>0?'+':''}${v}`)};
   if(rw.money){m.money=Math.max(0,m.money+rw.money);out.push(`$${rw.money>0?'+':''}${rw.money}`)}
   if(rw.hp){m.hp=Math.max(1,Math.min(100,m.hp+rw.hp));out.push(`체력 ${rw.hp>0?'+':''}${rw.hp}`)}
-  if(rw.mind){let v=rw.mind;if(v<0&&hasFx('cozy'))v=Math.round(v/2);m.mind=Math.max(0,Math.min(100,m.mind+v));out.push(`정신 ${v>0?'+':''}${v}`)}
+  if(rw.mind){let v=rw.mind;if(v<0&&(hasFx('cozy')||hasFx('clothes')))v=Math.round(v/2);m.mind=Math.max(0,Math.min(100,m.mind+v));out.push(`정신 ${v>0?'+':''}${v}`)}
   if(rw.en){m.en=Math.max(0,Math.min(EN_MAX,m.en+rw.en));out.push(`기력 ${rw.en>0?'+':''}${rw.en}`)}
   add('merit',rw.merit,'공적');add('credit',rw.credit,'신용');add('rep',rw.rep,'평판');
   if(rw.debt){m.debt=Math.max(0,m.debt+rw.debt);out.push(`빚 ${rw.debt>0?'+':''}$${rw.debt}`)}
@@ -439,6 +439,7 @@ function openScene(sc,keep){if(sc&&DEX_SC[sc.id])dexAdd('sc:'+sc.id);scene=sc;if
 function move(k){if(!ready())return;const m=G.me;if(k===m.cell)return;const[d,t]=cellDT(k);
   m.cell=k;result=null;log(`${DSHORT[d]} ${TIERS[t].n}(으)로 갔다.`,'move');
   if(hasFx('followed'))toast(pick(['뒤에서 발소리가 한 박자 늦게 멈춘다.','계단을 내려오는 발소리가 하나 더 있다.','돌아보면 아무도 없다. 발소리는 계속된다.']));
+  if(m.fugitive&&k==='1-1'&&chance(.34)){caught('적등방 숙소층 복도에 들어서자마자 문이란 문이 한꺼번에 열렸다. 다들 나를 알아봤다.');return}
   if(m.fugitive&&d===1&&chance(.25)){caught('홍등동에 들어서자마자 붉은 등 아래 누군가 내 이름을 불렀다. 붉은 완장을 찬 사내였다.');return}
   if(isBuild()&&chance(.3)&&!guardUse()){buildEvent();return}
   save();render()}
@@ -640,7 +641,7 @@ function playEv(src,id,step,keep){const E=src[id],st=E.s[step||'start'];if(!step
     if(res.extract){extract(fill(res.t),true,lines);return}
     if(res.go){result={title:E.n,text:fill(res.t||''),lines:[...lines,...give(res.rw)],bad:!!res.bad};if(res.bad)flicker();playEv(src,id,res.go,true);return}
     if(res.bad&&chance(.5))flicker();log(`${E.n}: ${fill(res.t).split('\n')[0]}`,'haunt');done(E.n,fill(res.t)+(res.fear?fearLine():''),[...lines,...give(res.rw)],!!res.bad)}}))},keep)}
-function anomaly(){const m=G.me,[d,t]=cellDT(m.cell);const ok=Object.keys(EV).filter(k=>EV[k].w(d,t)&&k!==m.lastEv);if(!ok.length)return false;const k=pick(ok);m.lastEv=k;playEv(EV,k);return true}
+function anomaly(){const m=G.me,[d,t]=cellDT(m.cell);const ok=Object.keys(EV).filter(k=>EV[k].w(d,t)&&k!==m.lastEv);if(!ok.length)return false;const k=hasFx('oily')&&ok.includes('cat')&&chance(.5)?'cat':pick(ok);m.lastEv=k;playEv(EV,k);return true}
 function explore(){if(!ready())return;const m=G.me;if(!spend(1))return;const[d,t]=cellDT(m.cell);
   if(isBuild()&&!guardUse()){buildEvent();return}
   if(m.fugitive&&chance(.08)){chaser();return}
@@ -908,6 +909,177 @@ function buildEvent(){const m=G.me;flicker();const d=dayIdx(T());if(m.buildDay!=
     done('망치 소리',`쿵. 쿵. 쿵.\n이번에는 소리가 바로 등 뒤에서 난다. 돌아보면 방금 지나온 복도가 벽으로 막혀 있다. 벽이 아직 축축하다.\n${tape?'카세트에서 테이프가 저절로 감기는 소리가 났다.':'젖은 시멘트가 손바닥에 묻어 있다. 언제 짚었는지 모르겠다.'}`+fearLine(),out,true);return}
   const out=give({mind:-18,hp:-15});if(m.mind<=0){m.cell=homeCell(m);m.en=Math.max(0,m.en-3);out.push('정신을 잃고 집에서 깨어남','기력 -3');log('증축 시간에 정신을 잃었다. 깨어 보니 내 방이었다.','haunt')}
   done('망치 소리',`쿵. 쿵. 쿵.\n망치 소리가 내 발밑에서 난다. 벽 속에서 누가 발목을 잡아당긴다. 손가락이 차갑고, 시멘트처럼 굳어 있다.\n「여기도 한 칸 필요해.」`+(m.mind<=0?'\n\n…눈을 뜨니 내 방 천장이다. 발목에 손자국이 남아 있다.':'')+fearLine(),out,true)}
+/* ---------- 1.2: 빈 칸 채우기 · 소속 전용 장소 ---------- */
+Object.assign(ITEMS,{
+ wire:{n:'안테나 선',d:'아무 데도 연결되지 않았는데 귀에 대면 잡음이 들린다.',v:90},
+ card13:{n:'13번 출입증',d:'어묵 공장 출입증. 이 공장 직원은 12번까지밖에 없다.',v:130},
+ mycoat:{n:'내 옷',d:'멈춘 공방의 재봉틀이 지은 옷. 내 치수에 꼭 맞는다.',v:70},
+ letter:{n:'젖은 편지',d:'배수로에서 건진 편지. 받는 사람은 이미 죽은 사람이다.',v:60},
+ pkey:{n:'비둘기 열쇠',d:'비둘기가 물어 온 열쇠. 내 방 열쇠와 똑같다. 내 열쇠는 주머니에 있다.',v:150}});
+Object.assign(ROOMFX,{wire:'안테나 선에서 밤새 누가 숫자를 셌다.',card13:'출입증 사진이 밤사이 나를 조금 더 닮아 갔다.',mycoat:'옷걸이에 건 옷이 밤새 어깨를 들썩였다.',letter:'젖은 편지가 마르지 않는다. 바닥에 물이 고였다.',pkey:'새벽에 누가 이 열쇠로 내 방문을 열어 보려 했다.'});
+Object.assign(FXDEF,{
+ bell:{n:'종소리',min:1440,d:'증축 피해를 한 번 막아 준다'},
+ ink:{n:'잉크 얼룩',bad:true,min:360,d:'수첩의 수칙 한 줄이 번져 보이지 않는다'},
+ markR:{n:'찍힘 · 적등방',bad:true,min:1440,d:'홍등동에서 판정 -6, 국숫집·전당포 값이 나빠진다'},
+ markS:{n:'찍힘 · 삼경',bad:true,min:1440,d:'종루동에서 판정 -6'},
+ oily:{n:'기름 냄새',min:240,d:'검은 고양이가 자주 따라온다'},
+ clothes:{n:'내 옷',min:480,d:'정신이 덜 깎인다. 거울 속 나는 이 옷을 입고 있지 않다'}});
+Object.assign(HIDDEN,{bell:'종이 네 번 울리면 다섯 번째를 기다리지 말 것.',cage:'옆 칸 숨소리가 멈추면 같이 숨을 멈출 것.',drain:'배수로에서 바깥 이름을 부르는 소리가 들리면 대답하지 말 것.'});
+DEX_T[3][0]=999;
+const DEX_V12={antenna:'오늘 밤 사라질 사람',workshop:'내 치수의 옷',pigeon:'눈을 깜빡이지 않는 비둘기',smoke:'네 번째 꽁초',bellfour:'네 번 울리는 종',neighbor:'빈 옆 칸',envelope:'13층의 손',redsam:'실종 전단 속 얼굴',redfree:'이미 적힌 이름',samred:'순찰 명단의 마지막 줄',samfree:'30년 전 서명',myrule:'내 글씨 수칙',finger:'남는 어묵 하나',print3:'다른 판본',hand:'줄 끝의 손',callout:'바깥 이름',safe:'금고 안 노크'};
+function dexAll(){return[...Object.keys(EV).map(k=>['ev:'+k,EV[k].n]),...Object.keys(HAUNT2).map(k=>['h2:'+k,HAUNT2[k].n+' · 다른 얼굴']),...Object.keys(HAUNT3).map(k=>['h3:'+k,HAUNT3[k].n]),
+  ...Object.keys(DEX_SC).map(k=>['sc:'+k,DEX_SC[k]]),...Object.keys(DEX_DN).map(k=>['dn:'+k,DEX_DN[k]]),['x:gate','귀문'],['x:blueprint','설계실'],...Object.keys(DEX_V12).map(k=>['x:'+k,DEX_V12[k]])]}
+
+/* 소속에 따른 차이 */
+const today=()=>dayIdx(T());
+const isRed=()=>G.me&&G.me.fac==='red'&&!G.me.fugitive;
+function markPen(){const m=G.me,d=cellDT(m.cell)[0];return(hasFx('markR')&&d===1)||(hasFx('markS')&&d===2)?6:0}
+function noodlePrice(){return hasFx('markR')?12:isRed()?4:8}
+function clinicPrice(){return G.me.fac==='sam'?10:isRed()?30:20}
+function mjMul(){return G.me&&G.me.fac==='sam'?2:1}
+function pawnV(k){return Math.round(ITEMS[k].v*(hasFx('markR')?0.7:1))}
+function noodleHint(){const m=G.me;if(!m)return'';if(m.fac==='sam')return(m.traces.noodle||0)>=2?'\n주인이 삼경 완장을 보더니 낮게 말한다. 「오늘은 4번 근처도 가지 마세요.」':'\n주인이 삼경 완장을 보고 눈짓한다. 「오늘은 좀 봐 주세요.」';
+  if(isRed())return'\n주인이 붉은 완장을 보고 국수 값을 반만 받는다. 보호비 덕이다.';if(hasFx('markR'))return'\n주인이 나를 알아본다. 「아, 그 사람.」 값이 오른다.';return''}
+function inkOn(){G.me.inkRow=null;addFx('ink')}
+function inkText(i,t){const m=G.me;if(!m||!hasFx('ink'))return t;if(m.inkRow==null)m.inkRow=ri(0,RULES.length-1);return i===m.inkRow?'▒▒▒▒▒ 잉크가 번져 읽을 수 없다 ▒▒▒▒▒':t}
+const RUMOR={noodle:'국숫집 4번 테이블에 오늘 수저가 두 벌 놓였대.',dentist:'오늘 한빛치과 셔터가 끝까지 올라가 있더라.',phone:'정문 공중전화가 오늘 벌써 세 번 울렸대.',floor13:'4동 12층 계단참이 오늘 유난히 길대.',well:'옛 우물에서 오늘 라디오 소리가 났대.',photo:'금성 사진관 조명이 밤새 켜져 있었대.',bath:'빗물탕에 오늘 물이 찼대. 따뜻한 물이.',antenna:'안테나 숲에서 오늘 이름 부르는 방송이 잡혔대.',workshop:'멈춘 공방에서 아침부터 재봉틀 소리가 났대.'};
+function setRumor(){const ids=Object.keys(PLACES).filter(k=>PLACES[k].haunt);const id=pick(ids);G.me.rumor={d:today(),id};return RUMOR[id]||`${PLACES[id].n} 쪽이 오늘 이상하대.`}
+function rumorBoost(id){const r=G.me&&G.me.rumor;return r&&r.d===today()&&r.id===id?.2:0}
+function guardUse(){if(hasFx('guarded')){clearFx('guarded');log('망치 소리가 다가오는데 누군가 내 앞을 막아섰다. 소리가 비켜 갔다.','haunt');toast('지켜보는 사람이 증축 피해를 한 번 막아 줬어요. (효과 해제)');return true}
+  if(hasFx('bell')){clearFx('bell');log('망치 소리가 다가오는데 어디선가 종이 한 번 울렸다. 소리가 멀어졌다.','haunt');toast('종소리가 증축 피해를 한 번 막아 줬어요. (효과 해제)');return true}return false}
+function capOK(key,n,msg){const dl=daily();dl[key]=dl[key]||0;if(dl[key]>=n){toast(msg||'오늘은 여기까지예요. 내일 다시 와요.');return false}return true}
+function capUse(key){const dl=daily();dl[key]=(dl[key]||0)+1}
+
+/* 여러 단계 장면 */
+const V12={
+ antenna:{n:'안테나 숲',red:1,s:{start:{t:'주파수를 돌리던 손이 멈춘다. 잡음이 걷히고 아나운서의 목소리.\n「오늘 밤 사라질 분들의 이름을 알려 드립니다.」\n이름이 하나씩 불린다. 다 아는 이름이다.',o:[
+  {l:'끝까지 듣는다',s:'nerve',dc:13,ok:{t:'마지막 이름이 불린다. 모르는 이름이다. 아나운서가 덧붙인다. 「정정합니다. 한 분은 오늘 오지 않으셨네요.」\n안테나에서 선 한 가닥이 툭 끊어져 손에 떨어진다.',rw:{mind:-8,clue:1,item:'wire'}},no:{t:'마지막 이름이 불린다. 내 이름이다. 아나운서가 숨을 고르고, 한 번 더 또박또박 부른다.',rw:{mind:-16,fx:'delirium'},bad:1,fear:1}},
+  {l:'라디오를 끈다',r:{t:'스위치를 내렸는데 방송이 한 줄 더 나온다.\n「…그리고 지금 막 라디오를 끈 분.」',rw:{mind:-6},bad:1}},
+  {l:'주파수를 바깥으로 돌린다',s:'sen',dc:12,ok:{t:'바늘을 바깥 주파수로 넘겼다. 경마 중계가 흘러나온다. 이름 부르는 소리는 그 아래로 가라앉았다.',rw:{mind:-2,item:'wire'}},no:{t:'어느 주파수로 돌려도 같은 목소리가 같은 이름을 부른다. 다음 차례가 가까워진다.',rw:{mind:-12},bad:1}}]}}},
+ workshop:{n:'멈춘 공방',red:1,s:{start:{t:'덮여 있던 재봉틀 하나가 혼자 돌아간다. 천 위에 옷 한 벌이 거의 다 지어져 있다.\n소매 길이를 보니 내 치수다.',o:[
+  {l:'다 지을 때까지 기다린다',s:'nerve',dc:12,ok:{t:'마지막 단추가 달리고 재봉틀이 멈춘다. 옷이 저절로 접혀 내 앞으로 밀려온다.\n입어 보니 꼭 맞는다. 거울 속의 나는 이 옷을 입고 있지 않다.',rw:{item:'mycoat',fx:'clothes',mind:-6}},no:{t:'기다리는 동안 옷이 내 몸에 맞춰 조여 온다. 입은 적이 없는데.',rw:{mind:-14,hp:-6},bad:1,fear:1}},
+  {l:'전원을 내린다',s:'str',dc:11,ok:{t:'스위치를 내리자 바늘이 멈춘다. 멈추기 직전, 마지막 한 땀이 천에 내 이름을 박았다.',rw:{mind:-4,clue:1}},no:{t:'스위치가 꿈쩍도 하지 않는다. 바늘이 내 소매 끝을 물었다.',rw:{hp:-8,mind:-8},bad:1}},
+  {l:'도망친다',r:{t:'공방을 빠져나오는 내내 재봉틀 소리가 따라왔다. 내 발걸음에 박자를 맞춰서.',rw:{mind:-6,fx:'followed'},bad:1}}]}}},
+ pigeon:{n:'비둘기장',s:{start:{t:'비둘기가 어제보다 하나 많다. 늘어난 비둘기는 발에 고리가 없고, 눈을 깜빡이지 않는다.\n그 비둘기가 무언가를 물고 내 앞에 내려앉는다.',o:[
+  {l:'물고 온 것을 받는다',r:{t:'열쇠다. 내 방 열쇠와 똑같이 생겼다. 주머니를 뒤져 보니 내 열쇠는 그대로 있다.',rw:{item:'pkey',mind:-6}}},
+  {l:'쫓아낸다',s:'agi',dc:11,ok:{t:'손을 휘젓자 비둘기가 날아오른다. 날아가며 내 이름을 한 번 불렀다.',rw:{mind:-3}},no:{t:'휘두른 손에 깃털 대신 긴 머리카락이 감겨 있다.',rw:{mind:-10},bad:1,fear:1}},
+  {l:'노인에게 묻는다',r:{t:'노인은 비둘기를 세지 않는다. 「열두 마리야. 늘 열두 마리.」\n노인의 수첩에는 날짜마다 12가 적혀 있다. 오늘 칸만 비어 있다.',rw:{mind:-4,clue:1}}}]}}},
+ bellfour:{n:'종루',red:1,s:{start:{t:'줄을 당기기도 전에 종이 울린다.\n하나, 둘, 셋, 넷.\n그리고 조용해진다. 다섯 번째가 올 것만 같은 정적.',o:[
+  {l:'다섯 번째를 기다린다',r:{t:'…쿵.\n다섯 번째는 종소리가 아니었다. 내 방문을 두드리는 소리였다. 이 높이에서 들릴 리가 없는데.',rw:{mind:-15,fx:'followed'},bad:1,fear:1,hidden:'bell'}},
+  {l:'곧장 내려간다',r:{t:'계단을 내려오는 동안 등 뒤에서 종이 한 번 더 울렸다. 돌아보지 않았다.\n종소리가 몸에 남아 있다.',rw:{mind:-3,fx:'bell'},hidden:'bell'}}]}}},
+ neighbor:{n:'옆 칸',s:{start:{t:'철망 너머 옆 칸에서 숨소리가 난다. 들이쉬고, 내쉬고.\n어느새 내 숨과 박자가 같다.',o:[
+  {l:'같이 숨을 멈춘다',r:{t:'숨을 멈춘다. 옆 칸의 숨도 멈춘다.\n한참 뒤, 철망 너머에서 아주 작게 「고마워」.\n옆 칸은 원래 비어 있다.',rw:{mind:-4,clue:1},hidden:'cage'}},
+  {l:'말을 건다',s:'talk',dc:12,ok:{t:'「거기 누구 있어요?」 숨소리가 멎고, 웃음 섞인 대답이 돌아온다.\n「너 들어오기 전부터 있었어.」\n이불 밑에 누가 두고 간 동전이 있다.',rw:{money:20,mind:-6}},no:{t:'대답은 없다. 숨소리가 철망에 바짝 붙는다. 철망이 내 쪽으로 휜다.',rw:{mind:-12},bad:1,fear:1}},
+  {l:'철망을 두드린다',r:{t:'두드리자 숨소리가 멎는다.\n그리고 내 칸 침대 밑에서 다시 시작된다.',rw:{mind:-10,fx:'followed'},bad:1}}]}}},
+ envelope:{n:'형님 심부름',s:{start:{t:'형님이 봉투를 건넨다. 「4동 13층 1301호.」\n13층은 없다. 형님은 농담하는 얼굴이 아니다.',o:[
+  {l:'간다',s:'nerve',dc:12,ok:{t:'12층과 14층 사이, 길어진 계단참에 문이 하나 있다.\n문을 두드리자 문틈으로 하얀 손만 나와 봉투를 받아 간다. 손톱이 길다.\n돌아오니 형님은 아무것도 묻지 않았다.',rw:{merit:5,money:30,mind:-8}},no:{t:'계단참을 몇 번을 오르내려도 1301호가 없다.\n돌아오니 형님 책상 위에 봉투가 놓여 있다. 뜯겨 있다. 받는 사람이 이미 가져간 것처럼.',rw:{merit:2,mind:-12},bad:1,fear:1}},
+  {l:'못 하겠다고 한다',r:{t:'형님이 봉투를 다른 놈에게 건넨다. 그놈은 그날 밤 돌아오지 않았다.',rw:{mind:-6,merit:-2},bad:1}}]}}},
+ redsam:{n:'적등방 숙소층',red:1,s:{start:{t:'「삼경이 여긴 웬일이야.」\n복도의 사내들이 길을 막지는 않는다. 다만 아무도 눈을 떼지 않는다.\n복도 끝 마작방에서 넷이 패를 치고 있다. 그중 하나는 의원 게시판의 실종 전단 속 얼굴이다.',o:[
+  {l:'그 사람에게 말을 건다',s:'talk',dc:12,ok:{t:'「집에 가셔야죠.」\n그 사람이 패를 쥔 채 웃는다. 「집? 나 여기 사는데.」\n전단 날짜를 보여 주자 손에서 패가 떨어진다. 아무것도 그려지지 않은 패다. 일어선 자리에 종이 한 장이 남았다.',rw:{sam:{cleanup:1},clue:1,mind:-6}},no:{t:'말을 걸자 마작방의 넷이 동시에 나를 본다. 사내 하나가 어깨를 툭 친다.\n「삼경 얼굴은 잘 기억해 둘게.」',rw:{mind:-6,fx:'markR'},bad:1}},
+  {l:'전단과 얼굴을 몰래 비교한다',s:'sen',dc:13,ok:{t:'틀림없다. 다만 전단 속 얼굴은 웃고 있지 않았는데, 저 사람은 웃고 있다.\n조용히 빠져나와 의원에 보고했다.',rw:{sam:{cleanup:1},mind:-4}},no:{t:'너무 오래 쳐다봤다. 마작방 문이 탁 닫힌다. 복도의 사내들이 이제 노골적으로 웃는다.',rw:{fx:'markR',mind:-4},bad:1}},
+  {l:'돌아간다',r:{t:'등 뒤에서 패 섞는 소리가 다시 시작된다. 넷이 아니라 다섯 사람 몫이다.',rw:{mind:-3}}}]}}},
+ myrule:{n:'삼경 숙소층',s:{start:{t:'어제 떼어 낸 수칙이 내 방문에 붙어 있다.\n내 글씨다. 쓴 기억이 없다.',o:[
+  {l:'떼어 낸다',r:{t:'떼어 내자 그 아래 같은 종이가 한 장 더 붙어 있다. 그 아래에도.',rw:{mind:-8},bad:1}},
+  {l:'그대로 둔다',r:{t:'그날 밤 문 앞에서 누가 수칙을 소리 내어 읽었다. 내 목소리로.\n아침에 보니 종이 끝에 한 줄이 늘어 있다.',rw:{mind:-6,clue:1}}}]}}},
+ finger:{n:'어묵 공장',s:{start:{t:'컨베이어 위로 어묵이 줄지어 지나간다. 그중 하나가 손가락 모양이다. 마디도 있다.\n세어 보면 늘 하나가 남는다.',o:[
+  {l:'집어 든다',s:'nerve',dc:12,ok:{t:'그냥 어묵이다. 손가락 모양일 뿐.\n퇴근할 때 반장이 말없이 출입증 하나를 건넨다. 「13번. 네 거야.」\n이 공장 직원은 12번까지다.',rw:{money:25,item:'card13',mind:-6,fx:'oily'}},no:{t:'집어 드는 순간 어묵이 내 손가락을 쥔다.',rw:{money:25,mind:-14,hp:-5,fx:'oily'},bad:1,fear:1}},
+  {l:'못 본 척한다',r:{t:'퇴근할 때 손가락을 세어 봤다. 열 개다. 다시 세어 보니 열한 개. 세 번째에 열 개.',rw:{money:25,mind:-8,fx:'oily'},bad:1}}]}}},
+ hand:{n:'정문 배수로',red:1,s:{start:{t:'줄이 팽팽해진다. 끌어올린 것은 손이다. 사람 손. 차갑고, 물에 불지 않았다.\n그 손이 내 손목을 잡는다.',o:[
+  {l:'뿌리친다',s:'str',dc:12,ok:{t:'손을 뿌리치자 손이 물속으로 사라진다. 손바닥에 남은 건 내가 어제 잃어버린 단추 하나.',rw:{mind:-8,clue:1}},no:{t:'손이 나를 물가로 끌어당긴다. 겨우 빠져나왔을 때 손목에 손가락 자국이 다섯 개 남아 있었다. 여섯 개였나.',rw:{mind:-14,hp:-8,fx:'followed'},bad:1,fear:1}},
+  {l:'손을 잡아 준다',s:'nerve',dc:13,ok:{t:'잡아 주자 손이 천천히 힘을 푼다. 물 위로 젖은 편지 한 통이 떠오른다.',rw:{mind:-6,item:'letter',rep:2}},no:{t:'잡아 주는 순간 깨달았다. 이 손은 도움을 바라는 게 아니다.',rw:{mind:-16},bad:1,fear:1}}]}}},
+ callout:{n:'정문 배수로',s:{start:{t:'물 흐르는 소리 사이로 누가 이름을 부른다.\n바깥 이름이다. 성채에 오기 전에 쓰던 이름.',o:[
+  {l:'대답한다',r:{t:'「…네.」\n대답하는 순간 물소리가 멎는다. 바깥으로 이어지는 쇠창살 너머에 누가 서 있다. 나와 똑같이 생긴 사람이 손을 흔든다.',rw:{mind:-14,fx:'delirium'},bad:1,fear:1,hidden:'drain'}},
+  {l:'대답하지 않는다',r:{t:'이름이 몇 번 더 불리다가 멀어진다. 마지막으로 불린 이름은 처음 듣는 이름이었다.',rw:{mind:-2},hidden:'drain'}}]}}},
+ safe:{n:'적등방 사무실',s:{start:{t:'철문 옆 금고 안에서 똑, 똑, 똑. 두드리는 소리.\n사무실 사람들은 아무도 신경 쓰지 않는다.',o:[
+  {l:'같이 두드린다',r:{t:'똑, 똑.\n안에서 소리가 멈추고, 한참 뒤 아주 작게 대답한다. 「아직이야?」',rw:{mind:-8,clue:1},bad:1}},
+  {l:'사무원에게 묻는다',s:'talk',dc:11,ok:{t:'「아, 그거요. 이자예요. 빚이 불어나는 소리.」\n사무원이 웃지도 않고 말한다.',rw:{mind:-4}},no:{t:'사무원이 고개를 든다. 「적등방도 아니면서 여긴 왜 왔어요.」',rw:{fx:'markR',mind:-3},bad:1}},
+  {l:'나간다',r:{t:'문을 닫자 노크 소리도 멈췄다. 문 안쪽에서 들은 것처럼.',rw:{mind:-2}}}]}}}};
+
+/* 괴담 장소 (평소 → 흔적 → 조우) */
+function hauntG(id,normal,trace,normalRw){const r=hauntRoll(id),nm=PLACES[id].n;
+  if(r==='normal'){done(nm,freshLine(normal),give(normalRw()));return}
+  if(r==='trace'){addTrace(id);done(nm,freshLine(trace)+fearLine(),give({mind:-4}),true);return}
+  resetTrace(id);flicker();playEv(V12,id)}
+const antennaVisit=()=>hauntG('antenna',['주파수를 돌리자 레이란 시내 방송이 잡힌다. 일기 예보, 경마 결과, 광고 노래. 바깥은 여전히 바깥이다.','바깥 라디오에서 성채 이야기는 한마디도 나오지 않는다. 이상하게 마음이 놓인다.','잡음 사이로 바다 건너 방송이 흐른다. 알아들을 수 없는 말인데 마음이 편해진다.'],
+  ['잡음 사이로 내 목소리가 들린다. 「…여기 있어요.」 내가 한 적 없는 말이다.','모든 주파수에서 같은 숨소리가 난다.','주파수를 아무리 돌려도 바늘이 13에 멈춘다.'],()=>({mind:5,item:chance(.1)?'wire':null}));
+const workshopVisit=()=>hauntG('workshop',['천을 들추자 녹슨 재봉틀이 나온다. 쓸 만한 부품 몇 개를 챙겼다.','기계 밑에서 단추 한 줌을 주웠다. 다 같은 옷에서 떨어진 단추다.','천 아래 기계에 먼지가 하나도 없다. 누가 매일 닦는 것처럼.'],
+  ['천 아래가 따뜻하다. 숨 쉬듯 천이 오르내린다.','천을 들추기도 전에 재봉틀이 한 땀 움직였다.','바닥에 분필로 사람 치수가 적혀 있다. 내 치수다.'],()=>({money:ri(5,15)}));
+function visit(id){if(!ready())return;if(id!=='noodle'&&!spend(1))return;const f={noodle,dentist,phone,floor13,well,photo:photoStudio,bath}[id]||PLACES[id].visit;f()}
+
+/* 생활 장소 */
+function feedPigeon(){const m=G.me,p=m.pigeon=m.pigeon||{n:12},d=today();
+  if(p.fed!=null&&p.fed<d&&!p.got){p.got=true;p.n++;const r=Math.random();
+    if(r<.12){playEv(V12,'pigeon');return}
+    if(r<.55){done('비둘기장','비둘기 한 마리가 동전을 물고 돌아왔다. 어디서 났는지는 묻지 않기로 했다.',give({money:ri(5,15)}));return}
+    if(r<.8){const rm=setRumor();const out=give({clue:chance(.3)?1:0});done('비둘기장',`비둘기 발목에 쪽지가 묶여 있다.\n「${rm}」`,out);return}
+    const it=pick(['number','film','plate','button']);done('비둘기장','비둘기가 무언가를 물고 와 발치에 떨어뜨린다. 성채 어딘가에서 주워 온 물건이다.',give({item:it}));return}
+  if(p.fed===d)return toast('모이는 이미 줬어요. 내일 비둘기가 무언가 물어 올 거예요.');
+  if(m.money<3)return toast('모이 값 $3가 필요해요.');
+  openScene({id:'pigeonfeed',title:'비둘기장',text:`비둘기장 노인이 철망을 열어 준다. 비둘기가 ${p.n}마리.\n「모이 주면 내일 뭐라도 물어 와.」`,choices:[
+    {l:'모이를 준다 ($3)',run:()=>{m.money-=3;p.fed=d;p.got=false;done('비둘기장','모이를 뿌리자 비둘기들이 한꺼번에 내려앉는다. 노인이 수를 센다. 「하나, 둘…」\n열둘에서 멈추고 고개를 갸웃한다. 한 마리가 남는다.',['$-3','내일 비둘기가 무언가 물어 와요'])}},
+    {l:'그냥 내려간다',run:()=>done('비둘기장','날갯짓 소리가 등 뒤에서 오래 이어졌다.',[])}]})}
+function smokeAct(){if(!capOK('smoke',3,'오늘은 담배를 많이 피웠어요. 목이 따갑다.'))return;capUse('smoke');
+  if(chance(.15)){dexAdd('x:smoke');done('담배 한 대','셋이 피웠는데, 바닥의 꽁초가 넷이다.\n그중 하나는 아직 타고 있다. 필터에 립스틱 자국이 있다. 여기 여자는 없었다.',give({mind:-4,en:1}),true);return}
+  const rm=setRumor();done('담배 한 대',`적등방 사람들 틈에서 담배를 나눠 피웠다. 누군가 지나가듯 말한다.\n「${rm}」`,[...give({mind:3,en:1}),'소문: 그곳의 조우 확률이 오늘 올라요'])}
+function bellAct(){if(hour()!==2)return toast('종은 새벽 2시대(2:00~2:59)에만 칠 수 있어요. 증축 바로 전이에요.');if(!capOK('bell',1,'오늘은 이미 종을 쳤어요.'))return;capUse('bell');
+  if(chance(.2)){flicker();playEv(V12,'bellfour');return}
+  addFx('bell');done('종 치기','녹슨 종이 무겁게 한 번 운다. 소리가 성채 구석구석으로 번져 나간다.\n아래층 어딘가에서 망치 소리가 잠깐 멈췄다.',['종소리 (증축 피해 1번 막음)'])}
+function cageAct(){if(!capOK('cage',2,'옆 칸이 조용하다. 오늘은 더 말을 걸지 않는 게 좋겠다.'))return;capUse('cage');const r=Math.random();
+  if(r<.25){playEv(V12,'neighbor');return}
+  if(r<.4){done('옆 칸','옆 칸 사람이 철망 틈으로 꼬깃꼬깃한 종이를 밀어 준다. 「주웠어. 너 이런 거 모으지?」',give({clue:1}));return}
+  const rm=setRumor();done('옆 칸',`철망 너머로 옆 칸 사람과 말을 섞었다. 얼굴은 보이지 않는다.\n「${rm}」`,[...give({mind:2}),'소문: 그곳의 조우 확률이 오늘 올라요'])}
+function redhallAct(){const m=G.me;if(m.fugitive){caught('적등방 숙소층 한가운데서 누가 내 이름을 불렀다. 문이란 문이 한꺼번에 열렸다.');return}
+  if(isRed()){if(!capOK('errand',1,'오늘 심부름은 끝났어요.'))return;capUse('errand');if(chance(.25)){playEv(V12,'envelope');return}
+    done('형님 심부름',pick(['봉투를 2동 국숫집 사장에게 전했다. 사장은 봉투 두께를 손으로 재 보더니 한숨을 쉬었다.','봉투를 전당포 노인에게 전했다. 노인은 봉투를 뜯지도 않고 금고에 넣었다.','봉투를 정문 차찬텡 주인에게 전했다. 주인이 밀크티 한 잔을 공짜로 내줬다.']),give({merit:3,money:15}));return}
+  if(!capOK('redhall',1,'적등방 사람들이 오늘은 더 들어오지 말라는 눈치다.'))return;capUse('redhall');
+  if(m.fac==='sam'){playEv(V12,'redsam');return}
+  dexAdd('x:redfree');
+  openScene({id:'redfree',title:'적등방 숙소층',red:true,text:'사내가 복도 끝 탁자로 손짓한다. 「앉아 봐.」\n장부가 펼쳐져 있다. 빚진 적이 없는데 장부에 내 이름이 이미 적혀 있다. 금액 칸만 비어 있다.\n「서명하면 $100. 그 대신 오늘부터 우리 객이야.」',choices:[
+    {l:'서명한다 (적등방의 객이 된다)',run:()=>{m.money+=100;m.debt+=150;m.debt0=m.debt;m.fac='red';m.rank='guest';m.merit=m.merit||0;m.credit=m.credit||0;if(!m.job||!JOBS[m.job]||!['red','common'].includes(JOBS[m.job][0]))m.job='도박장 잡일';m.addr=assignAddr('red');log('적등방 숙소층에서 장부에 서명하고 객이 되었다.','fac');
+      done('객','서명하자 사내가 장부를 덮는다. 「어서 와.」\n덮기 직전, 비어 있던 금액 칸에 숫자가 적히는 게 보였다. 아무도 펜을 들지 않았다.',['$+100','빚 $150','적등방 · 객'],true)}},
+    {l:'장부를 훔쳐본다',s:'sen',run:()=>{const c=chk('sen',12);if(c.ok)done('적등방 숙소층','내 이름 위아래로 낯익은 이름들이 있다. 의원 게시판 실종 전단에서 본 이름들이다. 금액 칸이 모두 비어 있다.',[c.txt,...give({clue:1,mind:-6})],true);else done('적등방 숙소층','장부를 넘기려는 손을 사내가 붙잡는다. 「구경은 공짜가 아니야.」 사내가 내 얼굴을 오래 들여다본다.',[c.txt,...give({fx:'markR',mind:-4})],true)}},
+    {l:'거절한다',run:()=>done('적등방 숙소층','「그래, 다음에.」 사내가 웃는다. 「내일 문 앞에 봉투 하나 둘게. 빈 봉투.」',give({mind:-6}),true)}]})}
+function samboardAct(){const m=G.me;
+  if(m.fac==='sam'){if(!capOK('board',1,'오늘은 게시판 정리를 끝냈어요.'))return;capUse('board');if(chance(.2)){playEv(V12,'myrule');return}
+    const left=Object.keys(HIDDEN).filter(k=>!m.hidden.includes(k)&&!(m.hints||[]).includes(k));let extra='';if(left.length&&chance(.6)){const k=pick(left);(m.hints=m.hints||[]).push(k);extra=`\n떼어 낸 종이 끝에 한 줄이 비친다. 「${HIDDEN[k].split('.')[0]}…」`}
+    done('수칙 게시판','문마다 붙은 수칙 중 누가 붙였는지 모르는 것 한 장을 떼어 냈다.'+extra,[...give({sam:{cleanup:1}}),'현장 수습 +1',extra?'수첩에 힌트가 생겼어요':''].filter(Boolean));return}
+  if(!capOK('samhall',1,'당직 대원이 오늘은 문을 열어 주지 않는다.'))return;capUse('samhall');
+  if(isRed()){const where=nightZone().where;dexAdd('x:samred');playEv({samred:{n:'삼경 숙소층',s:{start:{t:'삼경 숙소층. 문마다 수칙이 붙어 있다.\n당직 대원이 책상에서 순찰 명단에 무언가 적다가 자리를 비운다.',o:[
+      {l:'명단을 훔쳐본다',s:'sen',dc:12,ok:{t:`오늘 밤 새 계단이 생길 곳: ${where}.\n그리고 맨 아래 줄에 내 이름. 옆에 「주의」라고 적혀 있다.`,rw:{merit:3,mind:-4}},no:{t:'명단에 손을 대는 순간 대원이 돌아온다. 「적등방이 여긴 웬일로.」\n대원이 내 얼굴을 한참 들여다본다.',rw:{fx:'markS',mind:-4},bad:1}},
+      {l:'그냥 지나간다',r:{t:'문마다 붙은 수칙이 지나갈 때마다 바스락거린다. 한 장이 등 뒤로 떨어진다. 내 이름이 적혀 있다.',rw:{mind:-3}}}]}}}},'samred');return}
+  dexAdd('x:samfree');
+  openScene({id:'samfree',title:'삼경 숙소층',text:'당직 대원이 차를 한 잔 내준다. 「입단 생각 있어요?」\n대원이 서류를 내미는데, 서명란에 이미 내 서명이 있다. 날짜는 30년 전이다.',choices:[
+    {l:'차를 마시며 이야기를 듣는다',run:()=>done('삼경 숙소층','대원은 서명 이야기는 하지 않는다. 대신 성채에서 사라진 사람들 이야기를 한참 했다. 이름 몇 개는 귀에 익었다.',give({rep:5,mind:-6}))},
+    {l:'입단 서류를 낸다',run:()=>{scene=null;joinSam();if(G.me.fac!=='sam'){done('삼경 숙소층','대원이 서류를 돌려준다. 「아직은요. 평판을 더 쌓고 오세요.」\n돌려받은 서류의 서명이 조금 번져 있다.',give({mind:-3}))}}},
+    {l:'서류를 돌려준다',run:()=>done('삼경 숙소층','「그럼 30년 뒤에 다시 봬요.」 대원이 웃는다. 농담 같지 않다.',give({mind:-3}))}]})}
+function factoryAct(){if(!capOK('shift',2,'오늘 야간 작업은 두 번 다 했어요.'))return;if(!spend(3))return;capUse('shift');
+  if(chance(.25)){playEv(V12,'finger');return}
+  const g=gainStat('str',3);done('어묵 공장 야간 작업',pick(['기계 소리 사이로 라디오가 웅얼거린다. 어묵 반죽을 밤새 날랐다.','반장이 말없이 어묵 한 꼬치를 건넨다. 기름 냄새가 옷에 밴다.','컨베이어가 멈출 때마다 공장 전체가 숨을 참는 것 같다.']),[...give({money:25,fx:'oily'}),g].filter(Boolean))}
+function printshopAct(){if(!capOK('print',2,'오늘 인쇄 일은 두 번 다 했어요.'))return;if(!spend(2))return;capUse('print');const m=G.me;
+  if(chance(.3)){dexAdd('x:print3');const first=!m.wrongRule;m.wrongRule=true;if(first)log('인쇄소에서 3번 수칙이 다른 판본을 봤다. 「받지 말 것.」','haunt');if(chance(.4))inkOn();
+    done('찍은 적 없는 판본','인쇄기에서 수칙 문서가 쏟아진다. 한 장만 판본이 다르다. 다른 건 다 같은데, 3번만 다르다.\n「공중전화가 울리면 받지 말 것.」'+(first?'\n\n수첩을 열어 보니 3번 수칙 옆에 같은 글씨가 생겼다.':''),[...give({money:18,mind:-5}),hasFx('ink')?'잉크 얼룩':''].filter(Boolean),true);return}
+  const ink=chance(.25);if(ink)inkOn();done('수칙 인쇄',pick(['수칙 문서 백 장을 찍었다. 잉크 냄새에 머리가 띵하다.','인쇄기가 한 장을 더 뱉었다. 백한 장. 세어 보니 다시 백 장이다.','주인이 품삯을 주며 말한다. 「찍은 거 읽지는 마. 외우게 돼.」']),[...give({money:18}),ink?'잉크 얼룩 (수칙 한 줄이 번짐)':''].filter(Boolean),ink)}
+function fishAct(){if(!capOK('fish',5,'오늘은 낚시를 많이 했어요. 물이 너무 조용하다.'))return;if(!spend(1))return;capUse('fish');const r=Math.random();
+  if(r<.06){flicker();playEv(V12,'hand');return}
+  if(r<.13){playEv(V12,'callout');return}
+  if(r<.4){done('낚시',pick(['찌그러진 깡통이 걸려 나왔다. 안에 물이 아니라 모래가 들어 있다.','아무것도 걸리지 않았다. 바깥으로 흘러가는 물소리만 오래 들었다.','낡은 슬리퍼 한 짝. 다른 한 짝은 어제 누가 건졌다고 했다.']),give({mind:1}));return}
+  if(r<.7){done('낚시','동전 몇 개가 줄에 엉켜 올라왔다. 바깥 나라 동전도 섞여 있다.',give({money:ri(3,12)}));return}
+  if(r<.85){done('낚시','젖은 편지 한 통. 봉투의 받는 사람 이름이 번져서 읽히지 않는다.',give({item:'letter'}));return}
+  done('낚시','줄 끝에 성채 물건이 걸려 올라왔다. 누가 버린 걸까, 흘러온 걸까.',give({item:pick(['number','film','plate','button','nail'])}))}
+function officeAct(){const m=G.me;if(isRed()){if(!capOK('ledger',1,'장부는 하루에 한 번만 볼 수 있어요.'))return;capUse('ledger');
+    done('장부 열람',`장부에서 내 이름을 찾았다. 빚 $${m.debt}. 이름 옆에 작은 글씨가 붙어 있다. 「성실.」\n사무원이 장부를 덮으며 말한다. 「꼬박꼬박 갚으면 형님들이 알아봐.」`,give({credit:1}));return}
+  if(!capOK('office',1,'사무원이 오늘은 문을 열어 주지 않는다.'))return;capUse('office');playEv(V12,'safe')}
+Object.assign(PLACES,{
+ pigeon:{n:'비둘기장',btn:'비둘기장',act:feedPigeon},smoke:{n:'담배 한 대',btn:'담배 한 대 (하루 3번, 기력 +1)',act:smokeAct},
+ bell:{n:'종 치기',btn:'종을 친다 (새벽 2시대)',act:bellAct},antenna:{n:'안테나 숲 주파수',haunt:true,visit:antennaVisit},
+ cage:{n:'옆 칸',btn:'옆 칸에 말 걸기 (하루 2번)',act:cageAct},
+ redhall:{n:'적등방 숙소층',btn:()=>isRed()?'형님 심부름 (하루 1번)':'복도 끝 마작방 쪽으로 간다',act:redhallAct},
+ samboard:{n:'삼경 숙소층',btn:()=>G.me.fac==='sam'?'수칙 게시판 (하루 1번)':'당직실 쪽으로 간다',act:samboardAct},
+ factory:{n:'어묵 공장',btn:'야간 작업 (기력 3, $25, 하루 2번)',act:factoryAct},printshop:{n:'인쇄소',btn:'수칙 인쇄 일 (기력 2, $18, 하루 2번)',act:printshopAct},
+ workshop:{n:'멈춘 공방 천 아래',haunt:true,visit:workshopVisit},drain:{n:'배수로 낚시',btn:'낚시 (기력 1, 하루 5번)',act:fishAct}});
+Object.assign(PLACES.office,{btn:()=>isRed()?'장부 열람 (하루 1번)':'철문 옆 금고',act:officeAct});
+for(const[k,id,more]of[['0-0','pigeon',' 옥상 한쪽에 비둘기장이 있다.'],['1-0','smoke',''],['2-0','bell',''],['3-0','antenna',''],['0-1','cage',''],['1-1','redhall',''],['2-1','samboard',''],['0-2','factory',' 문에 「야간 작업자 구함」 종이가 붙어 있다.'],['2-2','printshop',''],['3-2','workshop',''],['0-4','drain',' 누가 두고 간 낚싯대가 난간에 기대어 있다.']]){const C=CELLS[k];C.p=C.p||[];if(!C.p.includes(id))C.p.push(id);if(more&&!C.d.includes(more.trim()))C.d+=more}
+
 function chaser(){const m=G.me;openScene({id:'chaser',title:'추격자',red:true,text:'골목 모퉁이에서 붉은 완장을 찬 사내 둘이 걸어온다. 한 명이 종이를 펼쳐 내 얼굴과 비교한다.',
   choices:[{l:'뛴다',s:'agi',run:()=>{const c=chk('agi',12);if(c.ok){done('따돌렸다','수로 쪽으로 뛰어 내려갔다. 발소리가 멀어진다.',[c.txt,...give({en:-1})])}else caught('발이 미끄러졌다. 목덜미를 붙잡혔다.',c.txt)}},
    {l:'모르는 척 지나간다',s:'talk',run:()=>{const c=chk('talk',13);if(c.ok)done('지나쳤다','「사람 잘못 봤소.」 사내들이 고개를 갸웃하더니 지나간다.',[c.txt]);else caught('「맞네.」',c.txt)}}]})}
@@ -951,11 +1123,11 @@ function doorbellEvent(){openScene({id:'doorbell',title:'문패 없는 집',text
   G.me&&G.me.items.bowl?{l:'「네 번째 그릇」에 국수를 담아 두고 온다 ($8)',run:()=>{if(G.me.money<8)return toast('돈이 모자라요.');G.me.money-=8;G.me.items.bowl--;G.me.bowlAt=T();log('네 번째 그릇에 국수를 담아 문패 없는 집 앞에 두고 왔다.','haunt');done('그릇','그릇을 문 앞에 내려놓았다. 김이 오르는 국수. 문 안쪽에서 수저 드는 소리가 났다.\n(내일 다시 와 보면…)',[])}}:null].filter(Boolean)})}
 
 /* ---------- 괴담 장소: 평소 → 흔적 → 조우 ---------- */
-function hauntRoll(id){const m=G.me;const tr=m.traces[id]||0;let pe=.08+.07*tr+(isBuild()?.15:0)+(m.mind<40?.1:0)+(isGate()?.2:0);if(G.opts.forceEnc)pe=1;
+function hauntRoll(id){const m=G.me;const tr=m.traces[id]||0;let pe=.08+.07*tr+(isBuild()?.15:0)+(m.mind<40?.1:0)+(isGate()?.2:0)+rumorBoost(id);if(G.opts.forceEnc)pe=1;
   const r=Math.random();if(r<pe)return'enc';if(r<pe+.2)return'trace';return'normal'}
 function addTrace(id){G.me.traces[id]=(G.me.traces[id]||0)+1}
 function resetTrace(id){G.me.traces[id]=0}
-function noodle(){const rooms=[2,4,7];openScene({id:'noodle',title:'국숫집',text:'저녁 시간인데 국숫집이 이상하게 한산하다.\n비어 있는 자리는 2번, 4번, 7번.\n4번 테이블에만 수저가 한 벌 더 놓여 있다.',choices:rooms.map(n=>({l:`${n}번 자리에 앉는다 ($8)`,run:()=>{const m=G.me;if(m.money<8)return toast('국숫값이 모자라요.');m.money-=8;
+function noodle(){const rooms=[2,4,7];openScene({id:'noodle',title:'국숫집',text:'저녁 시간인데 국숫집이 이상하게 한산하다.\n비어 있는 자리는 2번, 4번, 7번.\n4번 테이블에만 수저가 한 벌 더 놓여 있다.'+noodleHint(),choices:rooms.map(n=>({l:`${n}번 자리에 앉는다 ($${noodlePrice()})`,run:()=>{const m=G.me;const np=noodlePrice();if(m.money<np)return toast('국숫값이 모자라요.');m.money-=np;
   if(n!==4){const dl=daily(),en=dl.meal<3?3:0;if(en)dl.meal++;done('국수','김이 오르는 국수. 육수에서 생강 냄새가 난다. 오늘 하루가 조금 덜 젖은 것 같다.'+(en?'':'\n(오늘은 이미 세 번 먹어서 기력이 더 오르지 않는다)'),give({hp:10,mind:4,en}));return}
   discover('noodle');const r=hauntRoll('noodle');
   if(r==='normal'){const out=give({hp:6,mind:-5});done('4번 테이블','국수를 먹는 동안 맞은편 의자가 한 번 삐걱거렸다.\n아무도 앉아 있지 않았다.'+fearLine(),out,true)}
@@ -1063,9 +1235,9 @@ function stim(price,where){const m=G.me;if(!ready())return;const dl=daily();if(d
 const NUM=['','一','二','三','四','五','六','七','八','九'];
 const tile=n=>n===0?'白':NUM[n]+'萬';
 function mahjong(){if(!ready())return;const m=G.me;
-  openScene({id:'mj',title:'홍등루 · 마작 한 판',red:true,text:'초록 천 위로 패 섞는 소리. 딜러가 묻는다. 「얼마 걸겠소?」\n규칙: 서로 패를 한 장씩 받는다. 한 번 바꿀 수 있다. 숫자가 높은 쪽이 이기고, 같으면 딜러가 이긴다.',choices:[10,30,50].map(b=>({l:`$${b} 건다`+(m.money<b?(m.fac==='red'&&!m.fugitive?' (빚으로)':' (돈 부족)'):''),run:()=>{
-     if(m.money<b){if(m.fac==='red'&&!m.fugitive){m.debt+=b;m.money+=b;log(`마작 판돈 $${b}을 빚으로 걸었다.`,'fac')}else{toast('돈이 모자라요.');return}}
-     m.money-=b;mjDeal(b)}})).concat([{l:'일어선다',run:()=>done('홍등루','등 뒤에서 패 섞는 소리가 계속됐다.',[])}])})}
+  openScene({id:'mj',title:'홍등루 · 마작 한 판',red:true,text:(mjMul()>1?'딜러가 삼경 완장을 흘끗 본다. 「여기 사람이 아니잖아. 판돈은 두 배.」\n':'')+'초록 천 위로 패 섞는 소리. 딜러가 묻는다. 「얼마 걸겠소?」\n규칙: 서로 패를 한 장씩 받는다. 한 번 바꿀 수 있다. 숫자가 높은 쪽이 이기고, 같으면 딜러가 이긴다.',choices:[10,30,50].map(b=>({l:`$${b*mjMul()} 건다`+(m.money<b*mjMul()?(m.fac==='red'&&!m.fugitive?' (빚으로)':' (돈 부족)'):''),run:()=>{
+     if(m.money<b*mjMul()){if(m.fac==='red'&&!m.fugitive){m.debt+=b;m.money+=b;log(`마작 판돈 $${b}을 빚으로 걸었다.`,'fac')}else{toast('돈이 모자라요.');return}}
+     m.money-=b*mjMul();mjDeal(b)}})).concat([{l:'일어선다',run:()=>done('홍등루','등 뒤에서 패 섞는 소리가 계속됐다.',[])}])})}
 function mjDraw(){return chance(.04)?0:ri(1,9)}
 function mjDeal(bet){const mine=mjDraw();openScene({id:'mj2',title:'홍등루 · 마작 한 판',red:true,text:`내 패는 ${tile(mine)}.`+(mine===0?'\n아무것도 그려지지 않은 패. 이 판에 있을 리 없는 패다.':'')+`
 판돈 $${bet}.`,choices:[
@@ -1415,7 +1587,7 @@ function viewMap(){const m=G.me;const here=m?m.cell:null;const nz=nightZone();co
   const C=CELLS[here],[d,t]=cellDT(here);const places=(C.p||[]).filter(p=>p!=='laundry');
   out.unshift(h('div',{class:'card stack'},h('div',{class:'crumb mute',style:'font-size:12px'},'백계성 › '+DONGS[d]+' › '+TIERS[t].n),h('h2',{class:'disp',style:'font-size:28px'},C.n),h('p',{style:'margin:0;line-height:1.75;max-width:62ch'},C.d),h('p',{class:'mute',style:'margin:0;font-size:13px'},weather()[1]),
     h('div',{class:'wrap'},h('button',{class:'pri',onclick:explore},'둘러보기 (기력 1)'),
-      places.map(p=>PLACES[p].haunt?h('button',{onclick:()=>visit(p)},p==='noodle'?'국숫집 (기력 없이)':`${PLACES[p].n} (기력 1)`):p==='gamble'?[h('button',{onclick:mahjong},'마작 한 판 (기력 없이)'),m.fac==='free'&&!m.fugitive?h('button',{onclick:borrow},'빚을 지러 간다'):m.fac==='red'?h('button',{onclick:()=>payDebt(m.money)},'빚 갚기'):null]:p==='pawn'?h('button',{onclick:openPawn},'전당포'):p==='clinic'?h('button',{onclick:clinic},'삼경 의원'):p==='tea'?h('button',{onclick:openTea},'정문 차찬텡'):p==='fortune'?h('button',{onclick:fortune},'점쟁이 노파 ($5)'):null),
+      places.map(p=>PLACES[p].haunt?h('button',{onclick:()=>visit(p)},p==='noodle'?'국숫집 (기력 없이)':`${PLACES[p].n} (기력 1)`):p==='gamble'?[h('button',{onclick:mahjong},'마작 한 판 (기력 없이)'),m.fac==='free'&&!m.fugitive?h('button',{onclick:borrow},'빚을 지러 간다'):m.fac==='red'?h('button',{onclick:()=>payDebt(m.money)},'빚 갚기'):null]:p==='pawn'?h('button',{onclick:openPawn},'전당포'):p==='clinic'?h('button',{onclick:clinic},'삼경 의원'):p==='tea'?h('button',{onclick:openTea},'정문 차찬텡'):p==='fortune'?h('button',{onclick:fortune},'점쟁이 노파 ($5)'):PLACES[p].act?h('button',{onclick:()=>{if(ready())PLACES[p].act()}},typeof PLACES[p].btn==='function'?PLACES[p].btn():PLACES[p].btn):null),
       t===0?h('button',{onclick:breeze},'바람 쐬기 (기력 +2)'):null,
       here==='2-2'&&goalStage()>=3&&!m.bpDone?h('button',{style:'border-color:var(--tube);color:var(--tube)',onclick:openBlueprint},'인쇄소 뒤편, 어제 없던 문 (기력 1)'):null,
       here===cellKey(nz.d,1)?h('button',{style:'border-color:var(--tube);color:var(--tube)',onclick:enterNight},'새 계단을 오른다 (기력 3)'):null,
@@ -1427,10 +1599,10 @@ function viewMap(){const m=G.me;const here=m?m.cell:null;const nz=nightZone();co
 function openPawn(){if(!ready())return;const m=G.me;const own=Object.keys(m.items).filter(k=>m.items[k]>0&&k!=='anesth');
   openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'전당포'),h('button',{class:'ghost',onclick:closeModal},'닫기')),h('p',{class:'mute',style:'margin:0'},'「밤물건 삽니다. 어디서 났는지는 안 묻습니다.」 주인은 적등방에 보호비를 낸다.'),
     h('div',{class:'pl'},h('div',null,h('b',null,'뒷거래 각성제'),h('div',{class:'mute',style:'font-size:12.5px'},'기력 +4, 정신 -10, 가끔 섬망. 하루 2번')),h('button',{class:'sm',disabled:m.money<20,onclick:()=>stim(20,'전당포')},'$20')),
-    own.length?own.map(k=>h('div',{class:'pl'},h('div',null,h('b',null,ITEMS[k].n),` × ${m.items[k]}`,h('div',{class:'mute',style:'font-size:12.5px'},ITEMS[k].d)),h('button',{class:'sm',onclick:()=>{m.items[k]--;m.money+=ITEMS[k].v;if(m.fac==='red')m.merit+=2;log(`전당포에 「${ITEMS[k].n}」을(를) $${ITEMS[k].v}에 팔았다.`,'life');save();closeModal();render();toast(`$${ITEMS[k].v}를 받았다.`)}},`$${ITEMS[k].v}에 판다`))):h('p',{class:'mute'},'팔 밤물건이 없어요.')))}
+    own.length?own.map(k=>h('div',{class:'pl'},h('div',null,h('b',null,ITEMS[k].n),` × ${m.items[k]}`,h('div',{class:'mute',style:'font-size:12.5px'},ITEMS[k].d)),h('button',{class:'sm',onclick:()=>{m.items[k]--;m.money+=pawnV(k);if(m.fac==='red')m.merit+=2;log(`전당포에 「${ITEMS[k].n}」을(를) $${pawnV(k)}에 팔았다.`,'life');save();closeModal();render();toast(`$${pawnV(k)}를 받았다.`)}},`$${pawnV(k)}에 판다`))):h('p',{class:'mute'},'팔 밤물건이 없어요.')))}
 function clinic(){if(!ready())return;const m=G.me;const bad=(m.fx||[]).filter(f=>f.until>T()&&FXDEF[f.id].bad&&f.id!=='watched'&&f.id!=='followed');
   openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'삼경 의원'),h('button',{class:'ghost',onclick:closeModal},'닫기')),h('p',{class:'mute',style:'margin:0'},'소독약 냄새. 벽에 수칙이 빼곡하다.'),
-    h('div',{class:'pl'},h('div',null,h('b',null,'치료'),h('div',{class:'mute',style:'font-size:12.5px'},'체력 +30')),h('button',{class:'sm',disabled:m.money<20,onclick:()=>{m.money-=20;give({hp:30});save();closeModal();render();toast('치료를 받았다.')}},'$20')),
+    h('div',{class:'pl'},h('div',null,h('b',null,'치료'),h('div',{class:'mute',style:'font-size:12.5px'},'체력 +30')),h('button',{class:'sm',disabled:m.money<clinicPrice(),onclick:()=>{m.money-=clinicPrice();give({hp:30});save();closeModal();render();toast('치료를 받았다.')}},'$'+clinicPrice())),
     h('div',{class:'pl'},h('div',null,h('b',null,'각성제'),h('div',{class:'mute',style:'font-size:12.5px'},'기력 +4, 정신 -10, 가끔 섬망. 하루 2번')),h('button',{class:'sm',disabled:m.money<25,onclick:()=>stim(25,'삼경 의원')},'$25')),
     bad.map(f=>h('div',{class:'pl'},h('div',null,h('b',null,FXDEF[f.id].n+' 풀기'),h('div',{class:'mute',style:'font-size:12.5px'},FXDEF[f.id].d)),h('button',{class:'sm',disabled:m.money<30,onclick:()=>{m.money-=30;clearFx(f.id);if(m.fac==='sam')m.sam.cleanup=(m.sam.cleanup||0);save();closeModal();render();toast(FXDEF[f.id].n+'이(가) 풀렸다.')}},'$30')))))}
 function viewBoard(){const m=G.me;if(!m)return h('div',{class:'card empty'},'입주 신고 후 의뢰를 받을 수 있어요.');
@@ -1460,7 +1632,7 @@ function viewNote(){const m=G.me;const S=[...(typeof NOTICES!=='undefined'?[['no
   if(sub.note==='world')body=[h('div',{class:'paper stack'},h('span',{class:'lbl'},'백계성 안내 · 처음 온 사람에게'),...WORLD_NOTE.map(([a,b])=>h('div',null,h('b',{class:'disp'},a),h('p',{style:'margin:4px 0 0;line-height:1.75'},b)))),goalLore()];
   if(sub.note==='dex')body=dexBody();
   if(sub.note==='notice'&&typeof noticeBody==='function')body=noticeBody();
-  if(sub.note==='rules')body=[h('div',{class:'paper stack'},h('span',{class:'lbl'},'백계성 주민 수칙 · 계단참 게시판'),h('ol',{class:'rules'},RULES.map((t,i)=>h('li',null,h('span',null,h('span',{class:i===2&&m&&m.wrongRule?'strike':''},t),i===2&&m&&m.wrongRule?h('span',{class:'hand',style:'color:#8E2A1E;display:block'},'받지 말 것.'):null))))),
+  if(sub.note==='rules')body=[h('div',{class:'paper stack'},h('span',{class:'lbl'},'백계성 주민 수칙 · 계단참 게시판'),h('ol',{class:'rules'},RULES.map((t,i)=>h('li',null,h('span',null,h('span',{class:i===2&&m&&m.wrongRule?'strike':''},inkText(i,t)),i===2&&m&&m.wrongRule?h('span',{class:'hand',style:'color:#8E2A1E;display:block'},'받지 말 것.'):null))))),
     h('div',{class:'card stack'},h('span',{class:'lbl'},'내 수첩 · 겪어서 알게 된 것'),
       m&&m.hidden.length?m.hidden.map(k=>h('div',{class:'hand'},'· '+HIDDEN[k])):h('p',{class:'mute',style:'margin:0'},'아직 비어 있다.'),
       m&&(m.hints||[]).filter(k=>!m.hidden.includes(k)).map(k=>h('div',{class:'mute',style:'font-size:13px'},'· '+HIDDEN[k].split('.')[0]+'… (뒷말이 기억나지 않는다)')),
