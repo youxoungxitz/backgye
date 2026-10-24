@@ -1831,6 +1831,15 @@ function dmAdmin(){const box=h('div',{class:'stack',style:'gap:4px'},h('span',{c
     const rows=data||[];box.replaceChildren(...(rows.length?rows.map(x=>h('div',{style:'font-size:13px;padding:3px 0;border-bottom:1px solid var(--line)'},h('span',{class:'dim num',style:'font-size:11px'},mdhm(Date.parse(x.created_at))+' '),h('b',null,dmName(x.from_char)),' → ',h('b',null,dmName(x.to_char)),': ',x.text,h('button',{class:'ghost sm',style:'font-size:11px;padding:0 4px;margin-left:6px',onclick:async()=>{await sb.from('direct_messages').delete().eq('id',x.id);closeModal();openSettings()}},'지우기'))):[h('span',{class:'mute',style:'font-size:13px'},'아직 대화가 없어요.')]))});
   return h('details',{class:'card stack',style:'background:var(--sunk)'},h('summary',{style:'cursor:pointer'},h('span',{class:'lbl'},'1:1 대화 열람 (운영자만, 최근 150개)')),box)}
 
+/* 무전을 다시 그려도 쓰던 글자, 입력 위치, 읽던 스크롤이 유지되게 한다 */
+{const rawRenderChat=renderChat;renderChat=function(){const C=$('chatCard');const a=document.activeElement;const inC=!!(C&&a&&C.contains(a)&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'));
+  const keep={};if(C)C.querySelectorAll('input[id],textarea[id]').forEach(e=>{keep[e.id]=e.value});
+  const sel=inC?{el:a,id:a.id,s:a.selectionStart,e:a.selectionEnd}:null;const old=$('chlist');const nearBottom=!old||old.scrollHeight-old.scrollTop-old.clientHeight<48;const top=old?old.scrollTop:0;
+  rawRenderChat();
+  for(const id in keep){const e=document.getElementById(id);if(e&&!e.value&&keep[id])e.value=keep[id]}
+  if(sel){const e=document.contains(sel.el)?sel.el:(sel.id?document.getElementById(sel.id):null);if(e&&document.activeElement!==e){e.focus({preventScroll:true});try{e.setSelectionRange(sel.s,sel.e)}catch(x){}}}
+  if(!nearBottom)requestAnimationFrame(()=>{const l=$('chlist');if(l)l.scrollTop=top})}}
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
