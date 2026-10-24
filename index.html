@@ -1447,10 +1447,11 @@ function viewPeople(){const m=G.me;const q=(sub.q||'').trim();
     m?h('div',{class:'wrap'},h('button',{class:'sm',onclick:()=>openCard('me')},'내 주민증 보기 · 코드 공유')):null,search,
     h('div',{class:'roster'},m?h('button',{class:'rc',style:`--c:${m.color}`,onclick:()=>openSheet('me')},h('div',{class:'wrap'},avEl(m),h('div',null,h('b',{class:'disp',style:'font-size:18px'},m.name),h('div',{class:'mute',style:'font-size:12px'},rankLabel(m)))),m.quote?h('span',{class:'mute',style:'font-size:13px'},'“'+m.quote+'”'):null):null,
       list.map(id=>{const s=SAMPLES[id],r=relOf(id);return h('button',{class:'rc',style:`--c:${s.color}`,onclick:()=>openSheet(id)},h('div',{class:'wrap'},avEl(s),h('div',null,h('b',{class:'disp',style:'font-size:18px'},(s.name)),h('div',{class:'mute',style:'font-size:12px'},`${FACS[s.fac]}${s.rank?' · '+s.rank:''} · ${s.code}`))),h('span',{class:'mute',style:'font-size:13px'},'“'+s.quote+'”'),h('div',{class:'wrap'},h('span',{class:'tag amb'},'예시 주민'),r.friend?h('span',{class:'tag good'},STAGES[stageOf(r)]):r.req?h('span',{class:'tag'},'신청 보냄'):null,r.name?h('span',{class:'tag red'},r.name):null,h('span',{class:'tag'},CELLS[s.cell].n)))}))]}
-function viewNote(){const m=G.me;const S=[['world','세계'],['rules','수칙'],['items','밤물건'],['dex','도감'],['log','일지']];if(!S.some(x=>x[0]===sub.note))sub.note='world';
+function viewNote(){const m=G.me;const S=[...(typeof NOTICES!=='undefined'?[['notice','공지']]:[]),['world','세계'],['rules','수칙'],['items','밤물건'],['dex','도감'],['log','일지']];if(!S.some(x=>x[0]===sub.note))sub.note='world';
   const nav=h('div',{class:'wrap'},S.map(([k,n])=>h('button',{class:'sm'+(sub.note===k?' pri':''),onclick:()=>{sub.note=k;renderView()}},n)));let body;
   if(sub.note==='world')body=[h('div',{class:'paper stack'},h('span',{class:'lbl'},'백계성 안내 · 처음 온 사람에게'),...WORLD_NOTE.map(([a,b])=>h('div',null,h('b',{class:'disp'},a),h('p',{style:'margin:4px 0 0;line-height:1.75'},b)))),goalLore()];
   if(sub.note==='dex')body=dexBody();
+  if(sub.note==='notice'&&typeof noticeBody==='function')body=noticeBody();
   if(sub.note==='rules')body=[h('div',{class:'paper stack'},h('span',{class:'lbl'},'백계성 주민 수칙 · 계단참 게시판'),h('ol',{class:'rules'},RULES.map((t,i)=>h('li',null,h('span',null,h('span',{class:i===2&&m&&m.wrongRule?'strike':''},t),i===2&&m&&m.wrongRule?h('span',{class:'hand',style:'color:#8E2A1E;display:block'},'받지 말 것.'):null))))),
     h('div',{class:'card stack'},h('span',{class:'lbl'},'내 수첩 · 겪어서 알게 된 것'),
       m&&m.hidden.length?m.hidden.map(k=>h('div',{class:'hand'},'· '+HIDDEN[k])):h('p',{class:'mute',style:'margin:0'},'아직 비어 있다.'),
@@ -1637,9 +1638,11 @@ function wallEl(k){if(!WALLS[k]){WALLS[k]=[];if(sb)loadWall(k)}const list=walls(
       ghost?h('div',{class:'hand',style:'font-size:14.5px;opacity:.7'},pick(['여기 계단 하나 더 있었는데','너 어제도 여기 왔잖아','문 열지 마','몇 층 사세요?']),h('span',{class:'dim',style:'font-family:var(--f-body);font-size:11px;margin-left:8px'},'아는 사람')):null,
       !list.length&&!ghost?h('div',{class:'mute',style:'font-size:13px'},'아무것도 적혀 있지 않다.'):null,
       G.me?h('form',{class:'composer',onsubmit:async e=>{e.preventDefault();const v=inp.value.trim();if(!v)return;const{error}=await sb.from('wall_posts').insert({cell:k,character_id:G.me.id,text:hasFx('gum')?gumify(v):v});if(error)return toast('적지 못했어요.');inp.value='';loadWall(k)}},inp,h('button',{type:'submit'},'적는다')):null))}
-async function loadNotices(){const{data}=await sb.from('notices').select('*').order('created_at',{ascending:false}).limit(5);NOTICES=data||[];if(tab==='map')renderView()}
-function noticeEl(){const n=NOTICES[0];if(!n)return null;const p=n.author&&(SAMPLES[n.author]||(G.me&&G.me.id===n.author?G.me:null));
-  return h('div',{class:'card stack',style:'border-color:var(--lantern)'},h('div',{class:'row'},h('span',{class:'lbl'},'방주 공지'),h('span',{class:'dim num',style:'font-size:11px'},mdhm(Date.parse(n.created_at)))),h('p',{style:'margin:0;white-space:pre-wrap;line-height:1.7'},n.text),p?h('span',{class:'mute',style:'font-size:12px'},'— '+p.name):null)}
+async function loadNotices(){const{data}=await sb.from('notices').select('*').order('created_at',{ascending:false}).limit(20);NOTICES=data||[];if(tab==='map')renderView()}
+function noticeAuthor(n){return n.author&&(SAMPLES[n.author]||(G.me&&G.me.id===n.author?G.me:null))}
+function noticeCard(n,full){const p=noticeAuthor(n);return h('div',{class:'card stack',style:'border-color:var(--lantern)'},h('div',{class:'row'},h('span',{class:'lbl'},'방주 공지'),h('span',{class:'wrap',style:'gap:6px'},h('span',{class:'dim num',style:'font-size:11px'},mdhm(Date.parse(n.created_at))),full?null:h('button',{class:'ghost sm',title:'닫기',onclick:()=>{G.opts.noticeSeen=n.id;save();renderView();toast('공지는 수첩 「공지」 탭에서 다시 볼 수 있어요.')}},'닫기 ✕'))),h('p',{style:'margin:0;white-space:pre-wrap;line-height:1.7'},n.text),p?h('span',{class:'mute',style:'font-size:12px'},'— '+p.name):null)}
+function noticeEl(){const n=NOTICES[0];if(!n||G.opts.noticeSeen===n.id)return null;return noticeCard(n,false)}
+function noticeBody(){return NOTICES.length?NOTICES.map(n=>noticeCard(n,true)):[h('div',{class:'card empty'},'아직 공지가 없어요.')]}
 
 /* ---------- 실시간 ---------- */
 function subscribe(){sb.channel('baekgye').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},pl=>{const x=pl.new;if(CHAT[x.channel]&&!CHAT[x.channel].some(y=>y.id===x.id)){CHAT[x.channel].push(x);if(CHAT[x.channel].length>120)CHAT[x.channel].shift()}if(!SAMPLES[x.character_id]&&G.me&&x.character_id!==G.me.id)loadOthers();if(chKey()===x.channel)renderChat()})
