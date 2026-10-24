@@ -1678,7 +1678,7 @@ function openSettings(){const o=G.opts;
     h('label',{class:'row'},h('span',null,'공포 연출 약하게',h('div',{class:'mute',style:'font-size:12px'},'화면 깜빡임과 증축 시간 연출을 끕니다')),h('input',{type:'checkbox',style:'width:auto',checked:o.soft?true:null,onchange:e=>{o.soft=e.target.checked;save();render()}})),
     h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},'계정'),h('span',{class:'mute',style:'font-size:13px'},AUTH?AUTH.email:''),h('form',{class:'composer',onsubmit:async e=>{e.preventDefault();if(pw.value.length<8)return toast('8자 이상으로 정해 주세요.');const{error}=await sb.auth.updateUser({password:pw.value});toast(error?'바꾸지 못했어요.':'비밀번호를 바꿨어요.');pw.value=''}},pw,h('button',{type:'submit',class:'sm'},'비밀번호 변경')),
       h('div',{class:'wrap'},h('button',{class:'sm',onclick:async()=>{await flush();closeModal();showSlots()}},'캐릭터 바꾸기'),h('button',{class:'sm',onclick:async()=>{await flush();await sb.auth.signOut();location.reload()}},'로그아웃')))];
-  if(isAdminUser())body.push(adminTools());
+  body.push(suggestEntry());if(isAdminUser())body.push(adminTools(),suggestAdmin());
   openModal(h('div',{class:'stack'},body))}
 function adminTools(){const o=G.opts;const nt=h('textarea',{id:'noticeIn',maxlength:600,placeholder:'방주 공지 내용'});const ic=h('input',{id:'inviteIn',placeholder:'새 초대 코드 (예: BAAK-0404)',maxlength:30});const iu=h('input',{id:'inviteUses',type:'number',min:'1',value:'1',style:'width:80px'});
   const codes=h('div',{class:'stack',style:'gap:4px;font-size:13px'},h('span',{class:'mute'},'불러오는 중…'));
@@ -1767,6 +1767,26 @@ async function loadRadio(){RADIO_AT=Date.now();if(!sb||!G.me)return;const{data}=
 function radioStories(){if(Date.now()-RADIO_AT>300e3&&G.me)loadRadio();return RADIO.filter(x=>!x.hidden)}
 async function radioSend(signer,text){const{error}=await sb.from('radio_stories').insert({character_id:G.me.id,signer,text});if(error){toast('보내지 못했어요.');return false}await loadRadio();return true}
 async function radioHide(id){await sb.from('radio_stories').update({hidden:true}).eq('id',id);loadRadio()}
+
+/* ---------- 익명 건의함 ---------- */
+const SUG_CATS=['기능','버그','밸런스','기타'];
+function sugCount(){try{const o=JSON.parse(localStorage.getItem('baekgye-sug')||'{}');return o.d===dayIdx(Date.now())?o.n:0}catch(e){return 0}}
+function sugBump(){try{localStorage.setItem('baekgye-sug',JSON.stringify({d:dayIdx(Date.now()),n:sugCount()+1}))}catch(e){}}
+function suggestEntry(){return h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},'건의함'),h('p',{class:'mute',style:'margin:0;font-size:12.5px'},'「이런 게 있었으면 좋겠다」, 버그, 밸런스 의견을 익명으로 남길 수 있어요.'),h('button',{class:'sm',onclick:()=>{closeModal();openSuggest()}},'익명으로 건의하기'))}
+function openSuggest(){let cat='기능';const tx=h('textarea',{id:'sugText',maxlength:1000,rows:6,placeholder:'자유롭게 적어 주세요. (1000자)'});const err=h('p',{style:'margin:0;font-size:13px;color:var(--bad)'});
+  const cats=h('div',{class:'wrap'});const drawCats=()=>cats.replaceChildren(...SUG_CATS.map(c=>h('button',{type:'button',class:'sm'+(c===cat?' pri':''),onclick:()=>{cat=c;drawCats()}},c)));drawCats();
+  openModal(h('form',{class:'stack',onsubmit:async e=>{e.preventDefault();const t=tx.value.trim();if(!t){err.textContent='내용을 적어 주세요.';return}if(sugCount()>=5){err.textContent='오늘은 건의를 많이 보냈어요. 내일 다시 보내 주세요.';return}
+      const{error}=await sb.from('suggestions').insert({category:cat,text:t});if(error){err.textContent='보내지 못했어요. 잠시 후 다시 시도해 주세요.';return}sugBump();closeModal();toast('건의를 보냈어요. 고마워요!')}},
+    h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'익명 건의함'),h('button',{type:'button',class:'ghost',onclick:closeModal},'닫기')),
+    h('p',{class:'mute',style:'margin:0;font-size:13px;line-height:1.7'},'운영자만 읽어요. 누가 썼는지, 어느 캐릭터로 썼는지는 저장되지 않고 보낸 날짜만 남아요.'),
+    h('span',{class:'lbl'},'종류'),cats,tx,err,h('button',{type:'submit',class:'pri'},'보낸다')))}
+function suggestAdmin(){const box=h('div',{class:'stack',style:'gap:6px'},h('span',{class:'mute',style:'font-size:13px'},'불러오는 중…'));const ST={new:'새 건의',seen:'확인함',done:'반영함'};
+  const load=async()=>{const{data,error}=await sb.from('suggestions').select('*').order('id',{ascending:false}).limit(60);if(error){box.replaceChildren(h('span',{class:'mute',style:'font-size:13px'},'건의함 테이블이 아직 없어요. 5_suggestions.sql을 실행해 주세요.'));return}
+    const rows=data||[];box.replaceChildren(...(rows.length?rows.map(x=>h('div',{class:'stack',style:'gap:4px;padding:8px 0;border-bottom:1px solid var(--line)'},
+      h('div',{class:'row'},h('span',{class:'wrap',style:'gap:6px'},h('span',{class:'tag'+(x.status==='new'?' red':x.status==='done'?' good':'')},ST[x.status]),h('span',{class:'tag'},x.category)),h('span',{class:'dim num',style:'font-size:11px'},x.created_on)),
+      h('p',{style:'margin:0;white-space:pre-wrap;line-height:1.6;font-size:13.5px'},x.text),
+      h('div',{class:'wrap',style:'gap:4px'},['seen','done'].filter(s=>s!==x.status).map(s=>h('button',{class:'sm',onclick:async()=>{await sb.from('suggestions').update({status:s}).eq('id',x.id);load()}},ST[s]+'으로')),h('button',{class:'sm ghost',onclick:async()=>{await sb.from('suggestions').delete().eq('id',x.id);load()}},'지우기')))):[h('span',{class:'mute',style:'font-size:13px'},'아직 들어온 건의가 없어요.')]))};
+  load();return h('details',{class:'card stack',style:'background:var(--sunk)'},h('summary',{style:'cursor:pointer'},h('span',{class:'lbl'},'건의함 (운영자만 보여요)')),box)}
 
 /* ---------- 시작 ---------- */
 async function boot(){
