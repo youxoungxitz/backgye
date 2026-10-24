@@ -1173,17 +1173,30 @@ function sfx(name){if(!sndOn()||!SFX[name])return;const c=acInit();if(!c||c.stat
 const SCENE_SFX={phone:'phone',pager:'pager',well2:'static',myvoice:'static',tv:'static',antenna:'static',knock:'knock',bellfour:'bell',gate:'bell',doorbell2:'knock'};
 function sceneSfx(sc){const s=sc&&SCENE_SFX[sc.id];if(s)sfx(s)}
 /* 배경음: 비 오는 날 빗소리, 늘 낮게 깔리는 형광등 소리, 증축 시간의 먼 망치 소리 */
+let RAIN_PREVIEW=0;
 function ambUpdate(){if(!AC||AC.state!=='running')return;const want=sndOn()&&G.opts.amb!==false;
-  if(!AMB){AMB={rain:AC.createGain(),hum:AC.createGain()};const rs=AC.createBufferSource(),rf=AC.createBiquadFilter();rs.buffer=NOISE;rs.loop=true;rf.type='lowpass';rf.frequency.value=1400;rs.connect(rf);rf.connect(AMB.rain);AMB.rain.connect(MASTER);rs.start();
-    const ho=AC.createOscillator(),hf=AC.createBiquadFilter();ho.type='sawtooth';ho.frequency.value=60;hf.type='lowpass';hf.frequency.value=180;ho.connect(hf);hf.connect(AMB.hum);AMB.hum.connect(MASTER);ho.start();AMB.rain.gain.value=0;AMB.hum.gain.value=0}
-  const t=AC.currentTime,rain=want&&G.me&&weather()[0]==='비'?.07:0,hum=want&&G.me?.012:0;MASTER.gain.value=sndVol();
-  AMB.rain.gain.setTargetAtTime(rain,t,1.5);AMB.hum.gain.setTargetAtTime(hum,t,1.5)}
+  if(!AMB){AMB={};const sr=AC.sampleRate,len=sr*4,bb=AC.createBuffer(1,len,sr),bd=bb.getChannelData(0);let last=0;for(let i=0;i<len;i++){last=(last+0.02*(Math.random()*2-1))/1.02;bd[i]=last*3.5}
+    // 빗소리 바닥: 갈색 잡음을 낮게 깔고, 아주 느리게 세기가 오르내리게 한다
+    AMB.rain=AC.createGain();AMB.rain.gain.value=0;const bed=AC.createBufferSource();bed.buffer=bb;bed.loop=true;const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=650;
+    const gust=AC.createGain();gust.gain.value=.8;const lfo=AC.createOscillator(),lg=AC.createGain();lfo.frequency.value=.07;lg.gain.value=.25;lfo.connect(lg);lg.connect(gust.gain);lfo.start();
+    bed.connect(lp);lp.connect(gust);gust.connect(AMB.rain);
+    // 처마에 부딪히는 잔빗소리: 흰 잡음을 좁게 거른 것을 아주 작게
+    const hs=AC.createBufferSource();hs.buffer=NOISE;hs.loop=true;const bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1800;bp.Q.value=.6;const hg=AC.createGain();hg.gain.value=.12;hs.connect(bp);bp.connect(hg);hg.connect(AMB.rain);
+    AMB.rain.connect(MASTER);bed.start();hs.start();
+    AMB.hum=AC.createGain();AMB.hum.gain.value=0;const ho=AC.createOscillator(),hf=AC.createBiquadFilter();ho.type='sawtooth';ho.frequency.value=60;hf.type='lowpass';hf.frequency.value=180;ho.connect(hf);hf.connect(AMB.hum);AMB.hum.connect(MASTER);ho.start()}
+  const t=AC.currentTime;AMB.raining=(want&&G.me&&weather()[0]==='비')||RAIN_PREVIEW>Date.now();MASTER.gain.value=sndVol();
+  AMB.rain.gain.setTargetAtTime(AMB.raining?.16:0,t,2);AMB.hum.gain.setTargetAtTime(want&&G.me?.012:0,t,1.5)}
+/* 빗방울 하나하나와 처마 물방울 */
+function drop(t,peak){const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=NOISE;f.type='bandpass';f.frequency.value=1500+Math.random()*3500;f.Q.value=1.5+Math.random()*2;env(g,t,.002,peak,.02+Math.random()*.03);s.connect(f);f.connect(g);g.connect(MASTER);s.start(t,Math.random()*1.5);s.stop(t+.1)}
+function drip(t){const o=AC.createOscillator(),g=AC.createGain();const f0=700+Math.random()*500;o.type='sine';o.frequency.setValueAtTime(f0*1.25,t);o.frequency.exponentialRampToValueAtTime(f0,t+.05);env(g,t,.002,.05,.18);o.connect(g);g.connect(MASTER);o.start(t);o.stop(t+.3)}
+setInterval(()=>{if(!AMB||!AMB.raining||!AC||AC.state!=='running'||document.hidden)return;const t=AC.currentTime+.05;const n=3+Math.floor(Math.random()*6);for(let i=0;i<n;i++)drop(t+Math.random()*.3,.012+Math.random()*.03);if(Math.random()<.12)drip(t+Math.random()*.3)},300);
 setInterval(()=>{ambUpdate();if(sndOn()&&G.opts.amb!==false&&G.me&&isBuild()&&!G.opts.soft&&chance(.25)){if(AC&&AC.state==='running'){const keep=MASTER.gain.value;MASTER.gain.value=keep*.35;sfx('hammer');setTimeout(()=>{MASTER.gain.value=sndVol()},3000)}}},8000);
 function soundSettings(){const o=G.opts;const vol=h('input',{type:'range',min:'0',max:'1',step:'0.05',value:String(sndVol()),style:'width:140px',oninput:e=>{o.vol=+e.target.value;if(MASTER)MASTER.gain.value=o.vol;save()},onchange:()=>sfx('pager')});
   return h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},'소리'),
     h('label',{class:'row'},h('span',null,'효과음',h('div',{class:'mute',style:'font-size:12px'},'삐삐, 전화벨, 망치 소리, 종소리 같은 효과음')),h('input',{type:'checkbox',style:'width:auto',checked:sndOn()?true:null,onchange:e=>{o.sound=e.target.checked;save();if(o.sound){acInit();if(AC)AC.resume().then(()=>{sfx('pager');ambUpdate()})}else ambUpdate()}})),
     h('label',{class:'row'},h('span',null,'배경음',h('div',{class:'mute',style:'font-size:12px'},'비 오는 날 빗소리, 형광등 소리, 증축 시간의 먼 망치 소리')),h('input',{type:'checkbox',style:'width:auto',checked:G.opts.amb!==false?true:null,onchange:e=>{o.amb=e.target.checked;save();ambUpdate()}})),
-    h('label',{class:'row'},h('span',null,'음량'),vol))}
+    h('label',{class:'row'},h('span',null,'음량'),vol),
+    h('button',{class:'sm',onclick:()=>{acInit();if(!AC)return;AC.resume().then(()=>{RAIN_PREVIEW=Date.now()+12000;ambUpdate();setTimeout(ambUpdate,12500)})}},'빗소리 미리 듣기 (12초)'))}
 
 {const f0=pagerRing;pagerRing=function(p){sfx('pager');return f0(p)}}
 /* 상태 효과 설명: 태그를 누르면 무슨 효과인지 보여 준다 */
