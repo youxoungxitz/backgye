@@ -392,7 +392,7 @@ const hasFx=id=>(G.me&&G.me.fx||[]).some(f=>f.id===id&&f.until>T());
 function addFx(id){const m=G.me;m.fx=(m.fx||[]).filter(f=>f.id!==id&&f.until>T());m.fx.push({id,until:T()+ms(FXDEF[id].min)});if(id==='delirium')fakeLog()}
 function clearFx(id){G.me.fx=(G.me.fx||[]).filter(f=>f.id!==id)}
 const homeCell=m=>m.fac==='red'&&!m.fugitive?'1-1':m.fac==='sam'?'2-1':'0-1';
-function tick(){const m=G.me;if(!m)return;const now=T();dailyBonus();roomNight();ghostPager();if(G.opts.infEn)m.en=EN_MAX;
+function tick(){const m=G.me;if(!m)return;const now=T();dailyBonus();prologueCheck();roomNight();ghostPager();if(G.opts.infEn)m.en=EN_MAX;
   if(m.en>=EN_MAX)m.enAt=now;else{const g=Math.floor((now-m.enAt)/enEvery());if(g>0){m.en=Math.min(EN_MAX,m.en+g);m.enAt=m.en>=EN_MAX?now:m.enAt+g*enEvery()}}
   const hrs=(now-(m.ts||now))/HOUR*(fast()?60:1);m.ts=now;
   if(hrs>0){if(!hasFx('sick'))m.hp=Math.min(100,m.hp+hrs*3);if(m.cell===homeCell(m))m.mind=Math.min(100,m.mind+hrs*4)}
@@ -428,12 +428,12 @@ function give(rw){const m=G.me,out=[];if(!rw)return out;
   return out}
 function discover(id){const m=G.me;if(m.hidden.includes(id))return false;m.hidden.push(id);toast('수첩에 손글씨가 늘었다.');log(`수첩에 적었다: 「${HIDDEN[id]}」`,'haunt');return true}
 function fearLine(){const f=G.me.fear;return f&&FEAR_LINES[f]?'\n\n'+pick(FEAR_LINES[f]):''}
-function flicker(){if(G.opts.soft)return;document.body.classList.remove('flicker');void document.body.offsetWidth;document.body.classList.add('flicker');setTimeout(()=>document.body.classList.remove('flicker'),6000)}
+function flicker(){if(G.opts.soft)return;sfx('flicker');document.body.classList.remove('flicker');void document.body.offsetWidth;document.body.classList.add('flicker');setTimeout(()=>document.body.classList.remove('flicker'),6000)}
 function spend(n){const m=G.me;if(G.opts.infEn){m.en=EN_MAX;return true}if(m.en<n){toast(`기력이 모자라요. ${fast()?'5초':'5분'}마다 1씩 차요. 국숫집·차찬텡·옥상 바람·낮잠으로도 채울 수 있어요.`);return false}if(m.en>=EN_MAX)m.enAt=T();m.en-=n;return true}
 function daily(){const d=dayIdx(T());if(!G.me.daily||G.me.daily.d!==d)G.me.daily={d,meal:0,nap:0,stim:0,rest:0};return G.me.daily}
 function ready(){if(!G.me){toast('먼저 캐릭터를 등록해 주세요.');return false}if(G.me.nap){toast(`자는 중이에요. ${dur(G.me.nap.until-T())} 뒤에 깨요.`);return false}if(scene){toast('지금 장면부터 마무리해 주세요.');return false}return true}
 function done(title,text,lines,bad){if(DEX_DN[title])dexAdd('dn:'+title);if(PARTY)lines=partyDone(title,lines);result={title,text,lines:lines||[],bad:!!bad};scene=null;save();render();window.scrollTo({top:0,behavior:'smooth'})}
-function openScene(sc,keep){if(sc&&DEX_SC[sc.id])dexAdd('sc:'+sc.id);scene=sc;if(!keep)result=null;save();render();window.scrollTo({top:0,behavior:'smooth'})}
+function openScene(sc,keep){sceneSfx(sc);if(sc&&DEX_SC[sc.id])dexAdd('sc:'+sc.id);scene=sc;if(!keep)result=null;save();render();window.scrollTo({top:0,behavior:'smooth'})}
 
 /* ---------- 이동 ---------- */
 function move(k){if(!ready())return;const m=G.me;if(k===m.cell)return;const[d,t]=cellDT(k);
@@ -783,7 +783,7 @@ const goalStage=()=>GOALS.filter(g=>clueTotal()>=g[0]).length;
 function goalEl(){const n=clueTotal(),st=goalStage(),next=GOALS[st],m=G.me;const unclaimed=m&&(m.goalClaim||0)<st;
   return h('div',{class:'card stack'},h('div',{class:'row'},h('span',{class:'lbl'},'설계도 · 성채 공동 목표'),h('span',{class:'mute num',style:'font-size:12px'},`${st} / ${GOALS.length}장`)),
     next?meter('성채 전체가 모은 조각',n,next[0],'var(--tube)',`${n} / ${next[0]}`):h('p',{style:'margin:0'},`모든 장이 풀렸다. 모인 조각 ${n}개.`),
-    h('p',{class:'mute',style:'margin:0;font-size:12.5px'},next?`모두의 설계도 조각을 합쳐 ${next[0]}개가 되면 「${next[1]}」이 풀려요. 풀린 장은 수첩 「세계」 탭에서 읽을 수 있어요.`:'수첩 「세계」 탭에서 풀린 장을 읽을 수 있어요.'),
+    h('p',{class:'mute',style:'margin:0;font-size:12.5px'},next?`모두의 설계도 조각을 합쳐 ${next[0]}개가 되면 「${next[1]}」이 풀려요. 풀린 장은 수첩 「설계도」 탭에서 읽을 수 있어요.`:'수첩 「설계도」 탭에서 풀린 장을 읽을 수 있어요.'),
     unclaimed?h('button',{class:'sm pri',onclick:claimGoal},`「${GOALS[m.goalClaim||0][1]}」 몫 받기 · $100`):null)}
 function claimGoal(){const m=G.me;if(!m||(m.goalClaim||0)>=goalStage())return;const g=GOALS[m.goalClaim||0];m.goalClaim=(m.goalClaim||0)+1;const out=give({money:100});log(`설계도 「${g[1]}」이 풀렸다.`,'haunt');done('설계도 · '+g[1],g[2],out)}
 function goalLore(){const st=goalStage();return h('div',{class:'card stack'},h('span',{class:'lbl'},'설계도에 적힌 것'),
@@ -861,7 +861,7 @@ function pagerMarkRead(){pagesAll().forEach(p=>{if(p.to==='me')p.read=true});sav
 function pagerRing(p){const s=SAMPLES[p.from];toast(`삐삐가 떤다 · ${s?s.name:'모르는 번호'}: ${p.body}${pagerMean(p.body)}`)}
 function ghostPages(){const m=G.me;return(m&&m.ghostp)||[]}
 function ghostPager(){const m=G.me;if(!m)return;const d=dayIdx(T()),hr=hour();if(m.ghostDay===d||(hr>=4&&hr<22))return;m.ghostDay=d;if(!chance(.3))return;
-  m.ghostp=[{id:'g'+T(),t:T(),body:'0404',read:false},...ghostPages()].slice(0,3);toast('삐삐가 떤다. 모르는 번호. 0404.')}
+  m.ghostp=[{id:'g'+T(),t:T(),body:'0404',read:false},...ghostPages()].slice(0,3);sfx('pager');toast('삐삐가 떤다. 모르는 번호. 0404.')}
 function pagerUnread(){return pagesAll().filter(p=>p.to==='me'&&!p.read&&p.kind!=='party').length+ghostPages().filter(g=>!g.read).length}
 function pagerLabel(){const b=$('btnPager');if(!b)return;b.hidden=!G.me;const n=G.me?pagerUnread():0;b.textContent=n?`삐삐 ${n}`:'삐삐';b.style.color=n?'var(--bad)':''}
 function openPager(){const m=G.me;if(!m)return;const friends=Object.keys(G.rel||{}).filter(k=>G.rel[k].friend&&SAMPLES[k]);
@@ -901,7 +901,7 @@ function radioExtra(){const out=[],m=G.me,day=dayIdx(T()),mid=day*DAY-KST,st=rad
 $('btnPager')&&($('btnPager').onclick=openPager);
 
 function guardUse(){if(!hasFx('guarded'))return false;clearFx('guarded');log('망치 소리가 다가오는데 누군가 내 앞을 막아섰다. 소리가 비켜 갔다.','haunt');toast('지켜보는 사람이 증축 피해를 한 번 막아 줬어요. (효과 해제)');return true}
-function buildEvent(){const m=G.me;flicker();const d=dayIdx(T());if(m.buildDay!==d){m.buildDay=d;m.buildN=0;m.tapeGot=false}m.buildN++;
+function buildEvent(){const m=G.me;flicker();sfx('hammer');const d=dayIdx(T());if(m.buildDay!==d){m.buildDay=d;m.buildN=0;m.tapeGot=false}m.buildN++;
   log('증축 시간에 밖에 있었다. 수칙 1번을 어겼다.','haunt');
   if(m.buildN===1){const tape=!m.tapeGot&&chance(.35);if(tape)m.tapeGot=true;const out=give({mind:-10,item:tape?'tape':null});
     done('망치 소리',`쿵. 쿵. 쿵.\n벽 안쪽에서 망치 소리가 난다. 콘크리트 굳는 냄새가 복도에 번진다.\n${tape?'카세트 녹음 버튼을 누르고 있었다는 걸 나중에 알았다.':'소리가 멎었을 때, 방금 지나온 복도 끝에 문이 하나 늘어 있었다.'}`+fearLine(),out,true);return}
@@ -1023,7 +1023,7 @@ function smokeAct(){if(!capOK('smoke',3,'오늘은 담배를 많이 피웠어요
   const rm=setRumor();done('담배 한 대',`적등방 사람들 틈에서 담배를 나눠 피웠다. 누군가 지나가듯 말한다.\n「${rm}」`,[...give({mind:3,en:1}),'소문: 그곳의 조우 확률이 오늘 올라요'])}
 function bellAct(){if(hour()!==2)return toast('종은 새벽 2시대(2:00~2:59)에만 칠 수 있어요. 증축 바로 전이에요.');if(!capOK('bell',1,'오늘은 이미 종을 쳤어요.'))return;capUse('bell');
   if(chance(.2)){flicker();playEv(V12,'bellfour');return}
-  addFx('bell');done('종 치기','녹슨 종이 무겁게 한 번 운다. 소리가 성채 구석구석으로 번져 나간다.\n아래층 어딘가에서 망치 소리가 잠깐 멈췄다.',['종소리 (증축 피해 1번 막음)'])}
+  sfx('bell');addFx('bell');done('종 치기','녹슨 종이 무겁게 한 번 운다. 소리가 성채 구석구석으로 번져 나간다.\n아래층 어딘가에서 망치 소리가 잠깐 멈췄다.',['종소리 (증축 피해 1번 막음)'])}
 function cageAct(){if(!capOK('cage',2,'옆 칸이 조용하다. 오늘은 더 말을 걸지 않는 게 좋겠다.'))return;capUse('cage');const r=Math.random();
   if(r<.25){playEv(V12,'neighbor');return}
   if(r<.4){done('옆 칸','옆 칸 사람이 철망 틈으로 꼬깃꼬깃한 종이를 밀어 준다. 「주웠어. 너 이런 거 모으지?」',give({clue:1}));return}
@@ -1080,6 +1080,133 @@ Object.assign(PLACES,{
 Object.assign(PLACES.office,{btn:()=>isRed()?'장부 열람 (하루 1번)':'철문 옆 금고',act:officeAct});
 for(const[k,id,more]of[['0-0','pigeon',' 옥상 한쪽에 비둘기장이 있다.'],['1-0','smoke',''],['2-0','bell',''],['3-0','antenna',''],['0-1','cage',''],['1-1','redhall',''],['2-1','samboard',''],['0-2','factory',' 문에 「야간 작업자 구함」 종이가 붙어 있다.'],['2-2','printshop',''],['3-2','workshop',''],['0-4','drain',' 누가 두고 간 낚싯대가 난간에 기대어 있다.']]){const C=CELLS[k];C.p=C.p||[];if(!C.p.includes(id))C.p.push(id);if(more&&!C.d.includes(more.trim()))C.d+=more}
 
+/* ---------- 수첩 「세계」: 사이트용 세계관 ---------- */
+const WORLD_CH=[
+['들어가며',['레이란에는 오늘도 비가 내린다. 항구 쪽 크레인 불빛이 빗물에 번져 뿌옇게 보이고, 착륙하려는 여객기가 지붕에 닿을 것처럼 낮게 머리 위를 지나간다. 비행기 소리가 멀어지고 나면 빗소리만 남는다.',
+ '항구와 시가지 사이에 지도에는 나오지 않는 덩어리가 하나 있다. 처음 보는 사람은 그게 건물이라는 걸 바로 알아채지 못한다. 창문 옆에 또 창문이 붙어 있고, 베란다 위에는 누가 방을 하나 더 얹어 놓았고, 그 위로는 빨랫줄과 안테나가 빽빽하게 뻗어 있다. 아파트 여러 채가 서로 기대어 자라다가 한 덩어리로 굳어 버린 것처럼 보인다. 사람들은 그곳을 백계성(百階城)이라고 부른다. 계단이 백 개라서 붙은 이름이라는데, 끝까지 세어 본 사람은 없다.',
+ '정문 골목으로 들어서면 빗소리가 한 겹 멀어진다. 대신 물 떨어지는 소리가 사방에서 들린다. 처마 끝에서, 녹슨 배관에서, 누가 걷지 않은 빨래에서. 어묵 튀기는 기름 냄새와 젖은 타일 냄새, 어디선가 피우는 향 냄새가 한데 섞여 코끝에 끈적하게 달라붙는다. 머리 위 형광등은 지지직 소리를 내며 깜빡이고, 벽에는 누렇게 바랜 종이 한 장이 붙어 있다.',
+ '「백계성 주민 수칙. 새벽 3시에서 4시 사이 망치 소리가 들리면 방에 머물 것.」',
+ '골목 안쪽으로 붉은 등이 줄지어 매달려 있다. 등 아래 서 있던 사내들이 새로 들어온 사람의 얼굴을 한 번씩 훑어본다. 빚을 질 사람인지, 돈을 낼 손님인지 가늠하는 눈이다. 반대편 종루 쪽 계단에서는 완장을 찬 사람들이 손전등을 들고 오르내린다. 밤이 깊어지면 성채에서 밖을 돌아다니는 사람은 그들뿐이다.',
+ '누군가 지나가면서 낮게 말한다.',
+ '「여기 처음이지? 빚은 적등방이 받으러 오고, 밤에는 삼경이 돌아. 그것만 알아 두면 돼. 아, 그리고 새벽 세 시엔 절대 밖에 나오지 마.」']],
+['백계성과 레이란',['레이란은 바다를 끼고 있는 항구도시다. 배가 들어오면 물건이 들어오고, 사람도 같이 들어온다. 그렇게 들어온 사람 중 몇은 다시 나가지 못하고 성채로 흘러든다.',
+ '백계성이 서 있는 땅은 오래전에 맺은 조약이 꼬이는 바람에 어느 나라 땅도 아니게 되었다. 그래서 레이란 경찰은 정문 앞까지만 오고 그 안으로는 들어오지 않는다. 세금을 걷으러 오는 사람도, 건축 허가를 내주는 사람도, 죽은 사람을 서류에 올리는 사람도 없다. 성채 안의 규칙은 성채 사람들이 알아서 만들어 왔다.',
+ '그러다 보니 갈 곳 없는 사람들이 하나둘 모여들었다. 난민과 밀항자, 빚에 쫓기는 사람, 죄를 짓고 도망친 사람, 누군가를 찾으러 들어온 사람, 그리고 원래부터 여기서 나고 자란 사람들. 한 복도에서 여러 나라 말이 오가지만, 누구도 상대의 진짜 이름을 묻지 않는다. 여기서는 그게 예의다.',
+ '성채는 크게 네 동으로 나뉜다.',
+ '1동 정문동(正門樓)은 바깥과 맞닿은 동이다. 녹색 공중전화와 차찬텡, 철창 하숙이 있어서 성채에 처음 들어온 사람은 대개 이 동에서 첫날 밤을 보낸다.',
+ '2동 홍등동(紅燈樓)은 적등방의 동이다. 국숫집과 전당포, 마작방이 붙어 있고, 수로를 타야만 들어갈 수 있는 지하 도박장 홍등루가 그 아래에 있다. 이 동의 붉은 등은 꺼지는 날이 없다.',
+ '3동 종루동(鐘樓)은 삼경이 지키는 동이다. 꼭대기에 녹슨 종이 매달린 종루가 있고, 아래쪽에는 삼경 의원과 수칙을 찍어 내는 인쇄소가 있다.',
+ '4동 빈동(空樓)은 이름 그대로 거의 비어 있다. 간판 불은 대부분 꺼졌고 폐업한 치과와 멈춘 공방 정도만 남았다. 사람들은 숫자 4를 꺼리는 것처럼 이 동에 발을 들이는 것도 꺼린다.',
+ '동마다 위로는 옥상과 안테나 숲이 있고, 아래로는 바닷물이 스며드는 수로가 흐른다. 성채에서 하늘이 보이는 곳은 옥상밖에 없고, 바깥으로 빠져나가는 건 수로의 물밖에 없다.',
+ '바깥 사람들은 성채를 조금씩 잊어 가고 있다. 레이란 라디오는 성채 이야기를 하지 않고, 시내 지도에서 이 구역은 회색으로 칠해져 있을 뿐이다. 성채 사람들 중에는 그게 차라리 낫다는 사람도 있고, 그게 더 무섭다는 사람도 있다.']],
+['밤의 증축',['새벽 세 시가 되면 성채 어딘가에서 망치 소리가 나기 시작한다.',
+ '쿵, 쿵, 쿵. 벽 안쪽에서 울릴 때도 있고, 천장 위에서 들릴 때도 있고, 바로 옆방에서 나는 것처럼 가까울 때도 있다. 소리가 이어지는 동안 복도에는 덜 마른 시멘트 냄새가 퍼지고, 형광등이 하나씩 꺼져 간다. 그러다 네 시가 다가오면 언제 그랬냐는 듯 소리가 뚝 그친다.',
+ '아침이 되면 성채는 어제와 조금 달라져 있다. 어제 없던 계단이 생기거나, 복도 끝에 처음 보는 문이 하나 늘어 있거나, 누군가의 방이 한 뼘쯤 좁아져 있다. 새로 생긴 계단은 하루 동안만 열려 있고, 다음 날 아침이면 그 자리가 다시 벽으로 막혀 있다.',
+ '누가 짓는 건지는 아무도 모른다. 적등방 사람들도 모른다고 하고 삼경 사람들도 모른다고 한다. 성채에서 오래 산 노인들은 다만 이런 말을 한다. 증축이 있었던 다음 날에는 꼭 누군가 한 사람이 보이지 않는다고.',
+ '그래서 백계성 주민 수칙의 첫 번째 줄에는 이렇게 적혀 있다. 「새벽 3시에서 4시 사이 망치 소리가 들리면 방에 머물 것. 누가 두드려도 문을 열지 말 것.」']],
+['적등방(赤燈幫)',['홍등동 골목에 붉은 등이 걸린 곳은 모두 적등방의 구역이다. 그 불빛 아래서 벌어지는 일은 적등방이 책임지고, 적등방이 정리한다. 대놓고 그렇게 말하는 사람은 없어도 성채 사람이라면 다 알고 있다.',
+ '적등방은 백계성의 범죄 조직이다. 성채에서 오가는 돈 대부분이 한 번은 이들의 손을 거친다.',
+ '돈이 급한 사람에게는 돈을 빌려준다. 이자는 무겁고, 장부는 사무실 금고 안에 있다. 장부에 이름이 올라간 사람은 그날부터 적등방의 객이 된다. 홍등루의 마작판은 밤낮없이 돌아가는데, 판돈 대신 사람을 거는 테이블이 있다는 소문도 있다. 홍등동의 국숫집과 전당포, 차찬텡은 달마다 봉투를 낸다. 봉투를 내지 않은 가게는 얼마 안 가 간판 불이 꺼진다. 레이란 항구로 들어온 물건 중 세관을 거치지 않은 것들도 수로를 타고 성채로 흘러든다. 그게 누구 물건인지는 아무도 묻지 않는다.',
+ '적등방 안에도 위아래가 있다. 빚을 지고 들어온 객(客)은 잡일과 심부름을 하면서 빚을 갚아 나간다. 빚을 절반까지 줄이고 공을 쌓으면 붉은 등을 들 자격이 생기는데, 이들을 등잡이라고 부른다. 등잡이는 다시 주먹을 쓰는 홍봉(紅棒)이나, 장부와 수금을 맡는 백선(白扇) 중 한 길로 간다. 한 구역을 통째로 맡아 보호비를 걷는 사람은 향주(香主)라고 불리고, 그 위에는 방주(幫主)가 있다. 성채 사람이라면 누구나 방주의 얼굴을 알지만, 가까이 가 본 사람은 없다.',
+ '적등방에서 지켜야 하는 철칙은 하나뿐이다. 빚은 반드시 갚아야 한다. 돈이 없으면 일로 갚고, 일로도 안 되면 몸으로 갚는다.',
+ '들어오는 건 쉽다. 장부에 서명 한 번만 하면 된다. 하지만 나가는 건 거의 불가능하다. 적등방을 나가겠다고 말을 꺼낸 사람은 많지 않았고, 실제로 나간 사람은 그보다도 적다. 나간 사람 중 몇은 손가락이 모자라고, 몇은 한쪽 눈이 없다. 나머지는 수로에서 발견되었다. 몰래 빠져나간 사람은 도망자가 되는데, 붉은 완장을 찬 사내들이 그 얼굴이 그려진 종이를 들고 한 달 동안 성채를 뒤지고 다닌다.',
+ '그런데도 사람들은 제 발로 적등방을 찾아온다. 경찰도 법도 없는 곳에서 적등방은 한 번 한 약속만큼은 지키기 때문이다. 돈이 필요하면 빌려주고, 봉투를 낸 가게는 지켜 주고, 자기 구역에서 일어난 일은 밖으로 새어 나가지 않게 덮어 준다. 그래서 백계성 사람들은 적등방을 무서워하면서도, 적등방이 없는 성채는 잘 상상하지 못한다.']],
+['삼경(三更)',['삼경은 밤 열한 시부터 새벽 한 시 무렵, 하룻밤 중에서 가장 깊은 시간을 가리키는 말이다. 백계성에서는 그 시간에 깨어 있는 사람들을 부르는 이름이기도 하다.',
+ '삼경은 백계성의 자경단이다. 경찰이 들어오지 않는 성채에서 주민들이 직접 꾸린 야경꾼 모임으로 시작했다고 한다. 완장은 쓸 만한 천이면 아무거나 상관없고, 가진 거라고는 손전등과 호루라기, 수칙이 적힌 종이 다발이 전부다.',
+ '삼경이 하는 일은 크게 세 가지다. 먼저 순찰이다. 다들 방에 틀어박혀 있어야 하는 증축 시간에도 삼경은 밖에 나가 있다. 망치 소리가 어디서 나는지, 어느 복도에 새 문이 생겼는지 귀를 기울이고 받아 적는다.',
+ '다음은 수칙이다. 계단참마다 붙어 있는 주민 수칙을 찍어서 붙이고, 낡으면 새로 붙인다. 수칙을 어겼다고 벌을 주지는 않지만, 어긴 사람에게 무슨 일이 생겼는지는 빠짐없이 기록해 둔다.',
+ '마지막은 수색이다. 사라진 사람을 찾아다니고, 끝내 찾지 못하면 삼경 의원 게시판에 실종 전단을 붙인다. 새로 생긴 계단에는 못을 박아 사람이 오르지 못하게 막는다.',
+ '삼경에 갓 들어온 사람은 신참이라고 한다. 순찰과 현장 수습을 꾸준히 해내면 조 하나를 맡는 조장이 되고, 삼경 전체를 이끄는 사람은 대장이라고 부른다. 삼경은 돈을 많이 주지 않는다. 대신 삼경 완장을 차고 있으면 성채 사람들이 문을 열어 준다. 한밤중에 누가 문을 두드려도, 그게 삼경이면 연다.',
+ '삼경 대원들은 만나면 「오늘도 세어 봤어?」 하고 인사를 나눈다. 계단 이야기를 하는 것 같기도 하고, 사람 이야기를 하는 것 같기도 하다.']],
+['붉은 등과 종소리',['백계성에는 질서가 두 개 있다. 하나는 돈으로 돌아가고, 다른 하나는 수칙으로 돌아간다. 이 둘은 지금까지 한 번도 사이가 좋았던 적이 없다.',
+ '적등방 쪽에서 보면 삼경은 장사를 방해하는 참견꾼들이다. 삼경이 의원 게시판에 붙여 놓은 실종 전단을 보면, 그 얼굴 중 절반은 적등방 장부에도 이름이 올라 있다. 삼경이 그 이야기를 꺼낼 때마다 홍등동의 붉은 등이 하나씩 더 켜진다.',
+ '삼경 쪽에서 보면 적등방은 성채를 갉아먹는 사람들이다. 사람을 빚으로 묶어 두고, 그렇게 묶인 사람에게 하필 증축 시간에 심부름을 시킨다. 그렇게 나간 사람 가운데 몇은 끝내 돌아오지 않았다.',
+ '증축을 대하는 방식도 정반대다. 적등방에게 새로 생긴 방은 새 구역이고, 새 가게고, 새로 걷을 보호비다. 그러니 누구보다 먼저 가서 깃발을 꽂아야 한다. 삼경에게 새로 생긴 방은 누군가 사라진 자리다. 그러니 누구보다 먼저 가서 못을 박아 막아야 한다.',
+ '그래서 밤마다 비슷한 일이 되풀이된다. 새 계단이 생기면 붉은 완장과 삼경 완장이 거의 같은 시각에 그 앞에 도착한다. 대개는 한참 노려보다가 각자 돌아선다. 하지만 가끔은 그러지 않는다. 그런 밤에는 종루의 종이 세 번 울리고 홍등동의 불이 한꺼번에 꺼진다. 다음 날 아침 계단참에는 물이 흥건하게 고여 있고, 어느 쪽도 간밤에 무슨 일이 있었는지 입을 열지 않는다.',
+ '그래도 두 세력 사이에 말로 정한 적은 없는 약속이 하나 있다. 정문 골목에서는 서로 손대지 않는다는 것이다. 바깥으로 이어지는 하나뿐인 골목에서 피가 흐르면 레이란 경찰에게 정문을 넘어올 핑계를 주게 되기 때문이다. 그래서 정문 차찬텡 창가 자리에는 가끔 붉은 완장과 삼경 완장이 나란히 앉아 밀크티를 마신다. 둘 다 끝까지 상대 쪽으로는 고개를 돌리지 않는다.',
+ '성채 사람들은 그 둘 사이에서 하루하루를 산다. 낮에는 적등방에 봉투를 내고, 밤에는 삼경에게 문을 열어 준다. 어느 한쪽에 완전히 기대지 않고 버티는 사람이 백계성에서 오래 산다고들 한다.']],
+['무소속',['어느 쪽에도 속하지 않은 사람들도 있다. 장부에 이름이 없고 완장도 차지 않은 사람들이다. 대부분 정문동 철창 하숙에서 철망 문 하나를 사이에 두고, 옆 칸 사람의 숨소리까지 들으며 지낸다.',
+ '무소속에게는 번듯한 주소도, 정해진 생업도 없다. 신문을 돌리거나 짐을 나르거나 남의 빨래를 널어 주면서 하루하루를 버틴다. 그 대신 누구에게도 빚진 게 없고, 누구의 말도 듣지 않아도 된다.',
+ '그렇다고 마음 편하게 사는 건 아니다. 적등방은 무소속을 언젠가 장부에 오를 사람으로 보고, 삼경은 언젠가 실종 전단에 오를 사람으로 본다. 무소속으로 오래 버틴 사람은 드물다.',
+ '무소속이 고를 수 있는 길은 몇 가지가 있다. 홍등루에서 빚을 지고 적등방의 객이 되거나, 평판을 쌓아서 삼경 완장을 차거나, 주인 없는 문패를 구해 성채 어딘가에 자기 주소를 걸거나.',
+ '적등방에서 도망친 사람도 무소속이 된다. 다만 그 사람들 이름 뒤에는 도망자라는 말이 하나 더 붙는다. 그들이 홍등동에 발을 들이면 붉은 등 아래 누군가가 그 이름을 부른다.']],
+['주민 수칙과 숫자 4',['계단참마다 누렇게 바랜 종이가 한 장씩 붙어 있다. 백계성 주민 수칙이다. 지금은 삼경이 찍어서 붙이고 있지만, 맨 처음 누가 썼는지는 삼경도 모른다.',
+ '수칙은 지켜도 되고 어겨도 된다. 다만 어긴 뒤에 무슨 일이 생기든 책임져 주는 사람은 없다. 수칙을 어긴 사람은 가끔 이상한 물건을 손에 쥐고 돌아오는데, 사람들은 그걸 밤물건이라고 부른다. 전당포 노인은 그게 어디서 났는지 묻지 않고 값을 쳐 준다.',
+ '종이에 적혀 있지 않은 수칙도 있다. 직접 겪어 본 사람만 알고, 겪은 사람은 자기 수첩에 손글씨로 적어 둔다. 그리고 종이에 적힌 수칙 중 하나는 틀렸다는 소문이 있다. 어느 것이 틀렸는지는 아무도 모른다.',
+ '성채에는 13층이 없다. 어느 동이든 12층 다음은 바로 14층이다. 그런데 4동 12층과 14층 사이의 계단참만은 이상하게 길다. 사람들은 숫자 4도 피한다. 국숫집 4번 테이블에는 앉지 않고, 4동에는 살지 않고, 삐삐에 모르는 번호로 0404가 찍히면 답하지 않는다.']],
+['시대',['때는 1980년대 끝무렵이다. 레이란 시내에는 빨간 이층버스가 다니고, 레코드 가게에서는 광둥어 유행가가 흘러나오고, 주말이면 경마장에 사람들이 몰린다. 바다 건너에서는 몇 년 뒤면 이 도시의 주인이 바뀐다는 이야기가 오가고, 그 때문인지 도시 전체가 어딘가 들떠 있으면서도 불안하다.',
+ '성채 안의 시간은 바깥보다 조금 늦게 흐른다. 허리에는 삐삐를 차고, 급한 연락은 정문 골목 녹색 공중전화로 한다. 집집마다 브라운관 텔레비전에서 무협 드라마가 나오고, 카세트 라디오에서는 늘어진 테이프 소리가 난다. 비디오 가게에는 제목 없는 테이프가 쌓여 있고, 천장에서는 녹슨 선풍기가 미지근한 바람을 돌린다.',
+ '레이란 공항으로 내려오는 여객기는 백계성 지붕 바로 위를 스치듯 지나간다. 비행기가 지나갈 때마다 창문이 덜덜 떨리고 텔레비전 화면이 흔들려서, 성채 사람들은 말을 하다가도 잠깐 입을 다물고 소리가 지나가기를 기다린다. 옥상에 올라가면 비행기 배가 손에 닿을 것처럼 보인다.',
+ '성채 안에는 바깥에서는 허가를 받을 수 없는 가게들이 빼곡하다. 면허 없는 치과와 한약방, 간판 없는 이발소, 하루 종일 기계가 돌아가는 어묵 공장과 국숫집. 골목 위로는 전선이 거미줄처럼 엉켜 있고, 수도관에서 새는 물이 계단을 타고 흘러내린다. 햇빛이 들지 않는 복도는 낮에도 형광등을 켜 둬야 하고, 그 형광등은 늘 어딘가 하나씩 깜빡인다.',
+ '벽마다 붉은색과 초록색 한자 간판이 겹겹이 붙어 있다. 비가 오면 네온 불빛이 젖은 바닥에 번져서, 골목 전체가 물속에 잠긴 것처럼 보인다. 그 아래로 사람들은 오늘도 계단을 올라 집으로 돌아간다.',
+ '바깥에서는 몇 년째 성채를 허문다는 말이 돈다. 레이란 신문에 가끔 그런 기사가 실리고, 정부 사람들이 정문 앞에 와서 사진을 찍어 가기도 한다. 하지만 성채 안에서 그 이야기를 진지하게 하는 사람은 없다. 허물기 전에 성채가 먼저 자랄 거라고, 노인들은 그렇게 말하며 웃는다.']]];
+function worldBody(){const ps=t=>h('p',{style:'margin:0;line-height:1.85;max-width:64ch'+(t.startsWith('「')?';font-family:var(--f-disp);font-size:15.5px':'')},t);
+  return[h('div',{class:'paper stack'},h('span',{class:'lbl'},'백계성 안내 · 처음 온 사람에게'),h('p',{class:'mute',style:'margin:0;font-size:13px'},'장 제목을 누르면 펼쳐져요.'),
+    ...WORLD_CH.map(([t,pp],i)=>h('details',{open:i===0?true:null,style:'border-top:1px solid rgba(0,0,0,.12);padding-top:8px'},h('summary',{style:'cursor:pointer;font-family:var(--f-disp);font-size:18px'},t),h('div',{class:'stack',style:'gap:10px;margin-top:10px'},...pp.map(ps)))))]}
+function planBody(){const m=G.me;return[goalEl(),goalLore(),h('div',{class:'card stack'},h('span',{class:'lbl'},'내 설계도 조각'),h('div',{class:'row'},h('span',null,'가진 조각'),h('b',{class:'num'},m?m.clues||0:0)),
+  h('p',{class:'mute',style:'margin:0;font-size:12.5px;line-height:1.7'},'설계도 조각은 둘러보기, 괴담, 낮잠 꿈, 비둘기 쪽지 같은 곳에서 가끔 나와요. 성채 사람 모두가 가진 조각을 합쳐서 공동 목표를 채워요.'))]}
+
+function showPrologue(){const[t,pp]=WORLD_CH[0];openModal(h('div',{class:'stack',style:'gap:12px'},h('div',{class:'row'},h('span',{class:'lbl'},'백계성 · '+t),h('button',{class:'ghost',onclick:closeModal},'닫기')),
+  ...pp.map(x=>h('p',{style:'margin:0;line-height:1.85'+(x.startsWith('「')?';font-family:var(--f-disp);font-size:15.5px':'')},x)),
+  h('p',{class:'mute',style:'margin:0;font-size:12.5px'},'세계관 전체는 수첩 「세계」 탭에서 읽을 수 있어요.'),h('button',{class:'pri',onclick:closeModal},'성채로 들어간다')))}
+function prologueCheck(){const m=G.me;if(!m||m.prologue)return;if($('modalRoot').children.length)return;m.prologue=true;save();setTimeout(()=>{if(!$('modalRoot').children.length)showPrologue()},700)}
+/* ---------- 소리: 파일 없이 브라우저에서 합성한다 ---------- */
+let AC=null,MASTER=null,AMB=null,NOISE=null;
+const sndOn=()=>G.opts.sound!==false;
+const sndVol=()=>G.opts.vol==null?0.6:G.opts.vol;
+function acInit(){if(AC)return AC;const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;try{AC=new C();MASTER=AC.createGain();MASTER.gain.value=sndVol();MASTER.connect(AC.destination);
+  const len=AC.sampleRate*2,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;NOISE=buf}catch(e){AC=null}return AC}
+document.addEventListener('pointerdown',()=>{if(!sndOn())return;const c=acInit();if(c&&c.state==='suspended')c.resume();ambUpdate()},{passive:true});
+function env(g,t,a,peak,dec){g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(0.0001,t+a+dec)}
+function tone(type,f,t,a,peak,dec,f2){const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+a+dec);env(g,t,a,peak,dec);o.connect(g);g.connect(MASTER);o.start(t);o.stop(t+a+dec+.05)}
+function noise(t,dur,peak,ftype,freq,q){const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=NOISE;f.type=ftype||'lowpass';f.frequency.value=freq||1000;f.Q.value=q||1;env(g,t,.005,peak,dur);s.connect(f);f.connect(g);g.connect(MASTER);s.start(t,Math.random());s.stop(t+dur+.1)}
+const SFX={
+ pager:t=>{for(let i=0;i<3;i++){tone('square',2350,t+i*.22,.005,.12,.12)}},
+ phone:t=>{for(let r=0;r<3;r++){const s=t+r*1.6;for(let k=0;k<12;k++){tone('sine',440,s+k*.07,.004,.12,.05);tone('sine',480,s+k*.07,.004,.1,.05)}}},
+ hammer:t=>{for(let i=0;i<3;i++){const s=t+i*.9;tone('sine',95,s,.004,.9,.45,38);noise(s,.18,.5,'lowpass',700)}},
+ knock:t=>{for(let i=0;i<3;i++){const s=t+i*.32;noise(s,.07,.7,'bandpass',900,4);tone('triangle',180,s,.002,.4,.08,120)}},
+ bell:t=>{[[220,1],[440*1.19,.5],[661,.35],[871,.25],[1180,.15]].forEach(([f,a])=>tone('sine',f,t,.006,.45*a,3.2))},
+ static:t=>{noise(t,1.6,.35,'bandpass',2200,.7);noise(t+.2,1.2,.2,'highpass',4000)},
+ flicker:t=>{for(let i=0;i<5;i++){const s=t+i*.09+Math.random()*.05;tone('sawtooth',120,s,.003,.12,.05);noise(s,.03,.25,'highpass',3000)}},
+ coin:t=>{tone('square',1320,t,.003,.08,.08);tone('square',1760,t+.07,.003,.08,.12)}};
+function sfx(name){if(!sndOn()||!SFX[name])return;const c=acInit();if(!c||c.state!=='running')return;MASTER.gain.value=sndVol();try{SFX[name](c.currentTime+.02)}catch(e){}}
+const SCENE_SFX={phone:'phone',pager:'pager',well2:'static',myvoice:'static',tv:'static',antenna:'static',knock:'knock',bellfour:'bell',gate:'bell',doorbell2:'knock'};
+function sceneSfx(sc){const s=sc&&SCENE_SFX[sc.id];if(s)sfx(s)}
+/* 배경음: 비 오는 날 빗소리, 늘 낮게 깔리는 형광등 소리, 증축 시간의 먼 망치 소리 */
+function ambUpdate(){if(!AC||AC.state!=='running')return;const want=sndOn()&&G.opts.amb!==false;
+  if(!AMB){AMB={rain:AC.createGain(),hum:AC.createGain()};const rs=AC.createBufferSource(),rf=AC.createBiquadFilter();rs.buffer=NOISE;rs.loop=true;rf.type='lowpass';rf.frequency.value=1400;rs.connect(rf);rf.connect(AMB.rain);AMB.rain.connect(MASTER);rs.start();
+    const ho=AC.createOscillator(),hf=AC.createBiquadFilter();ho.type='sawtooth';ho.frequency.value=60;hf.type='lowpass';hf.frequency.value=180;ho.connect(hf);hf.connect(AMB.hum);AMB.hum.connect(MASTER);ho.start();AMB.rain.gain.value=0;AMB.hum.gain.value=0}
+  const t=AC.currentTime,rain=want&&G.me&&weather()[0]==='비'?.07:0,hum=want&&G.me?.012:0;MASTER.gain.value=sndVol();
+  AMB.rain.gain.setTargetAtTime(rain,t,1.5);AMB.hum.gain.setTargetAtTime(hum,t,1.5)}
+setInterval(()=>{ambUpdate();if(sndOn()&&G.opts.amb!==false&&G.me&&isBuild()&&!G.opts.soft&&chance(.25)){if(AC&&AC.state==='running'){const keep=MASTER.gain.value;MASTER.gain.value=keep*.35;sfx('hammer');setTimeout(()=>{MASTER.gain.value=sndVol()},3000)}}},8000);
+function soundSettings(){const o=G.opts;const vol=h('input',{type:'range',min:'0',max:'1',step:'0.05',value:String(sndVol()),style:'width:140px',oninput:e=>{o.vol=+e.target.value;if(MASTER)MASTER.gain.value=o.vol;save()},onchange:()=>sfx('pager')});
+  return h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},'소리'),
+    h('label',{class:'row'},h('span',null,'효과음',h('div',{class:'mute',style:'font-size:12px'},'삐삐, 전화벨, 망치 소리, 종소리 같은 효과음')),h('input',{type:'checkbox',style:'width:auto',checked:sndOn()?true:null,onchange:e=>{o.sound=e.target.checked;save();if(o.sound){acInit();if(AC)AC.resume().then(()=>{sfx('pager');ambUpdate()})}else ambUpdate()}})),
+    h('label',{class:'row'},h('span',null,'배경음',h('div',{class:'mute',style:'font-size:12px'},'비 오는 날 빗소리, 형광등 소리, 증축 시간의 먼 망치 소리')),h('input',{type:'checkbox',style:'width:auto',checked:G.opts.amb!==false?true:null,onchange:e=>{o.amb=e.target.checked;save();ambUpdate()}})),
+    h('label',{class:'row'},h('span',null,'음량'),vol))}
+
+{const f0=pagerRing;pagerRing=function(p){sfx('pager');return f0(p)}}
+/* 상태 효과 설명: 태그를 누르면 무슨 효과인지 보여 준다 */
+const FX_INFO={
+ delirium:['채팅과 벽 낙서에서 다른 사람 이름이 엉뚱하게 보이고, 단면도의 층 이름이 한 칸씩 어긋나 보여요. 일지에 내가 하지 않은 행동이 섞이고, 칸에 없는 사람이 보이기도 해요.','삼경 의원에서 풀 수 있어요. 깊은 사이 지인과 「이름 세 번」 장면을 해도 풀려요.'],
+ followed:['칸을 옮길 때마다 뒤에서 발소리가 따라붙어요. 수치가 깎이지는 않아요.','의원에서는 풀리지 않아요. 시간이 지나야 사라져요.'],
+ gum:['채팅, 벽 낙서, 1:1 대화에 쓰는 글자의 발음이 새요.','삼경 의원에서 풀 수 있어요.'],
+ cozy:['정신이 깎일 때 절반만 깎여요.',''],
+ watched:['적등방이 지켜보고 있어요. 이 효과가 있는 동안에는 적등방을 나갈 수 없어요.','의원에서는 풀리지 않아요. 시간이 지나야 사라져요.'],
+ guarded:['증축 시간의 피해를 한 번 막아 주고 사라져요.',''],
+ sick:['시간이 지나도 체력이 회복되지 않아요.','삼경 의원에서 풀 수 있어요.'],
+ lucky:['모든 판정에 +6이 붙어요.',''],
+ unlucky:['모든 판정에 -6이 붙어요.','삼경 의원에서 풀 수 있어요.'],
+ bell:['증축 시간의 피해를 한 번 막아 주고 사라져요.',''],
+ ink:['수첩의 주민 수칙 한 줄이 번져서 읽을 수 없어요.','삼경 의원에서 풀 수 있어요.'],
+ markR:['홍등동 칸에서 판정 -6. 국숫집 값이 $12로 오르고, 전당포에서 밤물건을 30% 싸게 쳐 줘요.','삼경 의원에서 풀 수 있어요.'],
+ markS:['종루동 칸에서 판정 -6.','삼경 의원에서 풀 수 있어요.'],
+ oily:['둘러볼 때 검은 고양이 괴이가 자주 나와요.',''],
+ clothes:['정신이 깎일 때 절반만 깎여요. 거울 속 나는 이 옷을 입고 있지 않아요.','']};
+function openFx(id){const f=(G.me.fx||[]).find(x=>x.id===id&&x.until>T());const D=FXDEF[id];if(!D)return;const I=FX_INFO[id]||[D.d,''];
+  openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},D.n),h('button',{class:'ghost',onclick:closeModal},'닫기')),
+    h('div',{class:'wrap'},h('span',{class:'fx '+(D.bad?'bad':'good')},D.bad?'나쁜 효과':'좋은 효과'),f?h('span',{class:'mute num',style:'font-size:13px'},`남은 시간 ${dur(f.until-T())}`):null),
+    h('p',{style:'margin:0;line-height:1.75'},I[0]),I[1]?h('p',{class:'mute',style:'margin:0;font-size:13px'},I[1]):null))}
 function chaser(){const m=G.me;openScene({id:'chaser',title:'추격자',red:true,text:'골목 모퉁이에서 붉은 완장을 찬 사내 둘이 걸어온다. 한 명이 종이를 펼쳐 내 얼굴과 비교한다.',
   choices:[{l:'뛴다',s:'agi',run:()=>{const c=chk('agi',12);if(c.ok){done('따돌렸다','수로 쪽으로 뛰어 내려갔다. 발소리가 멀어진다.',[c.txt,...give({en:-1})])}else caught('발이 미끄러졌다. 목덜미를 붙잡혔다.',c.txt)}},
    {l:'모르는 척 지나간다',s:'talk',run:()=>{const c=chk('talk',13);if(c.ok)done('지나쳤다','「사람 잘못 봤소.」 사내들이 고개를 갸웃하더니 지나간다.',[c.txt]);else caught('「맞네.」',c.txt)}}]})}
@@ -1551,7 +1678,8 @@ function renderLeft(){const L=$('left'),m=G.me;
       meter('기력',m.en,EN_MAX,'var(--en)',`${m.en} / ${EN_MAX}${nextEn?' · '+dur(nextEn-T()):''}`),
       h('div',{class:'row',style:'font-size:13px'},h('span',null,'돈'),h('b',{class:'num'},'$'+m.money)),
       m.debt?h('div',{class:'row',style:'font-size:13px'},h('span',null,'빚'),h('b',{class:'num',style:'color:var(--bad)'},'$'+m.debt)):null,
-      fx.length?h('div',{class:'wrap'},fx.map(f=>h('span',{class:'fx '+(FXDEF[f.id].bad?'bad':'good'),title:FXDEF[f.id].d},FXDEF[f.id].n,' ',h('span',{class:'num'},dur(f.until-T()))))):null,
+      fx.length?h('div',{class:'wrap'},fx.map(f=>h('button',{class:'fx '+(FXDEF[f.id].bad?'bad':'good'),title:FXDEF[f.id].d+' (눌러서 자세히)',style:'cursor:pointer;font:inherit;font-size:12px;font-weight:600;background:none;line-height:1.4',onclick:()=>openFx(f.id)},FXDEF[f.id].n,' ',h('span',{class:'num'},dur(f.until-T()))))):null,
+      fx.length?h('div',{class:'dim',style:'font-size:11.5px'},'효과를 누르면 무슨 효과인지 볼 수 있어요.'):null,
       (m.marks||[]).length?h('div',{class:'mute',style:'font-size:12.5px'},'흔적 · '+m.marks.join(', ')):null),
     h('div',{class:'card stack'},h('div',{class:'row'},h('span',{class:'lbl'},'생업'),h('span',{class:'mute',style:'font-size:12.5px'},m.job||'없음')),
       m.work?h('div',{class:'banner'},`${m.work.job} 중 · `,h('b',{class:'num'},dur(m.work.until-T())),' 뒤 퇴근'):h('button',{disabled:!m.job,onclick:startWork},m.job?`출근 (${fast()?'1분':'4시간'})`:'생업 없음 · 의뢰판의 일용직'),
@@ -1627,9 +1755,10 @@ function viewPeople(){const m=G.me;const q=(sub.q||'').trim();
     m?h('div',{class:'wrap'},h('button',{class:'sm',onclick:()=>openCard('me')},'내 주민증 보기 · 코드 공유')):null,search,
     h('div',{class:'roster'},m?h('button',{class:'rc',style:`--c:${m.color}`,onclick:()=>openSheet('me')},h('div',{class:'wrap'},avEl(m),h('div',null,h('b',{class:'disp',style:'font-size:18px'},m.name),h('div',{class:'mute',style:'font-size:12px'},rankLabel(m)))),m.quote?h('span',{class:'mute',style:'font-size:13px'},'“'+m.quote+'”'):null):null,
       list.map(id=>{const s=SAMPLES[id],r=relOf(id);return h('button',{class:'rc',style:`--c:${s.color}`,onclick:()=>openSheet(id)},h('div',{class:'wrap'},avEl(s),h('div',null,h('b',{class:'disp',style:'font-size:18px'},(s.name)),h('div',{class:'mute',style:'font-size:12px'},`${FACS[s.fac]}${s.rank?' · '+s.rank:''} · ${s.code}`))),h('span',{class:'mute',style:'font-size:13px'},'“'+s.quote+'”'),h('div',{class:'wrap'},h('span',{class:'tag amb'},'예시 주민'),r.friend?h('span',{class:'tag good'},STAGES[stageOf(r)]):r.req?h('span',{class:'tag'},'신청 보냄'):null,r.name?h('span',{class:'tag red'},r.name):null,h('span',{class:'tag'},CELLS[s.cell].n)))}))]}
-function viewNote(){const m=G.me;const S=[...(typeof NOTICES!=='undefined'?[['notice','공지']]:[]),['world','세계'],['rules','수칙'],['items','밤물건'],['dex','도감'],['log','일지']];if(!S.some(x=>x[0]===sub.note))sub.note='world';
+function viewNote(){const m=G.me;const S=[...(typeof NOTICES!=='undefined'?[['notice','공지']]:[]),['world','세계'],['plan','설계도'],['rules','수칙'],['items','밤물건'],['dex','도감'],['log','일지']];if(!S.some(x=>x[0]===sub.note))sub.note='world';
   const nav=h('div',{class:'wrap'},S.map(([k,n])=>h('button',{class:'sm'+(sub.note===k?' pri':''),onclick:()=>{sub.note=k;renderView()}},n)));let body;
-  if(sub.note==='world')body=[h('div',{class:'paper stack'},h('span',{class:'lbl'},'백계성 안내 · 처음 온 사람에게'),...WORLD_NOTE.map(([a,b])=>h('div',null,h('b',{class:'disp'},a),h('p',{style:'margin:4px 0 0;line-height:1.75'},b)))),goalLore()];
+  if(sub.note==='world')body=worldBody();
+  if(sub.note==='plan')body=planBody();
   if(sub.note==='dex')body=dexBody();
   if(sub.note==='notice'&&typeof noticeBody==='function')body=noticeBody();
   if(sub.note==='rules')body=[h('div',{class:'paper stack'},h('span',{class:'lbl'},'백계성 주민 수칙 · 계단참 게시판'),h('ol',{class:'rules'},RULES.map((t,i)=>h('li',null,h('span',null,h('span',{class:i===2&&m&&m.wrongRule?'strike':''},inkText(i,t)),i===2&&m&&m.wrongRule?h('span',{class:'hand',style:'color:#8E2A1E;display:block'},'받지 말 것.'):null))))),
@@ -1638,7 +1767,7 @@ function viewNote(){const m=G.me;const S=[...(typeof NOTICES!=='undefined'?[['no
       m&&(m.hints||[]).filter(k=>!m.hidden.includes(k)).map(k=>h('div',{class:'mute',style:'font-size:13px'},'· '+HIDDEN[k].split('.')[0]+'… (뒷말이 기억나지 않는다)')),
       h('p',{class:'dim',style:'margin:0;font-size:12px'},`문서에 없는 수칙 ${Object.keys(HIDDEN).length-(m?m.hidden.length:0)}개가 더 있다고들 한다.`))];
   if(sub.note==='items'){const own=m?Object.keys(m.items).filter(k=>m.items[k]>0):[];body=[h('div',{class:'card stack'},h('span',{class:'lbl'},'밤물건'),own.length?own.map(k=>h('div',{class:'pl'},h('div',null,h('b',null,ITEMS[k].n),` × ${m.items[k]}`,h('div',{class:'mute',style:'font-size:12.5px'},ITEMS[k].d)))):h('p',{class:'mute',style:'margin:0'},'수칙을 어기면 얻는 물건이에요. 전당포에서 팔 수 있어요.'),
-    h('div',{class:'row'},h('span',null,'설계도 조각'),h('b',{class:'num'},m?m.clues||0:0)),h('p',{class:'dim',style:'margin:0;font-size:12px'},'증축의 진실에 닿는 단서. 업데이트에서 쓰여요.'))]}
+    h('div',{class:'row'},h('span',null,'설계도 조각'),h('b',{class:'num'},m?m.clues||0:0)),h('p',{class:'dim',style:'margin:0;font-size:12px'},'증축의 진실에 닿는 단서. 수첩 「설계도」 탭에서 성채 공동 목표를 볼 수 있어요.'))]}
   if(sub.note==='log'){const K={life:'생활',move:'이동',work:'생업',fac:'세력',haunt:'괴담',rel:'관계'};body=[h('div',{class:'card feed'},G.log.length?G.log.slice(0,60).map(l=>h('div',{class:'it'},h('span',{class:'k'},K[l.k]||'기록',h('small',null,mdhm(l.t))),h('span',null,l.text))):h('div',{class:'empty'},'아직 기록이 없어요.'))]}
   return[h('h2',{class:'disp',style:'font-size:24px'},'수첩'),nav,...body]}
 function renderPeople(){const P=$('peopleCard'),m=G.me;const k=m?m.cell:null;
@@ -1657,7 +1786,7 @@ function renderChat(){const C=$('chatCard'),m=G.me;const ch=sub.chat;
     if(!items.length)list.append(h('div',{class:'mute',style:'font-size:13px'},ch==='cell'?'이 칸은 조용하다.':'아직 조용하다.'));
     items.forEach(x=>{if(x.who==='hammer'){list.append(h('div',{class:'msg hammer'},h('time',null,hm(x.t)),x.text));return}if(x.who==='sys'){list.append(h('div',{class:'msg sys'},h('time',null,hm(x.t)),x.text));return}
       const p=x.who==='me'?m:SAMPLES[x.who];if(!p)return;if(ch==='ooc'){list.append(h('div',{class:'msg ooc'},h('time',null,hm(x.t)),h('span',{class:'who'},x.who==='me'?'나':`${p.name} 오너`),x.text));return}list.append(h('div',{class:'msg'},h('time',null,hm(x.t)),h('span',{class:'who',style:`color:${p.color==='#0B0B0B'?'#9E9184':p.color}`},x.who==='me'?p.name:(p.name)),x.text))})}
-  C.replaceChildren(...[h('div',{class:'row'},h('span',{class:'lbl'},'무전'),h('div',{class:'wrap'},[['cell','현장'],['all','전체'],['ooc','오너'],['radio','자정 라디오']].map(([k,n])=>h('button',{class:'sm'+(ch===k?' pri':''),onclick:()=>{sub.chat=k;renderChat()}},n)))),
+  C.replaceChildren(...[h('div',{class:'row'},h('span',{class:'lbl'},'무전'),h('div',{class:'wrap'},[['cell','현장'],['all','전체'],['ooc','오너'],['radio','자정 라디오']].map(([k,n])=>h('button',{class:'sm'+(ch===k?' pri':''),onclick:()=>{sub.chat=k;if(k==='radio')sfx('static');renderChat()}},n)))),
     h('p',{class:'dim',style:'margin:0;font-size:12px'},ch==='cell'?(m?`${CELLS[m.cell].n}에 있는 사람에게만 보여요.`:''):ch==='all'?'성채 전체에 들려요. 캐릭터로 말하는 곳이에요.':ch==='ooc'?'오너끼리 이야기하는 곳이에요 (OOC). 캐릭터가 아니라 오너로 말해요.':'매일 자정, 누가 송출하는지 모르는 방송.'),
     list,m&&ch!=='radio'?chatForm:null,hasFx('gum')&&ch!=='radio'&&ch!=='ooc'?h('p',{class:'dim',style:'margin:0;font-size:12px'},'빈 잇몸 때문에 발음이 새요.'):null].filter(Boolean));
   requestAnimationFrame(()=>{list.scrollTop=list.scrollHeight})}
@@ -1678,6 +1807,7 @@ function openSettings(){const o=G.opts;let arm=0;
   const rb=h('button',{class:'sm',style:'border-color:var(--bad);color:var(--bad)',onclick:()=>{if(T()-arm<3000){try{localStorage.removeItem(KEY)}catch(e){}G=fresh();scene=null;result=null;save();closeModal();render();toast('처음부터 시작해요.')}else{arm=T();rb.textContent='한 번 더 누르면 지워져요'}}},'데이터 초기화');
   openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'설정'),h('button',{class:'ghost',onclick:closeModal},'닫기')),
     h('label',{class:'row'},h('span',null,'공포 연출 약하게',h('div',{class:'mute',style:'font-size:12px'},'화면 깜빡임과 증축 시간 연출을 끕니다')),h('input',{type:'checkbox',style:'width:auto',checked:o.soft?true:null,onchange:e=>{o.soft=e.target.checked;save();render()}})),
+    soundSettings(),
     h('div',{class:'card stack',style:'background:var(--sunk)'},h('span',{class:'lbl'},'테스트 도구 (미리보기 전용)'),
       h('label',{class:'row'},h('span',null,'빠른 타이머',h('div',{class:'mute',style:'font-size:12px'},'기력 10초마다, 출근 1분, 상태이상 60배 빠르게')),h('input',{type:'checkbox',style:'width:auto',checked:o.test?true:null,onchange:e=>{o.test=e.target.checked;save();render()}})),
       h('label',{class:'field'},h('span',null,'시간대 미리보기'),hourSel),
@@ -1805,7 +1935,7 @@ function renderChat(){const C=$('chatCard'),m=G.me;const ch=sub.chat;const list=
     items.forEach(x=>{const mine=m&&x.character_id===m.id;const p=mine?m:SAMPLES[x.character_id];const name=p?p.name:'누군가';const t=Date.parse(x.created_at);
       if(ch==='ooc'){list.append(h('div',{class:'msg ooc'},h('time',null,hm(t)),h('span',{class:'who'},mine?'나':`${name} 오너`),x.text));return}
       list.append(h('div',{class:'msg'},h('time',null,hm(t)),h('span',{class:'who',style:`color:${p&&p.color!=='#0B0B0B'?p.color:'#9E9184'}`},mine?name:scramble(name)),x.text,mine||isAdminUser()?h('button',{class:'ghost del sm',style:'font-size:11px;padding:0 4px',onclick:async()=>{await sb.from('messages').delete().eq('id',x.id);CHAT[key]=CHAT[key].filter(y=>y.id!==x.id);renderChat()}},'지우기'):null))})}
-  C.replaceChildren(...[h('div',{class:'row'},h('span',{class:'lbl'},'무전'),h('div',{class:'wrap'},[['cell','현장'],['all','전체'],['ooc','오너'],['dm','1:1'+(dmUnread()?' '+dmUnread():'')],['radio','자정 라디오']].map(([k,n])=>h('button',{class:'sm'+(ch===k?' pri':''),style:k==='dm'&&dmUnread()&&ch!==k?'color:var(--bad);border-color:var(--bad)':'',onclick:()=>{sub.chat=k;renderChat()}},n)))),
+  C.replaceChildren(...[h('div',{class:'row'},h('span',{class:'lbl'},'무전'),h('div',{class:'wrap'},[['cell','현장'],['all','전체'],['ooc','오너'],['dm','1:1'+(dmUnread()?' '+dmUnread():'')],['radio','자정 라디오']].map(([k,n])=>h('button',{class:'sm'+(ch===k?' pri':''),style:k==='dm'&&dmUnread()&&ch!==k?'color:var(--bad);border-color:var(--bad)':'',onclick:()=>{sub.chat=k;if(k==='radio')sfx('static');renderChat()}},n)))),
     h('p',{class:'dim',style:'margin:0;font-size:12px'},ch==='cell'?(m?`${CELLS[m.cell].n}에 있는 사람에게만 보여요.`:''):ch==='all'?'성채 전체에 들려요. 캐릭터로 말하는 곳이에요.':ch==='ooc'?'오너끼리 이야기하는 곳이에요 (OOC).':ch==='dm'?'나와 나눈 1:1 대화 목록이에요.':'매일 자정, 누가 송출하는지 모르는 방송.'),
     list,m&&ch!=='radio'&&ch!=='dm'?chatForm:null,hasFx('gum')&&ch!=='radio'&&ch!=='ooc'?h('p',{class:'dim',style:'margin:0;font-size:12px'},'빈 잇몸 때문에 발음이 새요.'):null].filter(Boolean));
   requestAnimationFrame(()=>{list.scrollTop=list.scrollHeight})}
@@ -1858,6 +1988,7 @@ function openSettings(){const o=G.opts;
   const pw=h('input',{type:'password',id:'newPw',placeholder:'새 비밀번호 (8자 이상)',autocomplete:'new-password'});
   const body=[h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'설정'),h('button',{class:'ghost',onclick:closeModal},'닫기')),
     h('label',{class:'row'},h('span',null,'공포 연출 약하게',h('div',{class:'mute',style:'font-size:12px'},'화면 깜빡임과 증축 시간 연출을 끕니다')),h('input',{type:'checkbox',style:'width:auto',checked:o.soft?true:null,onchange:e=>{o.soft=e.target.checked;save();render()}})),
+    soundSettings(),
     h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},'계정'),h('span',{class:'mute',style:'font-size:13px'},AUTH?AUTH.email:''),h('form',{class:'composer',onsubmit:async e=>{e.preventDefault();if(pw.value.length<8)return toast('8자 이상으로 정해 주세요.');const{error}=await sb.auth.updateUser({password:pw.value});toast(error?'바꾸지 못했어요.':'비밀번호를 바꿨어요.');pw.value=''}},pw,h('button',{type:'submit',class:'sm'},'비밀번호 변경')),
       h('div',{class:'wrap'},h('button',{class:'sm',onclick:async()=>{await flush();closeModal();showSlots()}},'캐릭터 바꾸기'),h('button',{class:'sm',onclick:async()=>{await flush();await sb.auth.signOut();location.reload()}},'로그아웃')))];
   body.push(suggestEntry());if(isAdminUser())body.push(adminTools(),suggestAdmin(),dmAdmin());
@@ -2004,13 +2135,17 @@ function dmAdmin(){const box=h('div',{class:'stack',style:'gap:4px'},h('span',{c
   return h('details',{class:'card stack',style:'background:var(--sunk)'},h('summary',{style:'cursor:pointer'},h('span',{class:'lbl'},'1:1 대화 열람 (운영자만, 최근 150개)')),box)}
 
 /* 무전을 다시 그려도 쓰던 글자, 입력 위치, 읽던 스크롤이 유지되게 한다 */
+let CHAT_PIN=true,CHAT_TOP=0,CHAT_CH=null;
 {const rawRenderChat=renderChat;renderChat=function(){const C=$('chatCard');const a=document.activeElement;const inC=!!(C&&a&&C.contains(a)&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'));
   const keep={};if(C)C.querySelectorAll('input[id],textarea[id]').forEach(e=>{keep[e.id]=e.value});
-  const sel=inC?{el:a,id:a.id,s:a.selectionStart,e:a.selectionEnd}:null;const old=$('chlist');const nearBottom=!old||old.scrollHeight-old.scrollTop-old.clientHeight<48;const top=old?old.scrollTop:0;
+  const sel=inC?{el:a,id:a.id,s:a.selectionStart,e:a.selectionEnd}:null;
+  if(CHAT_CH!==sub.chat){CHAT_CH=sub.chat;CHAT_PIN=true}
   rawRenderChat();
   for(const id in keep){const e=document.getElementById(id);if(e&&!e.value&&keep[id])e.value=keep[id]}
   if(sel){const e=document.contains(sel.el)?sel.el:(sel.id?document.getElementById(sel.id):null);if(e&&document.activeElement!==e){e.focus({preventScroll:true});try{e.setSelectionRange(sel.s,sel.e)}catch(x){}}}
-  if(!nearBottom)requestAnimationFrame(()=>{const l=$('chlist');if(l)l.scrollTop=top})}}
+  const l=$('chlist');if(!l)return;
+  l.addEventListener('scroll',()=>{CHAT_PIN=l.scrollHeight-l.scrollTop-l.clientHeight<48;CHAT_TOP=l.scrollTop},{passive:true});
+  if(!CHAT_PIN){const top=CHAT_TOP;requestAnimationFrame(()=>requestAnimationFrame(()=>{l.scrollTop=top}))}}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
