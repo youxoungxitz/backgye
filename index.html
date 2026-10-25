@@ -1767,7 +1767,7 @@ function renderLeft(){const L=$('left'),m=G.me;
       fx.length?h('div',{class:'dim',style:'font-size:11.5px'},'효과를 누르면 무슨 효과인지 볼 수 있어요.'):null,
       (m.marks||[]).length?h('div',{class:'mute',style:'font-size:12.5px'},'흔적 · '+m.marks.join(', ')):null),
     h('div',{class:'card stack'},h('div',{class:'row'},h('span',{class:'lbl'},'생업'),h('span',{class:'mute',style:'font-size:12.5px'},m.job||'없음')),
-      m.work?h('div',{class:'banner'},`${m.work.job} 중 · `,h('b',{class:'num'},dur(m.work.until-T())),' 뒤 퇴근 ',h('button',{class:'sm ghost',onclick:earlyLeave},'조기 퇴근')):h('button',{disabled:!m.job,onclick:startWork},m.job?`출근 (${fast()?'1분':'4시간'})`:'생업 없음 · 의뢰판의 일용직'),
+      m.work?h('div',{class:'banner'},`${m.work.job} 중 · `,h('b',{class:'num'},dur(m.work.until-T())),' 뒤 퇴근 ',h('button',{class:'sm ghost',onclick:earlyLeave},'조기 퇴근'),typeof doze==='function'?h('button',{class:'sm ghost',onclick:doze},'몰래 졸기'):null):h('button',{disabled:!m.job,onclick:startWork},m.job?`출근 (${fast()?'1분':'4시간'})`:'생업 없음 · 의뢰판의 일용직'),
       m.nap?h('div',{class:'banner'},'낮잠 중 · ',h('b',{class:'num'},dur(m.nap.until-T())),' 뒤에 깨요 ',h('button',{class:'sm ghost',onclick:wake},'일찍 깨기')):m.cell===homeCell(m)?h('p',{class:'mute',style:'margin:0;font-size:12.5px'},'집에 있으면 정신이 천천히 돌아오고, 낮잠을 잘 수 있어요.'):null,
       (m.items.anesth>0)?h('button',{class:'sm',onclick:()=>{m.items.anesth--;give({hp:15});toast('마취제를 썼다. 체력 +15');render()}},`마취제 쓰기 (${m.items.anesth})`):null),
     h('div',{class:'card stack'},h('div',{class:'row'},h('span',{class:'lbl'},'능력치'),h('button',{class:'sm',onclick:()=>openCard('me')},'주민증')),statsEl(m.stats,m.sxp),h('p',{class:'dim',style:'margin:0;font-size:12px'},'최대 100. 판정에 쓰면 오르고(성공 +3, 실패 +2), 출근하면 생업 능력치가 올라요. 판정 = 능력치 + 20면 주사위 두 개, 정신 30 미만이면 -6.')),
@@ -1792,7 +1792,7 @@ function resultEl(){const r=result;return h('div',{class:'result'+(r.bad?' bad':
 function viewMap(){const m=G.me;const here=m?m.cell:null;const nz=nightZone();const del=m&&hasFx('delirium');
   const grid=h('div',{class:'section-map',role:'grid','aria-label':'백계성 단면도'});grid.append(h('div'));DONGS.forEach((d,i)=>grid.append(h('div',{class:'hd',style:`--c:${DZH[i][1]}`},h('span',{class:'zh buzz',style:i===3?'animation:buzz 3.3s infinite':''},DZH[i][0]),h('span',null,d.split(' · ')[0],h('span',{class:'sub'},' · '+d.split(' · ')[1])))));
   TIERS.forEach((t,ti)=>{const tl=del?TIERS[(ti+1)%TIERS.length]:t;grid.append(h('div',{class:'tl'},h('span',{class:'zh',style:'font-size:13px;color:var(--mute)'},TZH[TIERS.indexOf(tl)]),h('b',null,tl.n),h('span',{class:'sub dim'},tl.f)));
-    DONGS.forEach((d,di)=>{const k=cellKey(di,ti),C=CELLS[k];const ppl=SAMPLE_IDS.filter(id=>SAMPLES[id].cell===k);const haunt=(C.p||[]).some(p=>PLACES[p].haunt);const isNZ=nz.d===di&&ti===1;
+    DONGS.forEach((d,di)=>{const k=cellKey(di,ti),C=CELLS[k];const ppl=SAMPLE_IDS.filter(id=>SAMPLES[id].cell===k&&(typeof online!=='function'||online(SAMPLES[id])));const haunt=(C.p||[]).some(p=>PLACES[p].haunt);const isNZ=nz.d===di&&ti===1;
       grid.append(h('button',{class:'cell'+(k===here?' here':'')+(ti===4||di===3?' dark':''),onclick:()=>{if(m)move(k);else toast('입주 신고 후 이동할 수 있어요.')},'aria-label':C.n},h('b',null,C.n),h('div',{class:'pins'},k===here?h('span',{class:'pin n',title:'나'}):null,ppl.map(()=>h('span',{class:'pin',title:'사람'})),haunt?h('span',{class:'pin h',title:'괴담 장소'}):null,isNZ?h('span',{class:'tag tube',style:'font-size:9.5px;padding:0 4px'},'새 계단'):null)))});
     if(ti===1)grid.append(h('div'),h('div',{class:'nightline'},`오늘 밤의 구역: ${nz.where}`))});
   const out=[h('div',{class:'card stack'},h('div',{class:'row'},h('span',{class:'lbl'},'백계성 단면도'),h('span',{class:'wrap dim',style:'font-size:11px'},h('span',{class:'pin n'}),'나',h('span',{class:'pin'}),'사람',h('span',{class:'pin h'}),'괴담')),grid,h('p',{class:'dim',style:'margin:0;font-size:12px'},'칸을 눌러 이동해요. 이동은 기력이 들지 않아요.'))];
@@ -1804,7 +1804,7 @@ function viewMap(){const m=G.me;const here=m?m.cell:null;const nz=nightZone();co
       t===0?h('button',{onclick:breeze},'바람 쐬기 (기력 +2)'):null,
       here==='2-2'&&goalStage()>=3&&!m.bpDone?h('button',{style:'border-color:var(--tube);color:var(--tube)',onclick:openBlueprint},'인쇄소 뒤편, 어제 없던 문 (기력 1)'):null,
       here===cellKey(nz.d,1)?h('button',{style:'border-color:var(--tube);color:var(--tube)',onclick:enterNight},'새 계단을 오른다 (기력 3)'):null,
-      here===homeCell(m)?h('button',{onclick:nap},`낮잠 (${fast()?'1분':'1시간'}, 기력 +6)`):null,
+      here===homeCell(m)?(m.work?h('button',{onclick:nap},'몰래 졸기 (근무 중)'):h('button',{onclick:nap},`낮잠 (${fast()?'1분':'1시간'}, 기력 +6)`)):null,
       here===homeCell(m)?h('button',{onclick:openRoom},'내 방'):null,
       partyFriendsHere().map(k=>h('button',{style:'border-color:var(--hp)',onclick:()=>partyExplore(k)},`${SAMPLES[k].name}과(와) 같이 둘러보기 (기력 1)`)))));
   out.splice(1,0,wallEl(here));out.splice(1,0,goalEl());if(isGate())out.unshift(gateEl());else if(gateWeek())out.unshift(gateWeekEl());const nt=noticeEl();if(nt)out.unshift(nt);
@@ -4170,10 +4170,32 @@ function nbCard(){const m=G.me;if(!m||!isNewbie(m))return null;const nb=nbInit()
         g?h('span',{class:'dim',style:'font-size:11.5px;flex:none'},'받음'):d?h('button',{class:'sm pri',style:'flex:none',onclick:()=>nbClaim(k)},`$${NB_REWARD} 받기`):null)})),
     h('div',{class:'row'},h('span',{class:'dim',style:'font-size:11.5px'},`하나마다 $${NB_REWARD}, 다 마치면 $${NB_ALL}를 더 받아요.`),h('button',{class:'ghost sm',style:'flex:none;white-space:nowrap',onclick:()=>{nb.hide=1;save();render()}},'접기')))}
 {const rl0=renderLeft;renderLeft=function(){const r=rl0.apply(this,arguments);try{const c=nbCard();const L=$('left');if(c&&L){const first=L.firstElementChild;if(first&&first.nextSibling)L.insertBefore(c,first.nextSibling);else L.append(c)}}catch(e){}return r}}
-{const ex0=explore;explore=function(){const m=G.me,en=m&&m.en;const r=ex0.apply(this,arguments);try{if(G.me&&G.me.en<en)nbMark('explore')}catch(e){}return r}}
+{const ex0=explore;explore=function(){const l0=G.log&&G.log[0],s0=scene,r0=result;const r=ex0.apply(this,arguments);try{if(G.me&&((G.log&&G.log[0]!==l0)||scene!==s0||result!==r0))nbMark('explore')}catch(e){}return r}}
 {const fw0=finishWork;finishWork=function(){const r=fw0.apply(this,arguments);try{nbMark('work')}catch(e){}return r}}
 {const po0=post;post=function(ch,who){const r=po0.apply(this,arguments);try{if(who==='me')nbMark('chat')}catch(e){}return r}}
 if(typeof tipsBody==='function'){const tb0=tipsBody;tipsBody=function(){const r=tb0.apply(this,arguments);try{if(TIPS&&TIPS.length!==undefined)nbMark('board')}catch(e){}return r}}
+
+/* ---------- 몰래 졸기: 출근해 있을 때의 낮잠. 들키면 일당이 깎인다 ---------- */
+const DOZE_CAUGHT={
+ red:['어깨를 툭 치는 손. 고개를 드니 홍봉이 장부를 펼치고 있다.\n「졸았지. 적어 둔다.」\n볼펜 끝이 내 이름 옆에 작은 점을 하나 찍었다.','눈을 뜨니 마작패 하나가 이마에 붙어 있다. 「白」. 사무원이 웃지도 않고 말한다.\n「오늘 일당은 반이야. 장부에 그렇게 적혔어.」'],
+ sam:['누가 완장을 세게 잡아당긴다. 조장이다.\n「순찰 중에 조는 건 문 열어 주는 거랑 같아.」\n오늘 순찰 일지에 내 이름 옆으로 빨간 줄이 하나 그어졌다.','손전등 빛이 얼굴을 비춘다. 「…자고 있었어?」\n대장은 더 묻지 않았다. 그게 더 무섭다. 일당이 반으로 깎였다.'],
+ free:['사장이 신문을 둘둘 말아 머리를 친다.\n「돈 받고 잠자냐? 반만 줄 거야.」','눈을 뜨니 가게 셔터가 반쯤 내려와 있다. 주인이 팔짱을 끼고 서 있다.\n「잔 만큼 빼고 준다.」']};
+const DOZE_OK=['고개를 숙이고 잠깐 눈을 붙였다. 아무도 몰랐다. 목이 조금 결린다.','기둥에 기대 선 채로 졸았다. 꿈에서도 일을 하고 있었다.','장부 위에 엎드려 잠깐 잤다. 볼에 숫자가 찍혀 있다.','쪽잠을 잤다. 깨어 보니 시계가 십 분밖에 안 갔다. 그래도 개운하다.'];
+const DOZE_GHOST='누가 어깨를 흔들어 깨웠다. 「일어나, 들킨다.」\n돌아보니 아무도 없다. 바로 뒤에서 사장이 지나갔다.';
+function dozeOdds(m){const agi=+(m.stats&&m.stats.agi)||10;let p=.35-(agi-10)*.01;if(m.work&&m.work.dozed)p+=.2;return Math.max(.12,Math.min(.6,p))}
+function doze(){const m=G.me;if(!m)return;if(!m.work)return toast('출근해 있을 때만 몰래 졸 수 있어요.');if(scene)return toast('지금 장면부터 마무리해 주세요.');if(m.nap)return toast('이미 자고 있어요.');
+  const dl=daily();if(dl.nap>=2)return toast('오늘은 더 잠이 오지 않아요.');dl.nap++;const w=m.work;const f=m.fugitive?'free':m.fac;let out=[],text,bad=false;
+  if(chance(isBuild()?.25:.08)){out=give({en:4,mind:-4});text=DOZE_GHOST;log('근무 중에 몰래 졸았다. 누가 깨워 줬다. 아무도 없었는데.','haunt')}
+  else if(chance(dozeOdds(m))){w.cut=Math.min(.75,(w.cut||0)+.5);w.dozed=1;out=give({en:2});if(f==='red'&&(m.credit||0)>0){m.credit--;out.push('신용 -1')}else if(f==='sam'){out.push(...give({mind:-3}))}
+    out.push(`이번 일당 ${Math.round((1-w.cut)*100)}%만 받음`);text=pick(DOZE_CAUGHT[f]||DOZE_CAUGHT.free);bad=true;log(`${w.job} 중에 몰래 졸다가 들켰다.`,'work')}
+  else{w.dozed=1;out=give({en:4,mind:2});text=pick(DOZE_OK);if(chance(.1)){if(chance(.5)){out.push(...give({clue:1}));text+='\n\n꿈에서 누가 설계도를 펼쳐 보여 줬다. 깨어 보니 손에 종이 조각이 쥐여 있다.'}else{out.push(...give({fx:'delirium'}));text+='\n\n꿈에서 일터에 문이 하나 더 있었다. 깨어 보니 손톱 밑이 까맣다.'}}log(`${w.job} 중에 몰래 졸았다. 아무도 몰랐다.`,'work')}
+  try{sfx('snuff')}catch(e){}done('몰래 졸기',text,out,bad)}
+/* 출근 중엔 낮잠 대신 몰래 졸기 */
+{const np0=nap;nap=function(){const m=G.me;if(m&&m.work)return doze();return np0.apply(this,arguments)}}
+/* 들킨 만큼 일당을 깎는다 */
+function dozeCutPay(fn){return function(){const w=G.me&&G.me.work;if(!w||!w.cut)return fn.apply(this,arguments);const j=w.job,o=PAY[j];PAY[j]=Math.max(0,Math.floor((o||40)*(1-w.cut)));try{return fn.apply(this,arguments)}finally{PAY[j]=o}}}
+finishWork=dozeCutPay(finishWork);
+if(typeof earlyLeave==='function')earlyLeave=dozeCutPay(earlyLeave);
 
 /* ---------- 시작 ---------- */
 async function boot(){
