@@ -1608,7 +1608,7 @@ function openForm(edit){const c=edit?G.me:null;const st=c?{...c.stats}:{str:10,a
   const sw=h('div',{class:'swatches'});const drawSw=()=>{sw.replaceChildren(...COLORS.map(([col,n])=>h('button',{type:'button',title:n,'aria-label':'대표 색 '+n,'aria-pressed':String(col===color),style:`background:${col}`,onclick:()=>{color=col;if(!img)prev.style.background=col;drawSw()}})))};drawSw();
   const err=h('p',{style:'margin:0;color:var(--bad);font-size:13px'});
   const form=h('form',{class:'stack',onsubmit:e=>{e.preventDefault();const v=id=>{const el=document.getElementById(id);return el?el.value.trim():''};
-    const name=v('f-name');if(!name){err.textContent='이름을 적어 주세요.';return}if(!c&&pool>0){err.textContent=`능력치 포인트가 ${pool} 남았어요.`;return}
+    const name=v('f-name');if(!name){err.textContent='이름을 적어 주세요.';return}if(!c&&pool>0){err.textContent=`능력치 포인트가 ${pool} 남았어요.`;return}if(!c&&v('f-fac')==='sam'&&typeof samClosed==='function'&&samClosed()){err.textContent='지금은 삼경이 새 대원을 받지 않아요. 다른 소속을 골라 주세요.';return}
     const prof={name,age:v('f-age'),gender:v('f-gender'),look:v('f-look'),pers:v('f-pers'),habit:v('f-habit'),likes:v('f-likes'),dislikes:v('f-dislikes'),fear:v('f-fear'),fearNote:v('f-fearnote'),keep:v('f-keep'),quote:v('f-quote'),memo:v('f-memo'),secret:v('f-secret'),color,img,portrait};
     if(c){Object.assign(G.me,prof);const nj=v('f-job');if(nj!==(G.me.job||'')){if(G.me.work)toast('일하는 중이라 생업은 퇴근한 뒤에 바꿀 수 있어요.');else{G.me.job=nj||null;log(nj?`생업을 바꿨다: ${nj}`:'생업을 그만뒀다.','work')}}log('프로필을 고쳤다.','life')}
     else{const reason=v('f-reason'),fac=v('f-fac'),job=v('f-job')||null;const debt0=fac==='red'?1000:0;
@@ -3028,6 +3028,14 @@ function facMarkSvg(fac,px){const f=FAC_PIX[fac==='free'||fac==='sam'||fac==='re
 function facMark(fac,px,extra){const s=h('span',{class:'facmark','aria-hidden':'true',title:(FACS[fac]||'')+' 마크',style:extra||''});s.innerHTML=facMarkSvg(fac,px||18);return s}
 {const fc0=factionCard;factionCard=function(){const el=fc0();try{const m=G.me,l=el.querySelector('.lbl');if(l){const f=m.fugitive?'free':m.fac;const row=h('div',{class:'row',style:'align-items:center;gap:10px;justify-content:flex-start'},facMark(f,30),h('div',null,h('b',{style:'display:block;font-size:15px'},FACS[f]),l.cloneNode(true)));l.replaceWith(row)}}catch(e){}return el}}
 {const id0=idCard;idCard=function(p,isMe){const el=id0(p,isMe);try{const dts=[...el.querySelectorAll('dt')];const t=dts.find(x=>x.textContent==='소속');if(t&&t.nextElementSibling)t.nextElementSibling.prepend(facMark(isMe&&p.fugitive?'free':p.fac,12,'margin-right:4px;vertical-align:-1px'))}catch(e){}return el}}
+
+/* ---------- 신고서 열 때 서버의 진영 설정·인원을 먼저 불러온다 ---------- */
+async function facPrime(){if(typeof sb==='undefined'||!sb)return;try{await Promise.all([loadFlags(),G.me?null:loadOthers()])}catch(e){}
+  const rs=document.getElementById('f-reason'),f0=document.getElementById('f-fac');if(!rs||!f0)return;const keep=f0.value;
+  rs.dispatchEvent(new Event('change',{bubbles:true}));const f=document.getElementById('f-fac');
+  if(f&&keep!==f.value&&[...f.options].some(o=>o.value===keep)){f.value=keep;f.dispatchEvent(new Event('change',{bubbles:true}))}}
+{const o0=openForm;openForm=function(edit){const r=o0.apply(this,arguments);if(!edit)facPrime();return r}}
+{const a0=afterLogin;afterLogin=async function(){loadFlags();return a0.apply(this,arguments)}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
