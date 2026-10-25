@@ -1729,7 +1729,7 @@ function factionCard(){const m=G.me;const c=[h('span',{class:'lbl'},'성채에�
     m.rank==='guest'?h('p',{class:'mute',style:'margin:0;font-size:12px'},`등잡이 승진: 공적 50, 빚 $${Math.floor(m.debt0/2)} 이하`):m.rank==='head'?h('p',{class:'mute',style:'margin:0;font-size:12px'},`${DSHORT[m.headDong||1]} 구역을 맡고 있다. 매일 보호비를 걷을 수 있다.`):h('p',{class:'mute',style:'margin:0;font-size:12px'},'홍봉·백선 갈래와 향주 승진은 베타 2에서 열려요.'),
     m.rank==='head'?h('button',{class:'sm pri',disabled:daily().head,onclick:collectProtection},daily().head?'오늘 보호비는 걷었다':'구역 보호비 걷기'):null,
     h('div',{class:'wrap'},m.rank==='guest'?h('button',{class:'sm',onclick:promote},'승진 신청'):null,h('button',{class:'sm',disabled:!m.debt||!m.money,onclick:()=>payDebt(50)},'빚 $50 갚기'),h('button',{class:'sm',disabled:!m.debt||!m.money,onclick:()=>payDebt(m.money)},'있는 만큼 갚기'),h('button',{class:'sm',style:'border-color:var(--bad);color:var(--bad)',onclick:leaveRed},'나간다')));
-  else if(m.fac==='sam')c.push(h('div',{class:'mute',style:'font-size:13px'},`${RANKN[m.rank]} · 순찰 ${m.sam.patrol||0} · 현장 수습 ${m.sam.cleanup||0} · 봉인 ${m.sam.seal||0}`),h('div',{class:'mute',style:'font-size:13px'},`평판 ${m.rep||0} · ${REPN(m.rep||0)}`+((m.merit||0)?` · 공적 ${m.merit}`:'')),m.rank==='rookie'?h('p',{class:'mute',style:'margin:0;font-size:12px'},'조장 승진: 순찰 20, 현장 수습 5'):h('p',{class:'mute',style:'margin:0;font-size:12px'},'대장은 베타 2에서 열려요.'),m.rank==='rookie'?h('button',{class:'sm',onclick:promote},'승진 신청'):null);
+  else if(m.fac==='sam')c.push(h('div',{class:'mute',style:'font-size:13px'},`${RANKN[m.rank]} · 순찰 ${m.sam.patrol||0} · 현장 수습 ${m.sam.cleanup||0} · 봉인 ${m.sam.seal||0}`),h('div',{class:'mute',style:'font-size:13px'},`평판 ${m.rep||0} · ${REPN(m.rep||0)}`+((m.merit||0)?` · 공적 ${m.merit}`:'')),m.rank==='rookie'?h('p',{class:'mute',style:'margin:0;font-size:12px'},'조장 승진: 순찰 20, 현장 수습 5'):h('p',{class:'mute',style:'margin:0;font-size:12px'},'대장은 베타 2에서 열려요.'),h('div',{class:'wrap'},m.rank==='rookie'?h('button',{class:'sm',onclick:promote},'승진 신청'):null,h('button',{class:'sm',style:'border-color:var(--bad);color:var(--bad)',onclick:leaveSam},'완장 반납')));
   else{c.push(h('div',{class:'mute',style:'font-size:13px'},`평판 ${m.rep||0} · ${REPN(m.rep||0)}`+((m.merit||0)?` · 공적 ${m.merit}`:'')+((m.credit||0)?` · 신용 ${m.credit}`:'')));
     if(m.fugitive)c.push(h('button',{class:'sm',onclick:ransom},`몸값 치르기 ($${Math.max(300,m.debt*3)})`));
     else c.push(h('p',{class:'mute',style:'margin:0;font-size:12px'},'갈 수 있는 길: 홍등루에서 빚을 지고 객이 되기 · 평판 80과 현장 수습 3으로 삼경 입단 · 문패로 주소 얻기 · 가게는 업데이트 예정'),h('div',{class:'wrap'},h('button',{class:'sm',onclick:joinSam},'삼경 입단 신청'),m.items.plate>0&&!m.hasAddr?h('button',{class:'sm',onclick:usePlate},'문패를 걸고 주소 얻기'):null))}
@@ -2965,7 +2965,7 @@ const FAC_DESC={
 function facDescDraw(){const box=document.getElementById('facDesc');const sel=document.getElementById('f-fac');if(!box||!sel)return;const d=FAC_DESC[sel.value];if(!d){box.replaceChildren();return}
   let cnt='';try{if(typeof facCounts==='function'){const c=facCounts();cnt=`지금 성채: 적등방 ${c.red} · 삼경 ${c.sam} · 무소속 ${c.free}`}}catch(e){}
   box.replaceChildren(h('div',{class:'card stack',style:'gap:4px;padding:12px 14px;background:var(--sunk)'},h('div',{class:'row',style:'justify-content:flex-start;gap:10px;align-items:center'},facMark(sel.value,30),h('b',{style:'font-size:14px'},d.t)),...d.l.map(x=>h('p',{class:'mute',style:'margin:0;font-size:13px;line-height:1.65'},x)),
-    h('p',{class:'dim',style:'margin:4px 0 0;font-size:12px'},'소속은 나중에 게임 안에서 바뀔 수 있어요. 다른 소속도 골라서 설명을 비교해 보세요.'+(cnt?' '+cnt:''))))}
+    h('p',{class:'dim',style:'margin:4px 0 0;font-size:12px'},'만든 지 3일 안에는 시트 고치기에서 소속을 한 번 바꿀 수 있어요. 그 뒤로는 게임 안에서 탈방, 완장 반납, 입단으로 바뀌어요.'+(cnt?' '+cnt:''))))}
 
 /* ---------- 진영 마크: 16칸 도트 ---------- */
 const FAC_PIX={
@@ -3036,6 +3036,49 @@ async function facPrime(){if(typeof sb==='undefined'||!sb)return;try{await Promi
   if(f&&keep!==f.value&&[...f.options].some(o=>o.value===keep)){f.value=keep;f.dispatchEvent(new Event('change',{bubbles:true}))}}
 {const o0=openForm;openForm=function(edit){const r=o0.apply(this,arguments);if(!edit)facPrime();return r}}
 {const a0=afterLogin;afterLogin=async function(){loadFlags();return a0.apply(this,arguments)}}
+
+/* ---------- 삼경 완장 반납 · 새 캐릭터 소속 정정 ---------- */
+const SAM_REJOIN=7*864e5,FIX_WINDOW=3*864e5;
+function samQuit(silent){const m=G.me;const cut=silent?20:10;const r0=m.rep||0;m.rep=Math.max(0,r0-cut);
+  m.fac='free';m.rank='';if(!m.hasAddr)m.addr=assignAddr('free');if(m.job&&!jobsFor(m).includes(m.job))m.job=null;
+  m.samLeft={at:T(),day:dayIdx(T()),silent:!!silent,knocked:false};
+  log(silent?'완장을 두고 말없이 삼경을 나왔다. 순찰 일지에 「이탈」로 남았다.':'대장 앞에 완장을 내려놓고 삼경을 나왔다.','fac');
+  const lines=['무소속',`평판 -${r0-m.rep}`,'삼경 의원 반값 혜택 끝','7일 동안 재입단 불가'];
+  done('완장 반납',silent
+    ?'종루 아래 탁자에 완장을 개어 놓고 나왔다. 아무도 부르지 않았다.\n계단을 내려가는데 위에서 누가 순찰 일지를 넘기는 소리가 났다. 한 장, 한 장. 내 이름이 적힌 쪽에서 멈췄다.'
+    :'대장은 완장을 받아 들고 한참 들여다봤다. 「밤에 나가는 사람이 하나 줄었네요.」\n그는 일지에서 내 이름을 지우지 않았다. 대신 옆에 오늘 날짜를 적었다. 「문은 잘 잠그고 자요. 이제는 우리가 그쪽 문을 두드리는 쪽이니까.」',lines)}
+function leaveSam(){const m=G.me;if(!m||m.fac!=='sam')return;if(m.work)return toast('일하는 중에는 완장을 반납할 수 없어요. 퇴근한 뒤에 해 주세요.');
+  openScene({id:'leavesam',title:'완장 반납',text:'종루 아래, 순찰을 마친 대원들이 젖은 우비를 털고 있다.\n완장을 풀면 팔에 감겨 있던 자리가 서늘하다.\n삼경을 나간 사람은 밤에 문을 잠그고 자는 쪽이 된다.',choices:[
+    {l:'대장 앞에 완장을 내려놓는다',run:()=>samQuit(false)},
+    {l:'완장만 두고 말없이 나간다',run:()=>samQuit(true)},
+    {l:'아직은 아니다',run:()=>{done('완장','완장을 다시 팔에 감았다. 매듭이 전보다 조금 헐겁다.',[])}}]})}
+{const j0=joinSam;joinSam=function(){const m=G.me;if(m&&m.samLeft&&T()-m.samLeft.at<SAM_REJOIN){const d=Math.ceil((SAM_REJOIN-(T()-m.samLeft.at))/864e5);return toast(`완장을 반납한 지 얼마 안 됐어요. ${d}일 뒤에 다시 신청할 수 있어요.`)}return j0.apply(this,arguments)}}
+/* 나간 뒤 처음 맞는 한밤: 순찰 시간에 문을 두드린다 */
+setInterval(()=>{const m=G.me;if(!m||!m.samLeft||m.samLeft.knocked||document.hidden)return;if(dayIdx(T())-m.samLeft.day>2){m.samLeft.knocked=true;return}
+  const x=hour();if(!(x>=23||x<3))return;m.samLeft.knocked=true;
+  const t=pick(['문을 세 번 두드리는 소리. 삼경이 돌던 시간이다. 문을 열어 보면 복도에는 젖은 발자국만 있다.','팔에 완장이 감겨 있던 자리가 붉게 부어 있다. 그 위로 누가 손가락으로 매듭을 짓는 것처럼 차갑다.','문 너머에서 누가 순찰 일지를 읽는다. 「이상 없음.」 내 이름 다음 줄에서 목소리가 멈춘다.']);
+  log(t,'haunt');toast(t);save()},60e3);
+
+/* 소속 정정: 만든 지 3일 안, 한 번만 */
+function canFixFac(m){return m&&!m.facFix&&!m.fugitive&&m.rank!=='boss'&&!m.isNpc&&T()-(m.created||0)<FIX_WINDOW}
+function fixFac(nf){const m=G.me;const old=m.fac;if(!nf||nf===old||!canFixFac(m))return;
+  if(nf==='sam'&&typeof samClosed==='function'&&samClosed())return toast('지금은 삼경이 새 대원을 받지 않아 삼경으로는 바꿀 수 없어요.');
+  if(nf==='sam'&&m.samLeft&&T()-m.samLeft.at<SAM_REJOIN)return toast('완장을 반납한 지 7일이 안 돼 삼경으로는 바꿀 수 없어요.');if(m.work)return toast('일하는 중에는 소속을 바꿀 수 없어요. 퇴근한 뒤에 해 주세요.');
+  if(old==='red'){m.debt=0;m.debt0=0;m.merit=0;m.credit=0}
+  if(nf==='red'){m.debt=1000;m.debt0=1000}
+  m.fac=nf;m.rank=nf==='red'?'guest':nf==='sam'?'rookie':'';if(!m.hasAddr)m.addr=assignAddr(nf);
+  const jobs=jobsFor(m);if(!jobs.includes(m.job))m.job=jobs[0]||null;m.cell=homeCell(m);
+  m.facFix={from:old,to:nf,at:T()};log(`소속을 정정했다: ${FACS[old]} → ${FACS[nf]}. 새 주소는 ${m.addr}.`,'fac');
+  toast(`소속을 ${FACS[nf]}(으)로 바꿨어요.${nf==='red'?' 빚 $1000이 생겼어요.':old==='red'?' 적등방 빚은 사라졌어요.':''}`);save();render()}
+{const o0=openForm;openForm=function(edit){const r=o0.apply(this,arguments);if(!edit||!canFixFac(G.me))return r;try{
+  const m=G.me;const form=document.querySelector('#modalRoot form');const job=document.getElementById('f-job');if(!form)return r;
+  const opts=['red','sam','free'].filter(f=>f===m.fac||!(f==='sam'&&((typeof samClosed==='function'&&samClosed())||(m.samLeft&&T()-m.samLeft.at<SAM_REJOIN))));
+  const s=h('select',{id:'f-fixfac'},opts.map(f=>h('option',{value:f},FACS[f]+(f===m.fac?' (지금)':''))));s.value=m.fac;
+  const left=Math.max(1,Math.ceil((FIX_WINDOW-(T()-(m.created||0)))/36e5));
+  const box=h('div',{class:'stack',style:'gap:6px;grid-column:1/-1'},h('label',{class:'field full'},h('span',null,'소속 정정'),s),
+    h('p',{class:'mute',style:'margin:0;font-size:12.5px'},`만든 지 3일이 안 된 캐릭터는 소속을 한 번 바꿀 수 있어요. ${left}시간 남았어요. 적등방에서 나가면 빚이 사라지고, 적등방으로 가면 빚 $1000이 생겨요. 주소와 생업도 새 소속에 맞게 바뀌어요.`));
+  const anchor=job?job.closest('.field')||job:null;if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(box,anchor);else form.append(box);
+  form.addEventListener('submit',()=>{setTimeout(()=>{if(!form.isConnected&&s.value!==G.me.fac)fixFac(s.value)},0)})}catch(e){}return r}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
