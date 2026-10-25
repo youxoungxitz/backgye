@@ -240,6 +240,9 @@ body.build{background:#0E1110}
 .msg.ooc.cont{margin-top:1px}
 .msg.ooc.cont time{opacity:.45}
 .msg .who .facmark{display:inline-block}
+.roomfig{margin:0;display:flex;flex-direction:column;gap:4px}
+.roomart{width:100%;max-width:448px;aspect-ratio:112/64;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;border:1px solid var(--line);border-radius:4px;background:#000}
+.roomfig figcaption{font-size:11.5px;color:var(--dim);font-family:var(--f-mono)}
 </style>
 </head>
 <body>
@@ -3498,6 +3501,86 @@ function deepCard(){const m=G.me,sp=deepSpace(),S=DEEP_SP[sp],nx=DEEP_SP[deepSpa
     m&&m.deepLog&&m.deepLog.length?h('details',null,h('summary',{style:'cursor:pointer;font-size:13px'},`탐사 일지 · ${m.deepLog.length}번`),h('div',{class:'stack',style:'gap:8px;margin-top:8px'},m.deepLog.map(r=>h('div',{style:'font-size:12.5px;line-height:1.6;border-left:2px solid var(--line);padding-left:8px'},
       h('b',null,`${DEEP_SP[r.sp].n} · ${r.turn}/20 · ${{win:'끝까지',back:'돌아옴',quit:'포기',dark:'등불 꺼짐',hp:'쓰러짐',mind:'정신 놓음'}[r.kind]}`),h('div',{class:'mute'},'챙긴 것: '+r.loot),...(r.log||[]).map(x=>h('div',{class:'dim'},x)))))):null)}
 {const vn0=viewNight;viewNight=function(){const r=[].concat(vn0.apply(this,arguments));try{r.push(deepCard())}catch(e){}return r}}
+
+/* ---------- 내 방 도트 그림: 사는 동마다 방 모양이 다르고, 놓아둔 밤물건이 그림 안에 놓인다 ---------- */
+const RA_W=112,RA_H=64;
+const RA_KIND={red:{n:'적등방 숙소층',lamp:[50,12]},sam:{n:'삼경 숙소',lamp:[102,32]},cage:{n:'1동 철창 하숙',lamp:[56,11]},flat:{n:'4동 문패 집',lamp:[94,28]}};
+function raKind(p){const a=String((p&&p.addr)||'');if(a.startsWith('2동'))return'red';if(a.startsWith('3동'))return'sam';if(a.startsWith('4동'))return'flat';return'cage'}
+/* 물건 자리: [왼쪽 x, 바닥 y] 여섯 칸 */
+const RA_SLOTS={red:[[39,20],[51,20],[78,40],[92,40],[38,58],[56,58]],sam:[[68,22],[82,22],[71,38],[82,38],[36,58],[52,58]],cage:[[24,22],[38,22],[66,40],[76,40],[24,46],[40,46]],flat:[[48,18],[62,18],[46,44],[60,44],[14,60],[30,60]]};
+const RA_SPR={
+ tape:{c:{k:'#151515',d:'#3A3A44',w:'#D8D0B8',r:'#B0262A'},p:['kkkkkkkkkk','kddddddddk','kdwwwwwwdk','kdwkwwkwdk','kdwwwwwwdk','kddddddddk','kdddrrdddk','kkkkkkkkkk']},
+ nail:{c:{k:'#202020',s:'#9A9C98'},p:['....kk....','...kssk...','....ss....','....ss....','....ss....','....ss....','....ss....','.....s....']},
+ mirror:{c:{k:'#1A2228',b:'#7FA6B8',w:'#E8F4F8'},p:['.......k..','......kbk.','.....kbwk.','....kbbwk.','...kbbbbk.','..kbbwbbk.','.kbbbbbbk.','kkkkkkkkk.']},
+ molar:{c:{k:'#3A3428',w:'#F2EEDC',y:'#D8C88A'},p:['..kkkkkk..','.kwwwwwwk.','.kwwwwwwk.','.kwwwwwyk.','..kwwwwk..','..kwkkwk..','..kk..kk..']},
+ plate:{c:{k:'#2A1A0E',b:'#6B4A2A',w:'#E8DCC0'},p:['kkkkkkkkkk','kbbbbbbbbk','kbwwwwwwbk','kbwwwwwwbk','kbbbbbbbbk','kkkkkkkkkk']},
+ number:{c:{k:'#3A3428',w:'#EDE6D0',b:'#3A4A8A'},p:['.kkkkkkk..','.kwwwwwk..','.kwbbbwk..','.kwwwwwk..','.kwbbwwk..','.kwwwwwk..','.kkkkkkk..']},
+ button:{c:{k:'#1A1A1A',s:'#8A8C88',y:'#F2C14E'},p:['...kkkk...','..kssssk..','.ksyyyysk.','.ksyyyysk.','.ksyyyysk.','..kssssk..','...kkkk...']},
+ bowl:{c:{k:'#2A2A2A',w:'#F2EEE4',y:'#E8C870',b:'#3A6AA8',s:'#B8B8B8'},p:['..s....s..','...s..s...','kkkkkkkkkk','kyyyyyyyyk','kwwwwwwwwk','.kwbwbwbk.','..kwwwwk..','...kkkk...']},
+ film:{c:{k:'#0E1418',d:'#1E2A30',w:'#C8DDE8'},p:['kkkkkkkkkk','kddddddddk','kdwwdwwddk','kddwdwdddk','kdwwdwwddk','kddddddddk','kkkkkkkkkk']},
+ lantern:{c:{k:'#2A1A0E',y:'#F2D88A',r:'#B0262A'},p:['....kk....','...kyyk...','..kyyyyk..','.kyrrrryk.','.kyyyyyyk.','.kyrrrryk.','..kyyyyk..','...kyyk...','....rr....','....r.....']},
+ wire:{c:{k:'#B87333'},p:['...kkkk...','..k....k..','.k.kkkk.k.','.k.k..k.k.','.k.kkkk.k.','..k....k..','...kkkkk..','.......k..','........k.']},
+ card13:{c:{k:'#1A1A1A',w:'#E8E2D0',p:'#8A9AA8',r:'#B0262A'},p:['kkkkkkkkkk','kwwwwwwwwk','kwppwrrrwk','kwppwwwwwk','kwwwwrrwwk','kkkkkkkkkk']},
+ mycoat:{c:{k:'#1A1A1A',c:'#5A6A7A',d:'#3E4A56'},p:['..kk..kk..','.kcckkcck.','kcccccccck','kcccccccck','kcccddccck','kcccddccck','kkkkkkkkkk']},
+ letter:{c:{k:'#3A3428',w:'#E8E0C8',b:'#7A9AB0'},p:['kkkkkkkkkk','kwkwwwwkwk','kwwkwwkwwk','kwwwkkwwwk','kbwwwwwwbk','kbbwwwwbbk','kkkkkkkkkk']},
+ pkey:{c:{k:'#3A2A10',g:'#C9A84A'},p:['.kkk......','kgggk.....','kg.gkkkkkk','kgggk..k.k','.kkk...k..']},
+ meattag:{c:{k:'#2A2420',w:'#EDE6D0',r:'#9A2A2A'},p:['.k........','..k.......','..kkkkkkk.','..kwwwwwk.','..kwrwwwk.','..kwwwwwk.','..kwrrwwk.','..kkkkkkk.']},
+ chalk:{c:{k:'#6A6A60',w:'#F2F2EA'},p:['.......kk.','.....kwwk.','...kwwwk..','.kwwwk....','.kkk......']},
+ candle:{c:{k:'#3A3020',f:'#FF8A3A',y:'#FFD27A',w:'#EFE6D0',d:'#8A7A5A'},p:['....f.....','...fyf....','....y.....','...kwk....','...kwk....','...kwk....','...kwk....','..kkkkk...','..kdddk...']},
+ key1304:{c:{k:'#2A2A26',g:'#B8B8B0',w:'#E8DCC0'},p:['..kkk.....','.kgggk....','.kg.gkkkkk','.kgggk.k.k','..kkk..k..','...ww.....']},
+ drainring:{c:{k:'#2A2010',g:'#C9A84A',b:'#7AB0C8'},p:['...kkkk...','..kgbbgk..','..kg..gk..','..kg..gk..','..kggggk..','...kkkk...']},
+ pencil:{c:{k:'#2A2010',y:'#C9A04A',p:'#E8A0A0',w:'#C8B898'},p:['.........k','........ky','.......kyk','......kyk.','.....kyk..','....kyk...','...kyk....','..kpk.....','.kwk......','kk........']},
+ key13:{c:{k:'#2A1A10',g:'#C9A84A',r:'#B0262A'},p:['..kkk.....','.kgggk....','.kg.gkkkkk','.kgggk.k.k','..kkk..k..','...rr.....']},
+ pearl:{c:{k:'#1A1A1A',w:'#F0ECE0',b:'#4A8AA8',p:'#101010'},p:['...kkkk...','..kwwwwk..','.kwwbbwwk.','.kwbppbwk.','.kwbppbwk.','.kwwbbwwk.','..kwwwwk..','...kkkk...']},
+ box:{c:{k:'#2A1A0E',b:'#8A6A3A',t:'#C9B88A'},p:['kkkkkkkkkk','kbbbttbbbk','kbbbttbbbk','kttttttttk','kbbbttbbbk','kbbbttbbbk','kkkkkkkkkk']}};
+function raSprite(g,key,x,bottom){const S=RA_SPR[key]||RA_SPR.box;const rows=S.p,y0=bottom-rows.length;
+  rows.forEach((row,y)=>{for(let i=0;i<Math.min(10,row.length);i++){const ch=row[i];if(ch==='.'||!S.c[ch])continue;g.fillStyle=S.c[ch];g.fillRect(x+i,y0+y,1,1)}})}
+function raDraw(g,kind,p,night,haunt){const R=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h)};
+  if(kind==='red'){R(0,0,112,44,'#5A1414');for(let x=2;x<112;x+=8)R(x,0,1,38,'#6B1A18');R(0,38,112,6,'#3A0D0C');R(0,44,112,20,'#2B1A12');R(0,50,112,1,'#3A2418');R(0,57,112,1,'#3A2418');
+   R(66,6,24,22,'#1A0A08');R(68,8,20,18,'#120E1A');R(75,11,7,10,'#5A1010');R(77,12,3,8,'#FF3D33');R(76,15,5,1,'#FF3D33');R(68,22,20,1,'#2A1A20');
+   R(36,20,28,2,'#3A2418');R(37,22,1,3,'#2A1A10');R(62,22,1,3,'#2A1A10');
+   R(50,0,1,6,'#1A0A08');R(46,6,9,11,'#7E1A14');R(47,7,7,9,'#D2352A');R(46,9,9,1,'#7E1A14');R(46,13,9,1,'#7E1A14');R(49,10,3,3,'#FFD27A');R(49,17,3,1,'#D9A441');R(50,18,1,3,'#D9A441');
+   R(4,26,4,22,'#3A1A10');R(8,38,28,4,'#E9DCC6');R(9,35,7,4,'#F2EAD8');R(8,41,28,7,'#B0262A');R(8,41,28,1,'#D2352A');R(34,42,2,8,'#2A1208');
+   R(70,40,38,3,'#1F6B4A');R(70,43,38,2,'#3A2418');R(72,45,2,11,'#2A1A10');R(104,45,2,11,'#2A1A10');[74,79,100].forEach(x=>{R(x,37,3,3,'#EDE6D0');R(x,39,3,1,'#9A9A90')});
+   R(40,26,8,9,'#E9DCC6')}
+  else if(kind==='sam'){R(0,0,112,30,'#2C3A3A');R(0,30,112,14,'#243030');R(0,30,112,1,'#3E5050');for(let y=44;y<64;y+=4)for(let x=0;x<112;x+=4)R(x,y,4,4,((x+y)/4)%2?'#3A4038':'#2E332D');
+   R(4,8,2,46,'#55606A');R(28,8,2,46,'#55606A');R(6,16,22,4,'#C8CCC4');R(6,18,22,3,'#4E6E7A');R(6,38,22,4,'#C8CCC4');R(6,40,22,5,'#4E6E7A');R(6,8,22,1,'#55606A');R(6,30,22,1,'#55606A');R(7,36,6,3,'#E8E8E0');
+   R(38,4,24,22,'#1A2424');R(40,6,20,18,'#0E1A24');R(52,8,4,4,'#E9E3C4');R(53,7,2,1,'#E9E3C4');R(44,14,6,10,'#081014');R(46,11,2,3,'#081014');R(40,20,20,4,'#081014');
+   R(64,8,1,3,'#888888');R(62,11,6,4,'#E8E8E0');R(63,12,4,1,'#B0262A');R(63,13,1,1,'#3A3A3A');R(65,13,1,1,'#3A3A3A');
+   R(66,22,42,2,'#5A4A38');R(67,24,1,3,'#3A2E22');R(106,24,1,3,'#3A2E22');
+   R(68,38,40,4,'#5A4A38');R(70,42,2,14,'#3A2E22');R(104,42,2,14,'#3A2E22');R(94,34,6,4,'#C9B88A');R(94,34,6,1,'#8A7A5A');R(102,28,1,10,'#2A2A2A');R(99,26,7,3,'#3E6B4A');R(100,29,5,1,'#F2D88A');
+   R(40,24,6,7,'#E9E3C4')}
+  else if(kind==='flat'){R(0,0,112,44,'#C9BE96');for(let y=3;y<44;y+=6)for(let x=(y%12?3:0);x<112;x+=6)R(x,y,1,1,'#A89A70');R(0,42,112,2,'#8A7A5A');R(0,44,112,20,'#C99A4A');for(let x=0;x<112;x+=18)R(x,44,1,20,'#B5853A');R(0,52,112,1,'#B5853A');
+   R(10,4,32,26,'#6B5A3A');R(12,6,28,22,night?'#121A26':'#3A4A5A');R(12,6,28,1,night?'#1E2A3A':'#556A7A');R(18,6,1,22,'#8A7A5A');R(30,6,1,22,'#8A7A5A');R(12,14,28,1,'#8A7A5A');R(12,22,28,1,'#8A7A5A');R(34,6,6,22,'#8A6A9A');R(34,6,1,22,'#6A4A7A');
+   R(46,18,32,2,'#6B4A2A');R(47,20,1,3,'#4A321A');R(76,20,1,3,'#4A321A');
+   R(84,8,8,11,'#F2EEE4');R(84,8,8,3,'#B0262A');R(85,12,1,1,'#3A3A3A');R(87,14,1,1,'#3A3A3A');R(89,16,1,1,'#3A3A3A');
+   R(82,36,24,12,'#6B4A2A');R(82,41,24,1,'#4A321A');R(86,22,16,14,'#3A3A3A');R(88,24,12,9,night?'#7A9A8A':'#5A7A6A');R(93,20,1,2,'#3A3A3A');R(96,19,1,3,'#3A3A3A');
+   R(42,44,34,3,'#8A5A2A');R(44,47,2,4,'#6B4A2A');R(72,47,2,4,'#6B4A2A');
+   R(4,10,4,34,'#7A6A4A');R(5,30,2,2,'#D9A441');R(52,26,8,9,'#F2EEE4')}
+  else{R(0,0,112,46,'#3A3A34');R(30,6,8,10,'#34342E');R(80,20,10,14,'#34342E');R(0,46,112,18,'#2A2A26');R(0,46,112,1,'#4A4A42');
+   for(let x=0;x<112;x+=4)R(x,0,1,6,'#55554C');R(0,0,112,1,'#55554C');R(0,5,112,1,'#55554C');for(let x=0;x<20;x+=5)R(x,0,1,64,'#55554C');for(let x=94;x<112;x+=5)R(x,0,1,64,'#55554C');R(0,20,20,1,'#55554C');R(94,20,18,1,'#55554C');R(0,40,20,1,'#55554C');R(94,40,18,1,'#55554C');
+   R(56,0,1,8,'#202020');R(55,8,3,4,'#F2E6A0');R(55,8,3,1,'#9A9A8A');
+   R(22,46,36,6,'#B8AE96');R(32,45,26,7,'#6B6A50');R(23,44,7,3,'#D8D0B8');
+   R(60,14,34,1,'#8A8A80');R(64,15,6,8,'#8A3A3A');R(64,15,6,2,'#6A2A2A');R(74,15,7,10,'#B8B0A0');R(85,15,5,7,'#4A5A7A');
+   R(22,22,30,2,'#6B4E2E');R(23,24,1,3,'#4A321A');R(50,24,1,3,'#4A321A');
+   R(64,40,24,13,'#6B4E2E');R(64,44,24,1,'#4A321A');R(64,48,24,1,'#4A321A');R(64,40,24,1,'#8A6A42');
+   R(60,26,8,9,'#D8D0B8')}
+  /* 방 쪽지 */
+  if(p&&p.roomNote){const N={red:[41,27],sam:[41,25],flat:[53,27],cage:[61,27]}[kind];R(N[0],N[1],6,7,'#F2EEDC');R(N[0]+1,N[1]+2,4,1,'#8A8070');R(N[0]+1,N[1]+4,3,1,'#8A8070');R(N[0]+2,N[1]-1,2,1,'#B0262A')}
+  /* 물건 */
+  const room=(p&&p.room)||[],slots=RA_SLOTS[kind];room.slice(0,6).forEach((k,i)=>{const[x,b]=slots[i];raSprite(g,k,x,b);if(night&&typeof ROOMFX!=='undefined'&&ROOMFX[k]){g.fillStyle='rgba(125,242,207,.35)';g.fillRect(x+4,b-12,2,1)}});
+  /* 밤에는 어둡고 등 아래만 밝다 */
+  if(night){const[lx,ly]=RA_KIND[kind].lamp;const gr=g.createRadialGradient(lx,ly,2,lx,ly,62);gr.addColorStop(0,'rgba(255,200,120,.06)');gr.addColorStop(.3,'rgba(6,8,12,.35)');gr.addColorStop(1,'rgba(4,6,10,.84)');g.fillStyle=gr;g.fillRect(0,0,RA_W,RA_H)
+  /* 섬망이나 증축 시간: 방 구석에 누가 서 있다 */
+  if(haunt){const hx=kind==='sam'?32:kind==='flat'?78:kind==='red'?62:88,hy=kind==='cage'?18:16;g.fillStyle='rgba(0,0,0,.82)';g.fillRect(hx+2,hy,4,4);g.fillRect(hx,hy+4,8,14);g.fillRect(hx+1,hy+18,2,10);g.fillRect(hx+5,hy+18,2,10);g.fillStyle='#FF3D33';g.fillRect(hx+3,hy+1,1,1);g.fillRect(hx+5,hy+1,1,1)}}}
+function roomArt(p,isMe){const kind=raKind(p);const cv=document.createElement('canvas');cv.width=RA_W;cv.height=RA_H;cv.className='roomart';cv.setAttribute('role','img');
+  const names=((p&&p.room)||[]).map(k=>ITEMS[k]?ITEMS[k].n:k);cv.setAttribute('aria-label',`${RA_KIND[kind].n} 방 그림${names.length?'. 놓인 물건: '+names.join(', '):''}`);
+  const x=typeof hour==='function'?hour():12;const night=x>=19||x<6;const haunt=!!(isMe&&((typeof hasFx==='function'&&hasFx('delirium'))||(typeof isBuild==='function'&&isBuild())));
+  try{raDraw(cv.getContext('2d'),kind,p,night,haunt)}catch(e){}
+  return h('figure',{class:'roomfig'},cv,h('figcaption',null,`${p&&p.addr&&String(p.addr).includes(RA_KIND[kind].n.split(' ').pop())?'':RA_KIND[kind].n+' · '}${(p&&p.addr)||''}${night?' · 밤':''}`))}
+{const o0=openRoom;openRoom=function(){const r=o0.apply(this,arguments);try{const st=document.querySelector('#modalRoot .stack');if(st&&G.me&&st.children[1])st.insertBefore(roomArt(G.me,true),st.children[1])}catch(e){}return r}}
+{const e0=roomEl;roomEl=function(p,isMe,id){const el=e0.apply(this,arguments);try{if(el&&el.children[0])el.children[0].after(roomArt(p,isMe))}catch(e){}return el}}
+
 
 /* ---------- 시작 ---------- */
 async function boot(){
