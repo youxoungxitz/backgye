@@ -143,7 +143,7 @@ textarea{resize:vertical;min-height:62px}
 .msg.ooc .who{color:var(--ink);font-weight:600}
 .msg.hammer{color:var(--tube);letter-spacing:.2em}
 .msg.radio{background:var(--sunk);border:1px solid rgba(125,242,207,.35);border-radius:3px;padding:8px 10px;color:var(--tube);text-shadow:0 0 6px rgba(125,242,207,.4)}
-.composer{display:flex;gap:6px}
+.composer{display:flex;gap:6px} .msg em.act{font-style:italic;opacity:.72}
 .person{display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:center;padding:5px 4px;border-radius:4px;cursor:pointer;border:0;background:transparent;text-align:left;font-weight:400;width:100%}
 .person:hover{background:var(--wall)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--dim)} .dot.on{background:var(--good)}
@@ -2151,11 +2151,11 @@ function dmListEl(){const m=G.me;if(!m)return[];const th=dmThreads();
 async function dmMarkRead(pid){const ids=DMS.filter(x=>x.from===pid&&x.to===G.me.id&&!x.read).map(x=>x.id);if(!ids.length)return;DMS.forEach(x=>{if(ids.includes(x.id))x.read=true});renderChat();await sb.from('direct_messages').update({read:true}).in('id',ids)}
 function openDM(pid){const m=G.me;if(!m)return;if(typeof sameOwner==='function'&&sameOwner(pid))return toast('내 다른 캐릭터와는 대화할 수 없어요.');const p=SAMPLES[pid];DM_OPEN=pid;
   const list=h('div',{class:'chlist',id:'dmList',style:'max-height:50vh'});const inp=h('input',{id:'dmIn',maxlength:500,placeholder:`${dmName(pid)}에게`,autocomplete:'off'});
-  const draw=()=>{const msgs=DMS.filter(x=>dmPartner(x)===pid).slice().reverse();list.replaceChildren(...(msgs.length?msgs.map(x=>{const mine=x.from===m.id;return h('div',{class:'msg',style:mine?'text-align:right':''},h('time',null,mdhm(x.t)),h('span',{class:'who',style:`color:${(mine?m:p)&&(mine?m:p).color!=='#0B0B0B'?(mine?m:p).color:'#9E9184'}`},mine?m.name:dmName(pid)),x.text)}):[h('div',{class:'mute',style:'font-size:13px'},'첫 말을 걸어 보세요.')]));requestAnimationFrame(()=>{list.scrollTop=list.scrollHeight})};
+  const draw=()=>{const msgs=DMS.filter(x=>dmPartner(x)===pid).slice().reverse();list.replaceChildren(...(msgs.length?msgs.map(x=>{const mine=x.from===m.id;return h('div',{class:'msg',style:mine?'text-align:right':''},h('time',null,mdhm(x.t)),h('span',{class:'who',style:`color:${(mine?m:p)&&(mine?m:p).color!=='#0B0B0B'?(mine?m:p).color:'#9E9184'}`},mine?m.name:dmName(pid)),...actNodes(x.text))}):[h('div',{class:'mute',style:'font-size:13px'},'첫 말을 걸어 보세요.')]));requestAnimationFrame(()=>{list.scrollTop=list.scrollHeight})};
   DM_DRAW=draw;draw();dmMarkRead(pid);
   openModal(h('div',{class:'stack'},h('div',{class:'row'},h('div',{class:'wrap'},p?avEl(p):null,h('h2',{class:'disp',style:'font-size:22px'},dmName(pid))),h('button',{class:'ghost',onclick:()=>{DM_OPEN=null;closeModal()}},'닫기')),
-    h('p',{class:'dim',style:'margin:0;font-size:12px'},'캐릭터로 나누는 1:1 대화예요. 두 사람과 운영자만 볼 수 있어요.'),list,
-    h('form',{class:'composer',onsubmit:async e=>{e.preventDefault();let v=inp.value.trim();if(!v)return;if(hasFx('gum'))v=gumify(v);inp.value='';
+    h('p',{class:'dim',style:'margin:0;font-size:12px'},'캐릭터로 나누는 1:1 대화예요. 두 사람과 운영자만 볼 수 있어요. *고개를 끄덕인다*처럼 별표로 감싸면 행동 묘사가 돼요.'),list,
+    h('form',{class:'composer',onsubmit:async e=>{e.preventDefault();let v=inp.value.trim();if(!v)return;if(hasFx('gum'))v=gumKeep(v);inp.value='';
       const{data,error}=await sb.from('direct_messages').insert({from_char:m.id,to_char:pid,text:v}).select().single();if(error){toast('보내지 못했어요.');inp.value=v;return}
       if(data&&!DMS.some(x=>x.id===data.id))DMS.unshift(normDM(data));draw();renderChat()}},inp,h('button',{type:'submit',class:'pri'},'보내기'))));setTimeout(()=>inp.focus(),50)}
 let DM_DRAW=null;
@@ -2565,6 +2565,11 @@ function chatPut(C,arr){const f=arr.indexOf(chatForm);if(f<0||chatForm.parentNod
   if(sb0){sb0.addEventListener('touchstart',e=>{const t=e.touches[0];tx=t.clientX;ty=t.clientY},{passive:true});
    sb0.addEventListener('touchend',e=>{const t=e.changedTouches[0];if(Math.abs(t.clientX-tx)>12||Math.abs(t.clientY-ty)>12)return;e.preventDefault();
      if(chatForm.requestSubmit)chatForm.requestSubmit();else chatForm.dispatchEvent(new Event('submit',{cancelable:true}))},{passive:false})}}
+
+/* 1:1 대화 행동 묘사: *별표*로 감싼 부분. 빈 잇몸이어도 이 부분은 발음이 새지 않는다. */
+const ACT_RE=/(\*[^*\n]+\*)/,isAct=p=>/^\*[^*\n]+\*$/.test(p);
+function gumKeep(v){return String(v).split(ACT_RE).map(p=>isAct(p)?p:gumify(p)).join('')}
+function actNodes(t){return String(t||'').split(ACT_RE).filter(Boolean).map(p=>isAct(p)?h('em',{class:'act'},p.slice(1,-1)):p)}
 
 /* ---------- 시작 ---------- */
 async function boot(){
