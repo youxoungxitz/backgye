@@ -442,7 +442,7 @@ const ms=(m)=>m*MIN/(fast()?60:1);
 
 /* ---------- 캐릭터 수치 ---------- */
 const EN_MAX=20;
-const enEvery=()=>fast()?5e3:5*MIN;
+const enEvery=()=>(fast()?5e3:5*MIN)*(G.me&&(G.me.fx||[]).some(f=>f.id==='dawn'&&f.until>Date.now())?.6:1);
 const hasFx=id=>(G.me&&G.me.fx||[]).some(f=>f.id===id&&f.until>T());
 function addFx(id){const m=G.me;m.fx=(m.fx||[]).filter(f=>f.id!==id&&f.until>T());m.fx.push({id,until:T()+ms(FXDEF[id].min)});if(id==='delirium')fakeLog()}
 function clearFx(id){G.me.fx=(G.me.fx||[]).filter(f=>f.id!==id)}
@@ -450,7 +450,7 @@ const homeCell=m=>m.fac==='red'&&!m.fugitive?'1-1':m.fac==='sam'?'2-1':'0-1';
 function tick(){const m=G.me;if(!m)return;const now=T();dailyBonus();prologueCheck();roomNight();ghostPager();if(G.opts.infEn)m.en=EN_MAX;
   if(m.en>=EN_MAX)m.enAt=now;else{const g=Math.floor((now-m.enAt)/enEvery());if(g>0){m.en=Math.min(EN_MAX,m.en+g);m.enAt=m.en>=EN_MAX?now:m.enAt+g*enEvery()}}
   const hrs=(now-(m.ts||now))/HOUR*(fast()?60:1);m.ts=now;
-  if(hrs>0){if(!hasFx('sick'))m.hp=Math.min(100,m.hp+hrs*3);if(m.cell===homeCell(m))m.mind=Math.min(100,m.mind+hrs*4)}
+  if(hrs>0){if(!hasFx('sick')&&!hasFx('wet'))m.hp=Math.min(100,m.hp+hrs*3);if(m.cell===homeCell(m))m.mind=Math.min(100,m.mind+hrs*4)}
   if(m.work&&now>=m.work.until)finishWork();
   if(m.nap&&now>=m.nap.until)finishNap();
   rentCheck();if(m.bowlAt&&dayIdx(now)>dayIdx(m.bowlAt)){m.bowlAt=null;m.items.plate=(m.items.plate||0)+1;m.noodleSmell=true;log('문패 없는 집 앞에 두고 온 그릇이 비어 있었다. 대신 이름 칸이 빈 문패가 놓여 있었다.','haunt');toast('밤물건 「주인 없는 문패」를 얻었다.')}
@@ -466,7 +466,7 @@ function gainStat(stat,n){const m=G.me;m.sxp=m.sxp||{};if(m.stats[stat]>=STAT_MA
   while(m.stats[stat]<STAT_MAX&&m.sxp[stat]>=statNeed(m.stats[stat])){m.sxp[stat]-=statNeed(m.stats[stat]);m.stats[stat]++;up++}
   if(up){const nm=STATS.find(x=>x[0]===stat)[1];log(`${nm}이(가) 올랐다. ${m.stats[stat]-up} → ${m.stats[stat]}`,'life');toast(`${nm} +${up} (${m.stats[stat]})`);return `${nm} +${up}`}return null}
 const dcOf=dc=>dc>=8?Math.round(30+1.24*Math.pow(dc-8,1.7)):30-(8-dc)*3;
-function chk(stat,dc){const m=G.me,sv=Math.max(m.stats[stat],PARTY&&PARTY.stats?(+PARTY.stats[stat]||0):0),D=dcOf(dc),d=ri(1,20)+ri(1,20),pen=(m.mind<30?-6:0)+(hasFx('lucky')?6:0)-(hasFx('unlucky')?6:0)-markPen()-(hasFx('anemia')&&(stat==='str'||stat==='agi')?4:0),tot=sv+d+pen;const ok=tot>=D;const g=gainStat(stat,ok?3:2);
+function chk(stat,dc){const m=G.me,sv=Math.max(m.stats[stat],PARTY&&PARTY.stats?(+PARTY.stats[stat]||0):0),D=dcOf(dc),d=ri(1,20)+ri(1,20),pen=(m.mind<30?-6:0)+(typeof fxBonus==='function'?fxBonus(stat):0)+(hasFx('lucky')?6:0)-(hasFx('unlucky')?6:0)-markPen()-(hasFx('anemia')&&(stat==='str'||stat==='agi')?4:0),tot=sv+d+pen;const ok=tot>=D;const g=gainStat(stat,ok?3:2);
   return{ok,txt:`${STATS.find(s=>s[0]===stat)[1]} ${sv} + 주사위 ${d}${pen?` ${pen}`:''} = ${tot} / 목표 ${D}${g?' · '+g:''}`}}
 function give(rw){const m=G.me,out=[];if(!rw)return out;
   const add=(k,v,label,fmt)=>{if(!v)return;m[k]=(m[k]||0)+v;out.push(fmt?fmt(v):`${label} ${v>0?'+':''}${v}`)};
@@ -1718,7 +1718,7 @@ function openSheet(id){const isMe=id==='me';const p=isMe?G.me:SAMPLES[id];const 
   const rows=isMe?[['나이',p.age],['성별',p.gender],['주소',p.addr],['생업',p.job||'없음'],['외형',p.look],['성격',p.pers],['버릇',p.habit],['좋아하는 것',p.likes],['싫어하는 것',p.dislikes],['무서워하는 것',[p.fear,p.fearNote].filter(Boolean).join(' · ')],['지니는 물건',p.keep],['메모',p.memo],['비밀',p.secret],['흔적',(p.marks||[]).join(', ')]]:
     [['나이',p.age],['성별',p.gender],['생업',p.job||'없음'],['외형',p.look],['성격',p.pers],['버릇',p.habit],['좋아하는 것',p.likes],['싫어하는 것',p.dislikes],['무서워하는 것',[p.fear,p.fearNote].filter(Boolean).join(' · ')],['지니는 물건',p.keep],['메모',p.memo]];
   const body=h('div',{class:'stack sheet'},
-    h('div',{class:'row'},h('div',{class:'wrap',style:'gap:12px;flex-wrap:nowrap'},avEl(p,'big'),h('div',null,h('div',{class:'mute',style:'font-size:12px'},facMark(isMe&&p.fugitive?'free':p.fac,13,'margin-right:5px;vertical-align:-2px'),isMe?rankLabel(p):`${FACS[p.fac]}${p.rank?' · '+p.rank:''}`,' ',h('span',{class:'num dim'},p.code)),h('h2',{class:'disp',style:'font-size:26px'},isMe?p.name:(p.name)),!isMe&&typeof sb==='undefined'?h('span',{class:'tag amb'},'예시 주민'):null,(typeof isNewbie==='function'&&isNewbie(p))?h('span',{class:'tag tube'},`새 입주자 · ${nbDay(p)}일째`):null)),h('button',{class:'ghost',onclick:closeModal},'닫기')),
+    h('div',{class:'row'},h('div',{class:'wrap',style:'gap:12px;flex-wrap:nowrap'},avEl(p,'big'),h('div',null,h('div',{class:'mute',style:'font-size:12px'},facMark(isMe&&p.fugitive?'free':p.fac,13,'margin-right:5px;vertical-align:-2px'),isMe?rankLabel(p):`${FACS[p.fac]}${p.rank?' · '+p.rank:''}`,' ',h('span',{class:'num dim'},p.code)),h('h2',{class:'disp',style:'font-size:26px'},isMe?p.name:(typeof blurName==='function'?blurName(p):p.name)),!isMe&&typeof sb==='undefined'?h('span',{class:'tag amb'},'예시 주민'):null,(typeof isNewbie==='function'&&isNewbie(p))?h('span',{class:'tag tube'},`새 입주자 · ${nbDay(p)}일째`):null)),h('button',{class:'ghost',onclick:closeModal},'닫기')),
     p.portrait?h('img',{class:'portrait',src:p.portrait,alt:p.name+' 전신 이미지'}):null,
     p.quote?h('blockquote',{style:`margin:0;border-left:3px solid ${p.color};padding:4px 12px;font-family:var(--f-disp);font-size:17px`},'“'+p.quote+'”'):null,
     h('dl',null,rows.filter(x=>x[1]).map(x=>[h('dt',null,x[0]),h('dd',null,x[1])])),
@@ -1840,7 +1840,7 @@ function viewPeople(){const m=G.me;const q=(sub.q||'').trim();
     h('form',{class:'composer',onsubmit:e=>{e.preventDefault();const v=e.target.querySelector('input').value;addByCode(v);e.target.reset()}},h('input',{id:'codeIn',placeholder:'지인 코드로 신청 (예: #M4R2)',maxlength:8,autocomplete:'off'}),h('button',{type:'submit',class:'pri'},'신청')),
     m?h('div',{class:'wrap'},h('button',{class:'sm',onclick:()=>openCard('me')},'내 주민증 보기 · 코드 공유')):null,search,
     h('div',{class:'roster'},m?h('button',{class:'rc',style:`--c:${m.color}`,onclick:()=>openSheet('me')},h('div',{class:'wrap'},avEl(m),h('div',null,h('b',{class:'disp',style:'font-size:18px'},m.name),h('div',{class:'mute',style:'font-size:12px'},facMark(m.fugitive?'free':m.fac,13,'margin-right:5px;vertical-align:-2px'),rankLabel(m)))),m.quote?h('span',{class:'mute',style:'font-size:13px'},'“'+m.quote+'”'):null):null,
-      list.map(id=>{const s=SAMPLES[id],r=relOf(id);return h('button',{class:'rc',style:`--c:${s.color}`,onclick:()=>openSheet(id)},h('div',{class:'wrap'},avEl(s),h('div',null,h('b',{class:'disp',style:'font-size:18px'},(s.name)),h('div',{class:'mute',style:'font-size:12px'},facMark(s.fac,13,'margin-right:5px;vertical-align:-2px'),`${FACS[s.fac]}${s.rank?' · '+s.rank:''} · ${s.code}`))),h('span',{class:'mute',style:'font-size:13px'},'“'+s.quote+'”'),h('div',{class:'wrap'},h('span',{class:'tag amb'},'예시 주민'),r.friend?h('span',{class:'tag good'},STAGES[stageOf(r)]):r.req?h('span',{class:'tag'},'신청 보냄'):null,r.name?h('span',{class:'tag red'},r.name):null,h('span',{class:'tag'},CELLS[s.cell].n)))}))]}
+      list.map(id=>{const s=SAMPLES[id],r=relOf(id);return h('button',{class:'rc',style:`--c:${s.color}`,onclick:()=>openSheet(id)},h('div',{class:'wrap'},avEl(s),h('div',null,h('b',{class:'disp',style:'font-size:18px'},(typeof blurName==='function'?blurName(s):s.name)),h('div',{class:'mute',style:'font-size:12px'},facMark(s.fac,13,'margin-right:5px;vertical-align:-2px'),`${FACS[s.fac]}${s.rank?' · '+s.rank:''} · ${s.code}`))),h('span',{class:'mute',style:'font-size:13px'},'“'+s.quote+'”'),h('div',{class:'wrap'},h('span',{class:'tag amb'},'예시 주민'),r.friend?h('span',{class:'tag good'},STAGES[stageOf(r)]):r.req?h('span',{class:'tag'},'신청 보냄'):null,r.name?h('span',{class:'tag red'},r.name):null,h('span',{class:'tag'},CELLS[s.cell].n)))}))]}
 function viewNote(){const m=G.me;const S=[...(typeof NOTICES!=='undefined'?[['notice','공지']]:[]),['world','세계'],['plan','설계도'],['rules','수칙'],['items','밤물건'],['dex','도감'],['log','일지'],['tips','게시판'],['stamp','출석']];if(!S.some(x=>x[0]===sub.note))sub.note='world';
   const nav=h('div',{class:'wrap'},S.map(([k,n])=>h('button',{class:'sm'+(sub.note===k?' pri':''),onclick:()=>{sub.note=k;renderView()}},n)));let body;
   if(sub.note==='world')body=worldBody();
@@ -1860,11 +1860,11 @@ function renderPeople(){const P=$('peopleCard'),m=G.me;const k=m?m.cell:null;
   const here=SAMPLE_IDS.filter(id=>SAMPLES[id].cell===k);const ghost=m&&(isBuild()||hasFx('delirium')||(gateWeek()&&chance(.25+.12*gwDay())))&&chance(.5);
   P.replaceChildren(h('div',{class:'row'},h('span',{class:'lbl'},m?`${CELLS[k].n}의 사람들`:'사람들'),h('span',{class:'mute num'},here.length+(m?1:0)+(ghost?1:0))),
     h('div',{class:'stack',style:'gap:2px;margin-top:6px'},m?h('button',{class:'person',onclick:()=>openSheet('me')},avEl(m),h('span',null,h('b',null,m.name),' ',h('span',{class:'mute'},'(나)'),h('div',{class:'mute',style:'font-size:12px'},facMark(m.fugitive?'free':m.fac,13,'margin-right:5px;vertical-align:-2px'),rankLabel(m))),h('span',{class:'dot on'})):null,
-      here.map(id=>{const s=SAMPLES[id];return h('button',{class:'person',onclick:()=>openSheet(id)},avEl(s),h('span',null,h('b',null,(s.name)),h('div',{class:'mute',style:'font-size:12px'},facMark(s.fac,13,'margin-right:5px;vertical-align:-2px'),`${FACS[s.fac]}${s.rank?' · '+s.rank:''}`)),h('span',{class:'dot on'}))}),
+      here.map(id=>{const s=SAMPLES[id];return h('button',{class:'person',onclick:()=>openSheet(id)},avEl(s),h('span',null,h('b',null,(typeof blurName==='function'?blurName(s):s.name)),h('div',{class:'mute',style:'font-size:12px'},facMark(s.fac,13,'margin-right:5px;vertical-align:-2px'),`${FACS[s.fac]}${s.rank?' · '+s.rank:''}`)),h('span',{class:'dot on'}))}),
       ghost?h('div',{class:'person',style:'cursor:default'},h('div',{class:'av',style:'background:#2a2a2a'}),h('span',null,h('b',{class:'dim'},'아는 사람'),h('div',{class:'dim',style:'font-size:12px'},'명부에 없음')),h('span',{class:'dot on'})):null,
       !here.length&&m&&!ghost?h('div',{class:'mute',style:'font-size:13px;padding:6px 0'},quietTxt('이 칸엔 아무도 없다.')):null))}
 const chatIn=h('input',{id:'chatIn',maxlength:200,placeholder:'메시지 · *행동*은 별표로 감싸요'});
-const chatForm=h('form',{class:'composer',onsubmit:e=>{e.preventDefault();if(!G.me)return;let v=chatIn.value.trim();if(!v)return;if(hasFx('gum')&&sub.chat!=='ooc')v=gumify(v);post(sub.chat==='all'?'all':sub.chat==='ooc'?'ooc':'cell:'+G.me.cell,'me',v);chatIn.value='';save();renderChat()}},chatIn,h('button',{type:'submit',class:'pri'},'보내기'));
+const chatForm=h('form',{class:'composer',onsubmit:e=>{e.preventDefault();if(!G.me)return;let v=chatIn.value.trim();if(!v)return;if(hasFx('gum')&&sub.chat!=='ooc')v=gumify(v);if(sub.chat!=='ooc'&&typeof fxSpeech==='function')v=fxSpeech(v);post(sub.chat==='all'?'all':sub.chat==='ooc'?'ooc':'cell:'+G.me.cell,'me',v);chatIn.value='';save();renderChat()}},chatIn,h('button',{type:'submit',class:'pri'},'보내기'));
 function renderChat(){const C=$('chatCard'),m=G.me;const ch=sub.chat;
   const list=h('div',{class:'chlist',id:'chlist'});
   if(ch==='radio'){list.append(h('div',{class:'msg radio'},h('time',null,'00:00'),radioText()));radioExtra().forEach(x=>list.append(x))}
@@ -2018,7 +2018,7 @@ function renderChat(){const C=$('chatCard'),m=G.me;const ch=sub.chat;const list=
   else{const key=chKey();if(!CHAT[key]){CHAT[key]=[];if(sb&&m)loadChannel(key)}const items=CHAT[key].slice(-80);
     if(isBuild()&&ch==='all')list.append(h('div',{class:'msg hammer'},h('time',null,hm(T())),'쿵 · · · 쿵 · · · 쿵'));
     if(!items.length)list.append(h('div',{class:'mute',style:'font-size:13px'},ch==='cell'?quietTxt('이 칸은 조용하다.'):quietTxt('아직 조용하다.')));
-    items.forEach((x,i)=>{const mine=m&&x.character_id===m.id;const p=mine?m:SAMPLES[x.character_id];const name=p?p.name:'누군가';const t=Date.parse(x.created_at);
+    items.forEach((x,i)=>{const mine=m&&x.character_id===m.id;const p=mine?m:SAMPLES[x.character_id];const name=p?(mine?p.name:(typeof blurName==='function'?blurName(p):p.name)):'누군가';const t=Date.parse(x.created_at);
       if(ch==='ooc'){const pv=items[i-1];const cont=!!(pv&&pv.character_id===x.character_id&&t-Date.parse(pv.created_at)<5*MIN);const col=p&&p.color&&p.color!=='#0B0B0B'?p.color:'#9E9184';list.append(h('div',{class:'msg ooc'+(cont?' cont':''),style:`--oc:${col}`},h('time',null,hm(t)),cont?'':h('span',{class:'who',style:`color:${col}`},p?facMark(p.fugitive&&mine?'free':p.fac,12,'margin-right:4px;vertical-align:-1px'):'',mine?'나':`${name} 오너`,p&&(typeof isNewbie==='function'&&isNewbie(p))?h('span',{class:'nbmark'},'새'):null),...(typeof actNodes==='function'?actNodes(x.text):[x.text])));return}
       list.append(h('div',{class:'msg'},h('time',null,hm(t)),h('span',{class:'who',style:`color:${p&&p.color!=='#0B0B0B'?p.color:'#9E9184'}`},p?facMark(p.fugitive&&mine?'free':p.fac,12,'margin-right:4px;vertical-align:-1px'):'',mine?name:scramble(name),p&&(typeof isNewbie==='function'&&isNewbie(p))?h('span',{class:'nbmark'},'새'):null),...(typeof actNodes==='function'?actNodes(x.text):[x.text]),mine||isAdminUser()?h('button',{class:'ghost del sm',style:'font-size:11px;padding:0 4px',onclick:async()=>{await sb.from('messages').delete().eq('id',x.id);CHAT[key]=CHAT[key].filter(y=>y.id!==x.id);renderChat()}},'지우기'):null))})}
   chatPut(C,[h('div',{class:'row'},h('span',{class:'lbl'},'무전'),h('div',{class:'wrap'},[['cell','현장'],['all','전체'],['ooc','오너'],['dm','1:1'+(dmUnread()?' '+dmUnread():'')],['radio','자정 라디오']].map(([k,n])=>h('button',{class:'sm'+(ch===k?' pri':''),style:k==='dm'&&dmUnread()&&ch!==k?'color:var(--bad);border-color:var(--bad)':'',onclick:()=>{sub.chat=k;if(k==='radio')sfx('static');renderChat()}},n)))),
@@ -2059,13 +2059,13 @@ function viewPeople(){const m=G.me;const q=(sub.q||'').trim();
     h('form',{class:'composer',onsubmit:e=>{e.preventDefault();const v=e.target.querySelector('input').value;addByCode(v);e.target.reset()}},h('input',{id:'codeIn',placeholder:'지인 코드로 신청 (예: #7K2Q)',maxlength:8,autocomplete:'off'}),h('button',{type:'submit',class:'pri'},'신청')),
     m?h('div',{class:'wrap'},h('button',{class:'sm',onclick:()=>openCard('me')},'내 주민증 보기 · 코드 공유'),h('button',{class:'sm',onclick:()=>{loadOthers().then(render)}},'명부 새로고침')):null,search,
     h('div',{class:'roster'},m?h('button',{class:'rc',style:`--c:${m.color}`,onclick:()=>openSheet('me')},h('div',{class:'wrap'},avEl(m),h('div',null,h('b',{class:'disp',style:'font-size:18px'},m.name),h('div',{class:'mute',style:'font-size:12px'},facMark(m.fugitive?'free':m.fac,13,'margin-right:5px;vertical-align:-2px'),rankLabel(m)))),m.quote?h('span',{class:'mute',style:'font-size:13px'},'“'+m.quote+'”'):null):null,
-      list.map(id=>{const s=SAMPLES[id],r=relOf(id);return h('button',{class:'rc',style:`--c:${s.color}`,onclick:()=>openSheet(id)},h('div',{class:'wrap'},avEl(s),h('div',null,h('b',{class:'disp',style:'font-size:18px'},(s.name)),h('div',{class:'mute',style:'font-size:12px'},s.fac?facMark(s.fac,13,'margin-right:5px;vertical-align:-2px'):'',`${FACS[s.fac]||''}${s.rank?' · '+s.rank:''} · ${s.code}`))),s.quote?h('span',{class:'mute',style:'font-size:13px'},'“'+s.quote+'”'):null,h('div',{class:'wrap'},online(s)?h('span',{class:'tag good'},'접속 중'):null,sameOwner(id)?h('span',{class:'tag amb'},'내 캐릭터'):null,s.isNpc?h('span',{class:'tag red'},'방주'):null,(typeof isNewbie==='function'&&isNewbie(s))?h('span',{class:'tag tube'},'새 입주자'):null,r.friend?h('span',{class:'tag good'},STAGES[stageOf(r)]):r.req?h('span',{class:'tag'},'신청 보냄'):null,r.name?h('span',{class:'tag red'},r.name):null,h('span',{class:'tag'},CELLS[s.cell]?CELLS[s.cell].n:'')))})),
+      list.map(id=>{const s=SAMPLES[id],r=relOf(id);return h('button',{class:'rc',style:`--c:${s.color}`,onclick:()=>openSheet(id)},h('div',{class:'wrap'},avEl(s),h('div',null,h('b',{class:'disp',style:'font-size:18px'},(typeof blurName==='function'?blurName(s):s.name)),h('div',{class:'mute',style:'font-size:12px'},s.fac?facMark(s.fac,13,'margin-right:5px;vertical-align:-2px'):'',`${FACS[s.fac]||''}${s.rank?' · '+s.rank:''} · ${s.code}`))),s.quote?h('span',{class:'mute',style:'font-size:13px'},'“'+s.quote+'”'):null,h('div',{class:'wrap'},online(s)?h('span',{class:'tag good'},'접속 중'):null,sameOwner(id)?h('span',{class:'tag amb'},'내 캐릭터'):null,s.isNpc?h('span',{class:'tag red'},'방주'):null,(typeof isNewbie==='function'&&isNewbie(s))?h('span',{class:'tag tube'},'새 입주자'):null,r.friend?h('span',{class:'tag good'},STAGES[stageOf(r)]):r.req?h('span',{class:'tag'},'신청 보냄'):null,r.name?h('span',{class:'tag red'},r.name):null,h('span',{class:'tag'},CELLS[s.cell]?CELLS[s.cell].n:'')))})),
     !list.length?h('div',{class:'card empty'},'아직 다른 주민이 없어요. 초대 코드를 나눠 주세요.'):null]}
 function renderPeople(){const P=$('peopleCard'),m=G.me;const k=m?m.cell:null;
   const here=SAMPLE_IDS.filter(id=>SAMPLES[id].cell===k&&online(SAMPLES[id]));const ghost=m&&(isBuild()||hasFx('delirium')||(gateWeek()&&chance(.25+.12*gwDay())))&&chance(.5);
   P.replaceChildren(h('div',{class:'row'},h('span',{class:'lbl'},m?`${CELLS[k].n}에 있는 사람`:'사람들'),h('span',{class:'mute num'},here.length+(m?1:0)+(ghost?1:0))),
     h('div',{class:'stack',style:'gap:2px;margin-top:6px'},m?h('button',{class:'person',onclick:()=>openSheet('me')},avEl(m),h('span',null,h('b',null,m.name),' ',h('span',{class:'mute'},'(나)'),h('div',{class:'mute',style:'font-size:12px'},facMark(m.fugitive?'free':m.fac,13,'margin-right:5px;vertical-align:-2px'),rankLabel(m))),h('span',{class:'dot on'})):null,
-      here.map(id=>{const s=SAMPLES[id];return h('button',{class:'person',onclick:()=>openSheet(id)},avEl(s),h('span',null,h('b',null,(s.name)),(typeof isNewbie==='function'&&isNewbie(s))?h('span',{class:'nbmark'},'새 입주자'):null,h('div',{class:'mute',style:'font-size:12px'},s.fac?facMark(s.fac,13,'margin-right:5px;vertical-align:-2px'):'',`${FACS[s.fac]||''}${s.rank?' · '+s.rank:''}`)),h('span',{class:'dot on'}))}),
+      here.map(id=>{const s=SAMPLES[id];return h('button',{class:'person',onclick:()=>openSheet(id)},avEl(s),h('span',null,h('b',null,(typeof blurName==='function'?blurName(s):s.name)),(typeof isNewbie==='function'&&isNewbie(s))?h('span',{class:'nbmark'},'새 입주자'):null,h('div',{class:'mute',style:'font-size:12px'},s.fac?facMark(s.fac,13,'margin-right:5px;vertical-align:-2px'):'',`${FACS[s.fac]||''}${s.rank?' · '+s.rank:''}`)),h('span',{class:'dot on'}))}),
       ghost?h('div',{class:'person',style:'cursor:default'},h('div',{class:'av',style:'background:#2a2a2a'}),h('span',null,h('b',{class:'dim'},'아는 사람'),h('div',{class:'dim',style:'font-size:12px'},'명부에 없음')),h('span',{class:'dot on'})):null,
       !here.length&&m&&!ghost?h('div',{class:'mute',style:'font-size:13px;padding:6px 0'},quietTxt('지금 이 칸엔 아무도 없다.')):null))}
 
@@ -4309,6 +4309,81 @@ if(typeof loadInboxExtra==='function'&&typeof inboxItems==='function'){
 }
 if(typeof subscribe==='function'){const s1=subscribe;subscribe=function(){const r=s1.apply(this,arguments);try{sb.channel('baekgye-talk').on('postgres_changes',{event:'*',schema:'public',table:'talks'},pl=>{const x=pl.new;if(!x||!x.id)return;const fresh=!TALKS.some(y=>y.id===x.id&&y.status===x.status);talkUpsert(x);
   if(fresh&&G.me){if(x.to_char===G.me.id&&x.status==='open')toast(`${talkName(x.from_char)}이(가) 말을 걸었어요. 삐삐함을 보세요.`);else if(x.from_char===G.me.id&&x.status==='done')toast(`${talkName(x.to_char)}이(가) 대답했어요.`)}}).subscribe()}catch(e){}return r}}
+
+/* ---------- 효과 추가: 관계·생활 버프, 날씨·시간, 남들 눈에 보이는 무전 디버프, 이름 흐림, 빚 독촉, 발 묶임, 방 장난감 효과 ---------- */
+Object.assign(FXDEF,{
+ warm:{n:'온기',min:720,d:'누가 기다리고 있다. 다음 판정 한 번 +4'},
+ skilled:{n:'손에 익음',min:4320,d:'일당 +10%, 몰래 졸기가 덜 들킨다. 사흘 일을 쉬면 풀린다'},
+ dawn:{n:'새벽 공기',min:180,d:'기력이 더 빨리 찬다'},
+ wet:{n:'젖음',bad:true,min:120,d:'체력이 회복되지 않는다. 집 칸에 가면 풀린다'},
+ sleepless:{n:'잠 못 듦',bad:true,min:1200,d:'낮잠 회복이 절반. 몰래 졸기가 잘 들킨다'},
+ echo:{n:'메아리',bad:true,min:180,d:'무전 끝에 마지막 말이 한 번 더 따라붙는다'},
+ mimic:{n:'남의 말투',bad:true,min:180,d:'가끔 무전에 누가 대신 말했다는 말이 붙는다'},
+ hoarse:{n:'쉰 목소리',bad:true,min:180,d:'무전 글자가 군데군데 빠진다'},
+ blur:{n:'이름 흐림',bad:true,min:180,d:'다른 사람 눈에 내 이름 한 글자가 보이지 않는다'},
+ dun:{n:'빚 독촉',bad:true,min:4320,d:'퇴근할 때 일당 30%를 수금원이 떼 간다. 빚을 갚으면 풀린다'},
+ bound:{n:'발 묶임',bad:true,min:120,d:'다른 층으로 갈 때 기력이 1 더 든다'}});
+const inRoom=k=>!!(G.me&&(G.me.room||[]).includes(k));
+const isNightH=()=>{const x=hour();return x>=19||x<6};
+function fxGain(id,line){const had=hasFx(id);addFx(id);if(id==='blur')G.me.blur=T()+ms(FXDEF.blur.min);if(!had){if(line)log(line,FXDEF[id].bad?'haunt':'life');setTimeout(()=>toast(`${FXDEF[id].n}${line?' · '+line.slice(0,40):''}`),700)}}
+const fxSnap=()=>[G.log&&G.log[0],scene,result];
+const fxMoved=s=>(G.log&&G.log[0])!==s[0]||scene!==s[1]||result!==s[2];
+
+/* 방 장난감 효과 (설명에도 붙인다) */
+const TOY_PASSIVE={toy_lamp:'밤에 정신이 덜 깎인다',toy_coin:'하루 첫 판정 +2',toy_music:'낮잠 기력 +2',toy_globe:'증축 시간에 정신이 덜 깎인다',toy_ship:'비에 젖지 않는다',toy_tram:'발이 묶이지 않는다',toy_camera:'남의 말투가 옮지 않는다'};
+try{for(const k in TOY_PASSIVE)if(TOYS[k]&&!TOYS[k].d.includes('방에 두면'))TOYS[k].d+=` 〔방에 두면: ${TOY_PASSIVE[k]}〕`;for(const k in TOYS)if(TOYS[k].r==='x'&&!TOYS[k].d.includes('방에 두면'))TOYS[k].d+=' 〔방에 두면: 밤마다 무언가 일어난다〕'}catch(e){}
+{const g0=give;give=function(rw){try{if(rw&&rw.mind<0&&G.me){let d=0;if(inRoom('toy_lamp')&&isNightH())d+=1;if(inRoom('toy_globe')&&isBuild())d+=2;if(d)rw=Object.assign({},rw,{mind:Math.min(0,rw.mind+d)})}}catch(e){}return g0.call(this,rw)}}
+
+/* 판정 보정: 온기 +4 (한 번), 행운 동전 하루 첫 판정 +2 */
+function fxBonus(stat){let b=0;try{if(hasFx('warm')){clearFx('warm');b+=4}if(inRoom('toy_coin')){const dl=daily();if(!dl.coin){dl.coin=1;b+=2}}}catch(e){}return b}
+/* 발 묶임: 밤의 구역이나 12층 계단참에서 판정에 실패하면 */
+{const c0=chk;chk=function(stat,dc){const r=c0.apply(this,arguments);try{if(r&&!r.ok&&!inRoom('toy_tram')){const here=(scene&&scene.id==='night')||(typeof PLACE_CUR!=='undefined'&&PLACE_CUR&&PLACE_CUR.id==='floor13'&&Date.now()-PLACE_CUR.at<10*60e3);if(here&&chance(.5))fxGain('bound','발목에 무언가 감겼다. 계단을 오를 때마다 한 칸이 더 있는 것 같다.')}}catch(e){}return r}}
+{const mv0=move;move=function(k){const m=G.me;try{if(m&&hasFx('bound')&&k!==m.cell&&cellDT(k)[1]!==cellDT(m.cell)[1]){if(!spend(1))return toast('발이 묶여 다른 층으로 갈 기력이 없어요.');toast('발이 무겁다. 계단 한 칸이 끝나지 않는다. (기력 -1)')}}catch(e){}return mv0.apply(this,arguments)}}
+
+/* 둘러보기: 비에 젖음, 증축 시간엔 잠 못 듦, 정문 배수로에선 이름 흐림 */
+{const ex1=explore;explore=function(){const s=fxSnap(),build=isBuild(),cell=G.me&&G.me.cell;const r=ex1.apply(this,arguments);try{if(G.me&&fxMoved(s)){
+  if(weather()[0]==='비'&&!inRoom('toy_ship')&&chance(.3))fxGain('wet','비를 쫄딱 맞았다. 옷이 마르지 않는다.');
+  if(build)fxGain('sleepless','증축 소리를 들으며 깨어 있었다. 오늘은 잠이 오지 않을 것 같다.');
+  if(cell==='0-4'&&chance(.15))fxGain('blur','배수로 바깥에서 하얀 김이 들어왔다. 누가 내 이름을 부르다 말았다.')}}catch(e){}return r}}
+/* 괴담 장소: 우물은 메아리, 빗물탕은 쉰 목소리, 사진관은 남의 말투 */
+{const vs0=visit;visit=function(id){const s=fxSnap(),build=isBuild();const r=vs0.apply(this,arguments);try{if(G.me&&fxMoved(s)){
+  if(id==='well'&&chance(.35))fxGain('echo','우물 속에서 내 목소리가 한 번 더 돌아왔다. 아직 다 돌아오지 않은 것 같다.');
+  if(id==='bath'&&chance(.35))fxGain('hoarse','빗물탕 김을 들이마셨다. 목이 잠긴다.');
+  if(id==='photo'&&!inRoom('toy_camera')&&chance(.35))fxGain('mimic','사진 속 내가 먼저 입을 열었다. 그 말투가 입에 붙었다.');
+  if(build)fxGain('sleepless','증축 소리를 들으며 깨어 있었다. 오늘은 잠이 오지 않을 것 같다.')}}catch(e){}return r}}
+/* 새벽 공기 */
+{const br0=breeze;breeze=function(){const at=G.me&&G.me.breezeAt;const r=br0.apply(this,arguments);try{const x=hour();if(G.me&&G.me.breezeAt!==at&&x>=5&&x<7)fxGain('dawn','새벽 공기를 들이마셨다. 몸이 가볍다.')}catch(e){}return r}}
+/* 낮잠: 잠 못 듦이면 절반, 오르골이 있으면 +2 */
+{const fn0=finishNap;finishNap=function(){const sl=hasFx('sleepless');const en0=G.me.en;const r=fn0.apply(this,arguments);try{const m=G.me;if(sl){const got=m.en-en0;const back=Math.floor(got/2);if(back>0){m.en-=back;if(result&&result.lines)result.lines.push(`잠을 설쳤다 (기력 -${back})`)}}if(inRoom('toy_music')){const o=give({en:2});if(result&&result.lines)result.lines.push('오르골 소리 '+o.join(', '))}}catch(e){}return r}}
+/* 몰래 졸기 확률 */
+if(typeof dozeOdds==='function'){const dz0=dozeOdds;dozeOdds=function(m){let p=dz0.apply(this,arguments);if(hasFx('skilled'))p-=.1;if(hasFx('sleepless'))p+=.15;return Math.max(.08,Math.min(.75,p))}}
+
+/* 퇴근: 손에 익음 (+10%), 빚 독촉 (30%를 떼 간다) */
+{const fw1=finishWork;finishWork=function(){const m=G.me,w=m&&m.work,mo=m?m.money:0;const r=fw1.apply(this,arguments);try{if(m&&w){const day=dayIdx(T());const wk=m.wk||{};
+  if(wk.job===w.job&&wk.last===day-1)wk.n=(wk.n||1)+1;else if(!(wk.job===w.job&&wk.last===day))wk.n=1;wk.job=w.job;wk.last=day;m.wk=wk;
+  if(wk.n>=5)fxGain('skilled',`${w.job} 일이 손에 익었다. 눈 감고도 할 것 같다.`);
+  let pay=m.money-mo;if(hasFx('skilled')&&pay>0){const ex=Math.max(1,Math.round(pay*.1));m.money+=ex;pay+=ex;log(`손에 익은 일이라 $${ex}를 더 받았다.`,'work')}
+  if(hasFx('dun')&&m.debt>0&&pay>0){const take=Math.min(m.debt,Math.floor(pay*.3));if(take>0){m.money-=take;m.debt-=take;log(`퇴근길에 수금원이 기다리고 있었다. 일당에서 $${take}를 떼어 장부에 적었다. 남은 빚 $${m.debt}.`,'fac');toast(`수금원이 $${take}를 떼 갔어요.`)}}save()}}catch(e){}return r}}
+/* 빚 독촉: 이자가 붙는 캐릭터가 2주 동안 한 푼도 안 갚으면 */
+{const pd0=payDebt;payDebt=function(){const m=G.me,d0=m&&m.debt;const r=pd0.apply(this,arguments);try{if(m&&m.debt<d0){m.lastPay=T();if(hasFx('dun')){clearFx('dun');log('빚을 조금 갚았다. 수금원이 더는 따라오지 않는다.','fac')}}}catch(e){}return r}}
+/* 매 틱: 집에서 마르기, 빚 독촉 확인 */
+{const tk0=tick;tick=function(){const r=tk0.apply(this,arguments);try{const m=G.me;if(!m)return r;
+  if(hasFx('wet')&&m.cell===homeCell(m)){clearFx('wet');log('집에서 젖은 옷을 갈아입었다.','life')}
+  if(m.intr&&m.debt>0){if(!m.lastPay)m.lastPay=m.created||T();if(T()-m.lastPay>14*86400e3&&!hasFx('dun'))fxGain('dun','2주째 한 푼도 안 갚았다. 수금원이 내 일터를 알아냈다.')}}catch(e){}return r}}
+/* 집중 탐사에서 정신을 놓고 끌려 나오면 이름이 흐려진다 */
+{const de1=deepEnd;deepEnd=function(kind){const r=de1.apply(this,arguments);try{if(kind==='mind'&&G.me)fxGain('blur','누가 내 이름을 대신 대답한 뒤로, 이름 한 글자가 잘 떠오르지 않는다.')}catch(e){}return r}}
+/* 이야기 나누기: 대답을 주고받으면 온기, 이상한 화제는 가끔 이름 흐림 */
+if(typeof talkAnswer==='function'){const ta1=talkAnswer;talkAnswer=async function(x,text,dodge){const r=await ta1.apply(this,arguments);try{if(!dodge&&x.status==='done'){fxGain('warm','');if(TALK_ODD.some(c=>c.id===x.topic)&&chance(.3))fxGain('blur','대답을 하고 나서, 내 이름을 쓰는 손이 잠깐 멈췄다.')}}catch(e){}return r}}
+if(typeof talkResultOpen==='function'){const tr1=talkResultOpen;talkResultOpen=function(x){const first=!(G.me.talkSeen||{})[x.id];const r=tr1.apply(this,arguments);try{if(first&&x.status==='done'){fxGain('warm','');if(TALK_ODD.some(c=>c.id===x.topic)&&chance(.3))fxGain('blur','대답을 읽고 나서, 내 이름을 쓰는 손이 잠깐 멈췄다.')}}catch(e){}return r}}
+
+/* 무전 디버프: 메아리 · 남의 말투 · 쉰 목소리 */
+function fxSpeech(v){try{if(!G.me||!v)return v;if(hasFx('hoarse')){let ws=v.split(' ');let inAct=false;const ok=ws.map(w=>{const was=inAct;if((w.match(/\*/g)||[]).length%2)inAct=!inAct;return!was&&!w.includes('*')&&w.length>=2});let cut=0;ws=ws.map((w,i)=>{if(ok[i]&&chance(.3)){cut++;return w[0]+'…'}return w});if(!cut){const i=ok.indexOf(true);if(i>=0)ws[i]=ws[i][0]+'…'}v=ws.join(' ')}
+  if(hasFx('echo')){const words=v.replace(/[*「」.,!?~…]/g,' ').trim().split(/\s+/);const last=words[words.length-1];if(last)v=`${v} …${last}…`}
+  if(hasFx('mimic')&&chance(.4))v=v+' …라고, 누가 대신 말했다.';return v.slice(0,240)}catch(e){return v}}
+/* 이름 흐림: 시트에 남겨서 다른 사람 화면에도 보이게 */
+if(typeof SHEETK!=='undefined'&&!SHEETK.includes('blur'))SHEETK.push('blur');
+if(typeof personFromRow==='function'){const pf3=personFromRow;personFromRow=function(r){const p=pf3.apply(this,arguments);try{p.blur=+((r.sheet||{}).blur)||0}catch(e){}return p}}
+function blurName(p){const n=p&&p.name||'';if(!p||!(+p.blur>Date.now())||n.length<2)return n;let hsh=0;for(const ch of String(p.id||n))hsh=(hsh*31+ch.charCodeAt(0))>>>0;const i=hsh%n.length;return n.slice(0,i)+'■'+n.slice(i+1)}
 
 /* ---------- 시작 ---------- */
 async function boot(){
