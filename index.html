@@ -1614,7 +1614,7 @@ function openForm(edit){const c=edit?G.me:null;const st=c?{...c.stats}:{str:10,a
     const name=v('f-name');if(!name){err.textContent='이름을 적어 주세요.';return}if(!c&&pool>0){err.textContent=`능력치 포인트가 ${pool} 남았어요.`;return}if(!c&&typeof facShut==='function'&&facShut(v('f-fac'))){err.textContent=`지금은 ${FACS[v('f-fac')]}이 새 사람을 받지 않아요. 다른 소속을 골라 주세요.`;return}
     const prof={name,age:v('f-age'),gender:v('f-gender'),look:v('f-look'),pers:v('f-pers'),habit:v('f-habit'),likes:v('f-likes'),dislikes:v('f-dislikes'),fear:v('f-fear'),fearNote:v('f-fearnote'),keep:v('f-keep'),quote:v('f-quote'),memo:v('f-memo'),secret:v('f-secret'),color,img,portrait};
     if(c){Object.assign(G.me,prof);const nj=v('f-job');if(nj!==(G.me.job||'')){if(G.me.work)toast('일하는 중이라 생업은 퇴근한 뒤에 바꿀 수 있어요.');else{G.me.job=nj||null;log(nj?`생업을 바꿨다: ${nj}`:'생업을 그만뒀다.','work')}}log('프로필을 고쳤다.','life')}
-    else{const reason=v('f-reason'),fac=v('f-fac'),job=v('f-job')||null;const debt0=fac==='red'?1000:0;
+    else{const reason=v('f-reason'),fac=v('f-fac'),job=v('f-job')||null;const debt0=fac==='red'||reason==='debt'?1000:0;
       G.me={...prof,statV2:true,statV3:true,sxp:{},reason,fac,job,rank:fac==='red'?'guest':fac==='sam'?'rookie':'',addr:assignAddr(fac),code:'#'+Math.random().toString(36).slice(2,6).toUpperCase(),stats:{...st},
         hp:100,mind:80,en:EN_MAX,enAt:T(),ts:T(),money:fac==='red'?60:120,debt:debt0,debt0,merit:0,credit:0,rep:0,sam:{patrol:0,cleanup:0,seal:0},items:{},clues:0,hidden:[],hints:[],wrongRule:false,marks:[],fx:[],traces:{},qdone:{},work:null,nz:null,fugitive:null,cell:null,created:T()};
       G.me.cell=homeCell(G.me);if(reason==='lost'){G.me.cell='3-2';G.me.items.plate=0}
@@ -1755,7 +1755,7 @@ function viewMap(){const m=G.me;const here=m?m.cell:null;const nz=nightZone();co
   const C=CELLS[here],[d,t]=cellDT(here);const places=(C.p||[]).filter(p=>p!=='laundry');
   out.unshift(h('div',{class:'card stack'},h('div',{class:'crumb mute',style:'font-size:12px'},'백계성 › '+DONGS[d]+' › '+TIERS[t].n),h('h2',{class:'disp',style:'font-size:28px'},C.n),h('p',{style:'margin:0;line-height:1.75;max-width:62ch'},C.d),h('p',{class:'mute',style:'margin:0;font-size:13px'},weather()[1]),
     h('div',{class:'wrap'},h('button',{class:'pri',onclick:explore},'둘러보기 (기력 1)'),
-      places.map(p=>PLACES[p].haunt?h('button',{onclick:()=>visit(p)},p==='noodle'?'국숫집 (기력 없이)':`${PLACES[p].n} (기력 1)`):p==='gamble'?[h('button',{onclick:mahjong},'마작 한 판 (기력 없이)'),m.fac==='free'&&!m.fugitive?h('button',{onclick:borrow},'빚을 지러 간다'):m.fac==='red'?h('button',{onclick:()=>payDebt(m.money)},'빚 갚기'):null]:p==='pawn'?h('button',{onclick:openPawn},'전당포'):p==='clinic'?h('button',{onclick:clinic},'삼경 의원'):p==='tea'?h('button',{onclick:openTea},'정문 차찬텡'):p==='fortune'?h('button',{onclick:fortune},'점쟁이 노파 ($5)'):PLACES[p].act&&(!PLACES[p].show||PLACES[p].show())?h('button',{onclick:()=>{if(ready())PLACES[p].act()}},typeof PLACES[p].btn==='function'?PLACES[p].btn():PLACES[p].btn):null),
+      places.map(p=>PLACES[p].haunt?h('button',{onclick:()=>visit(p)},p==='noodle'?'국숫집 (기력 없이)':`${PLACES[p].n} (기력 1)`):p==='gamble'?[h('button',{onclick:mahjong},'마작 한 판 (기력 없이)'),m.fac!=='red'&&!m.fugitive?h('button',{onclick:borrow},'빚을 지러 간다'):null,(m.fac==='red'||m.debt>0)?h('button',{onclick:()=>payDebt(m.money)},'빚 갚기'):null]:p==='pawn'?h('button',{onclick:openPawn},'전당포'):p==='clinic'?h('button',{onclick:clinic},'삼경 의원'):p==='tea'?h('button',{onclick:openTea},'정문 차찬텡'):p==='fortune'?h('button',{onclick:fortune},'점쟁이 노파 ($5)'):PLACES[p].act&&(!PLACES[p].show||PLACES[p].show())?h('button',{onclick:()=>{if(ready())PLACES[p].act()}},typeof PLACES[p].btn==='function'?PLACES[p].btn():PLACES[p].btn):null),
       t===0?h('button',{onclick:breeze},'바람 쐬기 (기력 +2)'):null,
       here==='2-2'&&goalStage()>=3&&!m.bpDone?h('button',{style:'border-color:var(--tube);color:var(--tube)',onclick:openBlueprint},'인쇄소 뒤편, 어제 없던 문 (기력 1)'):null,
       here===cellKey(nz.d,1)?h('button',{style:'border-color:var(--tube);color:var(--tube)',onclick:enterNight},'새 계단을 오른다 (기력 3)'):null,
@@ -3144,8 +3144,22 @@ setInterval(()=>{try{if(!G.me||document.hidden||!hasFx('delirium'))return;if(!ch
 /* 적등방 입단 막기: 삼경과 같은 방식 */
 const redClosed=()=>{samClosed();return!!(FLAGS.red_closed&&FLAGS.red_closed.on)};
 const facShut=f=>f==='sam'?samClosed():f==='red'?redClosed():false;
-{const os0=openScene;openScene=function(sc,keep){try{const m=G.me;if(sc&&(sc.id==='redfree'||sc.id==='borrow')&&m&&m.fac!=='red'&&redClosed()){scene=null;
-  return done(sc.title||'적등방','사내가 펼치려던 장부를 도로 덮는다.\n「요즘은 객을 안 받아. 위에서 그러래.」\n탁자 위 붉은 등 하나가 꺼져 있다.',['지금은 적등방이 새 객을 받지 않아요'])}}catch(e){}return os0.apply(this,arguments)}}
+
+
+/* ---------- 빚은 누구나: 적등방 객이 되지 않고 장부에 이름만 올린다 ---------- */
+const LOAN_CAP=1500;
+function loanChoice(){const m=G.me;return{l:'$300만 빌린다 (객은 되지 않는다 · 갚을 돈 $390)',run:()=>{if((m.debt||0)>=LOAN_CAP)return done('홍등루','사내가 장부의 내 이름 칸을 손톱으로 두드린다. 「여긴 이미 꽉 찼어. 먼저 갚고 와.」',[`빚 $${LOAN_CAP} 이상은 더 빌릴 수 없어요`]);
+  m.money+=300;m.debt=(m.debt||0)+390;log('홍등루 장부에 이름을 올리고 $300을 빌렸다. 갚을 돈은 $390.','fac');
+  done('장부',`사내가 장부 맨 끝 칸에 내 이름을 적는다. 객 명단이 아니라 그 아래, 줄이 그어지지 않은 칸이다.\n「객은 아니어도 빚은 빚이야. 어디 사는지는 우리가 알아.」\n지폐에서 담배 냄새가 난다.`,['$+300','빚 +$390',`지금 빚 $${m.debt}`])}}}
+function loanScene(){return{id:'loan',title:'홍등루',red:true,text:'초록 천 테이블 너머로 사내가 장부를 민다. 객 명단이 적힌 앞쪽은 접혀 있다.\n「요즘은 객을 안 받아. 위에서 그러래. 그래도 돈이 급하면 뒤쪽 칸은 열려 있어.」',choices:[loanChoice(),{l:'그냥 돌아간다',run:()=>done('홍등루','등 뒤에서 마작 패 섞는 소리가 계속됐다.',[])}]}}
+{const os1=openScene;openScene=function(sc,keep){try{const m=G.me;if(sc&&m&&m.fac!=='red'&&!m.fugitive){
+  if((sc.id==='redfree'||sc.id==='borrow')&&typeof redClosed==='function'&&redClosed())return os1.call(this,loanScene(),keep);
+  if(sc.id==='borrow'&&Array.isArray(sc.choices)&&!sc.choices.some(c=>c.loan)){const lc=loanChoice();lc.loan=1;sc={...sc,text:m.fac==='sam'?'초록 천 테이블 너머로 사내가 장부를 민다. 내 팔의 완장을 보고 피식 웃는다.\n「삼경은 객으로 안 받아. 뒤쪽 칸이라면 몰라도.」\n장부 뒤쪽 칸에 이름을 올리면 돈을 빌릴 수 있다. 이자가 붙는다.':sc.text+'\n객이 되기 싫으면 장부 뒤쪽 칸에 이름만 올릴 수도 있다. 이자가 붙는다.',choices:[...(m.fac==='sam'?[]:[sc.choices[0]]),lc,...sc.choices.slice(1)]}}}}catch(e){}return os1.apply(this,[sc,keep])}}
+/* 적등방이 아니어도 빚이 있으면 갚을 수 있다 */
+{const fc1=factionCard;factionCard=function(){const el=fc1();try{const m=G.me;if(m&&m.fac!=='red'&&(m.debt||0)>0)el.append(h('div',{class:'stack',style:'gap:6px;border-top:1px solid var(--line);padding-top:10px'},
+  h('div',{class:'row',style:'font-size:13px'},h('span',null,'적등방 장부에 남은 빚'),h('b',{class:'num',style:'color:var(--bad)'},'$'+m.debt)),
+  h('div',{class:'wrap'},h('button',{class:'sm',disabled:!m.money||null,onclick:()=>payDebt(50)},'빚 $50 갚기'),h('button',{class:'sm',disabled:!m.money||null,onclick:()=>payDebt(m.money)},'있는 만큼 갚기')),
+  h('p',{class:'dim',style:'margin:0;font-size:12px'},'객이 아니라서 갚아도 신용은 쌓이지 않아요.')))}catch(e){}return el}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
