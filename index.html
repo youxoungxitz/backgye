@@ -258,6 +258,7 @@ body.build{background:#0E1110}
 .toymachine,.toycap{display:inline-block;line-height:0;image-rendering:pixelated}.toycap.shake{animation:toyshake .16s linear 4}@keyframes toyshake{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
 .sheet dd{white-space:pre-wrap;overflow-wrap:anywhere}
 .tcms{border-top:1px solid var(--line);padding-top:8px}.tcm{display:flex;flex-direction:column;gap:3px;padding:6px 0;border-top:1px dashed var(--line)}.tcms>.tcm:first-of-type{border-top:0}.tcm.re{margin-left:16px;padding-left:10px;border-left:2px solid var(--line);border-top:0}
+.nbrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-top:1px dashed var(--line)}.nbrow:first-child{border-top:0}.nbrow.got{opacity:.55}.nbmark{display:inline-block;font-size:10px;line-height:1;padding:2px 4px;margin:0 4px;border:1px solid var(--tube);color:var(--tube);border-radius:3px;vertical-align:1px;font-weight:400}
 @keyframes rainfall{from{background-position:0 0}to{background-position:-40px 240px}}
 @keyframes quake{0%,6%,33%,39%,66%,72%,100%{transform:translate(0,0)}2%{transform:translate(1px,1px)}35%{transform:translate(-1px,1px)}68%{transform:translate(1px,-1px)}}
 body.build #view{animation:quake 2.7s infinite}
@@ -1716,7 +1717,7 @@ function openSheet(id){const isMe=id==='me';const p=isMe?G.me:SAMPLES[id];const 
   const rows=isMe?[['나이',p.age],['성별',p.gender],['주소',p.addr],['생업',p.job||'없음'],['외형',p.look],['성격',p.pers],['버릇',p.habit],['좋아하는 것',p.likes],['싫어하는 것',p.dislikes],['무서워하는 것',[p.fear,p.fearNote].filter(Boolean).join(' · ')],['지니는 물건',p.keep],['메모',p.memo],['비밀',p.secret],['흔적',(p.marks||[]).join(', ')]]:
     [['나이',p.age],['성별',p.gender],['생업',p.job||'없음'],['외형',p.look],['성격',p.pers],['버릇',p.habit],['좋아하는 것',p.likes],['싫어하는 것',p.dislikes],['무서워하는 것',[p.fear,p.fearNote].filter(Boolean).join(' · ')],['지니는 물건',p.keep],['메모',p.memo]];
   const body=h('div',{class:'stack sheet'},
-    h('div',{class:'row'},h('div',{class:'wrap',style:'gap:12px;flex-wrap:nowrap'},avEl(p,'big'),h('div',null,h('div',{class:'mute',style:'font-size:12px'},facMark(isMe&&p.fugitive?'free':p.fac,13,'margin-right:5px;vertical-align:-2px'),isMe?rankLabel(p):`${FACS[p.fac]}${p.rank?' · '+p.rank:''}`,' ',h('span',{class:'num dim'},p.code)),h('h2',{class:'disp',style:'font-size:26px'},isMe?p.name:(p.name)),!isMe&&typeof sb==='undefined'?h('span',{class:'tag amb'},'예시 주민'):null)),h('button',{class:'ghost',onclick:closeModal},'닫기')),
+    h('div',{class:'row'},h('div',{class:'wrap',style:'gap:12px;flex-wrap:nowrap'},avEl(p,'big'),h('div',null,h('div',{class:'mute',style:'font-size:12px'},facMark(isMe&&p.fugitive?'free':p.fac,13,'margin-right:5px;vertical-align:-2px'),isMe?rankLabel(p):`${FACS[p.fac]}${p.rank?' · '+p.rank:''}`,' ',h('span',{class:'num dim'},p.code)),h('h2',{class:'disp',style:'font-size:26px'},isMe?p.name:(p.name)),!isMe&&typeof sb==='undefined'?h('span',{class:'tag amb'},'예시 주민'):null,(typeof isNewbie==='function'&&isNewbie(p))?h('span',{class:'tag tube'},`새 입주자 · ${nbDay(p)}일째`):null)),h('button',{class:'ghost',onclick:closeModal},'닫기')),
     p.portrait?h('img',{class:'portrait',src:p.portrait,alt:p.name+' 전신 이미지'}):null,
     p.quote?h('blockquote',{style:`margin:0;border-left:3px solid ${p.color};padding:4px 12px;font-family:var(--f-disp);font-size:17px`},'“'+p.quote+'”'):null,
     h('dl',null,rows.filter(x=>x[1]).map(x=>[h('dt',null,x[0]),h('dd',null,x[1])])),
@@ -2017,8 +2018,8 @@ function renderChat(){const C=$('chatCard'),m=G.me;const ch=sub.chat;const list=
     if(isBuild()&&ch==='all')list.append(h('div',{class:'msg hammer'},h('time',null,hm(T())),'쿵 · · · 쿵 · · · 쿵'));
     if(!items.length)list.append(h('div',{class:'mute',style:'font-size:13px'},ch==='cell'?quietTxt('이 칸은 조용하다.'):quietTxt('아직 조용하다.')));
     items.forEach((x,i)=>{const mine=m&&x.character_id===m.id;const p=mine?m:SAMPLES[x.character_id];const name=p?p.name:'누군가';const t=Date.parse(x.created_at);
-      if(ch==='ooc'){const pv=items[i-1];const cont=!!(pv&&pv.character_id===x.character_id&&t-Date.parse(pv.created_at)<5*MIN);const col=p&&p.color&&p.color!=='#0B0B0B'?p.color:'#9E9184';list.append(h('div',{class:'msg ooc'+(cont?' cont':''),style:`--oc:${col}`},h('time',null,hm(t)),cont?'':h('span',{class:'who',style:`color:${col}`},p?facMark(p.fugitive&&mine?'free':p.fac,12,'margin-right:4px;vertical-align:-1px'):'',mine?'나':`${name} 오너`),x.text));return}
-      list.append(h('div',{class:'msg'},h('time',null,hm(t)),h('span',{class:'who',style:`color:${p&&p.color!=='#0B0B0B'?p.color:'#9E9184'}`},p?facMark(p.fugitive&&mine?'free':p.fac,12,'margin-right:4px;vertical-align:-1px'):'',mine?name:scramble(name)),x.text,mine||isAdminUser()?h('button',{class:'ghost del sm',style:'font-size:11px;padding:0 4px',onclick:async()=>{await sb.from('messages').delete().eq('id',x.id);CHAT[key]=CHAT[key].filter(y=>y.id!==x.id);renderChat()}},'지우기'):null))})}
+      if(ch==='ooc'){const pv=items[i-1];const cont=!!(pv&&pv.character_id===x.character_id&&t-Date.parse(pv.created_at)<5*MIN);const col=p&&p.color&&p.color!=='#0B0B0B'?p.color:'#9E9184';list.append(h('div',{class:'msg ooc'+(cont?' cont':''),style:`--oc:${col}`},h('time',null,hm(t)),cont?'':h('span',{class:'who',style:`color:${col}`},p?facMark(p.fugitive&&mine?'free':p.fac,12,'margin-right:4px;vertical-align:-1px'):'',mine?'나':`${name} 오너`,p&&(typeof isNewbie==='function'&&isNewbie(p))?h('span',{class:'nbmark'},'새'):null),x.text));return}
+      list.append(h('div',{class:'msg'},h('time',null,hm(t)),h('span',{class:'who',style:`color:${p&&p.color!=='#0B0B0B'?p.color:'#9E9184'}`},p?facMark(p.fugitive&&mine?'free':p.fac,12,'margin-right:4px;vertical-align:-1px'):'',mine?name:scramble(name),p&&(typeof isNewbie==='function'&&isNewbie(p))?h('span',{class:'nbmark'},'새'):null),x.text,mine||isAdminUser()?h('button',{class:'ghost del sm',style:'font-size:11px;padding:0 4px',onclick:async()=>{await sb.from('messages').delete().eq('id',x.id);CHAT[key]=CHAT[key].filter(y=>y.id!==x.id);renderChat()}},'지우기'):null))})}
   chatPut(C,[h('div',{class:'row'},h('span',{class:'lbl'},'무전'),h('div',{class:'wrap'},[['cell','현장'],['all','전체'],['ooc','오너'],['dm','1:1'+(dmUnread()?' '+dmUnread():'')],['radio','자정 라디오']].map(([k,n])=>h('button',{class:'sm'+(ch===k?' pri':''),style:k==='dm'&&dmUnread()&&ch!==k?'color:var(--bad);border-color:var(--bad)':'',onclick:()=>{sub.chat=k;if(k==='radio')sfx('static');renderChat()}},n)))),
     h('p',{class:'dim',style:'margin:0;font-size:12px'},ch==='cell'?(m?`${CELLS[m.cell].n}에 있는 사람에게만 보여요.`:''):ch==='all'?'성채 전체에 들려요. 캐릭터로 말하는 곳이에요.':ch==='ooc'?'오너끼리 이야기하는 곳이에요 (OOC).':ch==='dm'?'나와 나눈 1:1 대화 목록이에요.':'매일 자정, 누가 송출하는지 모르는 방송.'),
     list,m&&ch!=='radio'&&ch!=='dm'?chatForm:null,hasFx('gum')&&ch!=='radio'&&ch!=='ooc'?h('p',{class:'dim',style:'margin:0;font-size:12px'},'빈 잇몸 때문에 발음이 새요.'):null].filter(Boolean));
@@ -2057,13 +2058,13 @@ function viewPeople(){const m=G.me;const q=(sub.q||'').trim();
     h('form',{class:'composer',onsubmit:e=>{e.preventDefault();const v=e.target.querySelector('input').value;addByCode(v);e.target.reset()}},h('input',{id:'codeIn',placeholder:'지인 코드로 신청 (예: #7K2Q)',maxlength:8,autocomplete:'off'}),h('button',{type:'submit',class:'pri'},'신청')),
     m?h('div',{class:'wrap'},h('button',{class:'sm',onclick:()=>openCard('me')},'내 주민증 보기 · 코드 공유'),h('button',{class:'sm',onclick:()=>{loadOthers().then(render)}},'명부 새로고침')):null,search,
     h('div',{class:'roster'},m?h('button',{class:'rc',style:`--c:${m.color}`,onclick:()=>openSheet('me')},h('div',{class:'wrap'},avEl(m),h('div',null,h('b',{class:'disp',style:'font-size:18px'},m.name),h('div',{class:'mute',style:'font-size:12px'},facMark(m.fugitive?'free':m.fac,13,'margin-right:5px;vertical-align:-2px'),rankLabel(m)))),m.quote?h('span',{class:'mute',style:'font-size:13px'},'“'+m.quote+'”'):null):null,
-      list.map(id=>{const s=SAMPLES[id],r=relOf(id);return h('button',{class:'rc',style:`--c:${s.color}`,onclick:()=>openSheet(id)},h('div',{class:'wrap'},avEl(s),h('div',null,h('b',{class:'disp',style:'font-size:18px'},(s.name)),h('div',{class:'mute',style:'font-size:12px'},s.fac?facMark(s.fac,13,'margin-right:5px;vertical-align:-2px'):'',`${FACS[s.fac]||''}${s.rank?' · '+s.rank:''} · ${s.code}`))),s.quote?h('span',{class:'mute',style:'font-size:13px'},'“'+s.quote+'”'):null,h('div',{class:'wrap'},online(s)?h('span',{class:'tag good'},'접속 중'):null,sameOwner(id)?h('span',{class:'tag amb'},'내 캐릭터'):null,s.isNpc?h('span',{class:'tag red'},'방주'):null,r.friend?h('span',{class:'tag good'},STAGES[stageOf(r)]):r.req?h('span',{class:'tag'},'신청 보냄'):null,r.name?h('span',{class:'tag red'},r.name):null,h('span',{class:'tag'},CELLS[s.cell]?CELLS[s.cell].n:'')))})),
+      list.map(id=>{const s=SAMPLES[id],r=relOf(id);return h('button',{class:'rc',style:`--c:${s.color}`,onclick:()=>openSheet(id)},h('div',{class:'wrap'},avEl(s),h('div',null,h('b',{class:'disp',style:'font-size:18px'},(s.name)),h('div',{class:'mute',style:'font-size:12px'},s.fac?facMark(s.fac,13,'margin-right:5px;vertical-align:-2px'):'',`${FACS[s.fac]||''}${s.rank?' · '+s.rank:''} · ${s.code}`))),s.quote?h('span',{class:'mute',style:'font-size:13px'},'“'+s.quote+'”'):null,h('div',{class:'wrap'},online(s)?h('span',{class:'tag good'},'접속 중'):null,sameOwner(id)?h('span',{class:'tag amb'},'내 캐릭터'):null,s.isNpc?h('span',{class:'tag red'},'방주'):null,(typeof isNewbie==='function'&&isNewbie(s))?h('span',{class:'tag tube'},'새 입주자'):null,r.friend?h('span',{class:'tag good'},STAGES[stageOf(r)]):r.req?h('span',{class:'tag'},'신청 보냄'):null,r.name?h('span',{class:'tag red'},r.name):null,h('span',{class:'tag'},CELLS[s.cell]?CELLS[s.cell].n:'')))})),
     !list.length?h('div',{class:'card empty'},'아직 다른 주민이 없어요. 초대 코드를 나눠 주세요.'):null]}
 function renderPeople(){const P=$('peopleCard'),m=G.me;const k=m?m.cell:null;
   const here=SAMPLE_IDS.filter(id=>SAMPLES[id].cell===k&&online(SAMPLES[id]));const ghost=m&&(isBuild()||hasFx('delirium')||(gateWeek()&&chance(.25+.12*gwDay())))&&chance(.5);
   P.replaceChildren(h('div',{class:'row'},h('span',{class:'lbl'},m?`${CELLS[k].n}에 있는 사람`:'사람들'),h('span',{class:'mute num'},here.length+(m?1:0)+(ghost?1:0))),
     h('div',{class:'stack',style:'gap:2px;margin-top:6px'},m?h('button',{class:'person',onclick:()=>openSheet('me')},avEl(m),h('span',null,h('b',null,m.name),' ',h('span',{class:'mute'},'(나)'),h('div',{class:'mute',style:'font-size:12px'},facMark(m.fugitive?'free':m.fac,13,'margin-right:5px;vertical-align:-2px'),rankLabel(m))),h('span',{class:'dot on'})):null,
-      here.map(id=>{const s=SAMPLES[id];return h('button',{class:'person',onclick:()=>openSheet(id)},avEl(s),h('span',null,h('b',null,(s.name)),h('div',{class:'mute',style:'font-size:12px'},s.fac?facMark(s.fac,13,'margin-right:5px;vertical-align:-2px'):'',`${FACS[s.fac]||''}${s.rank?' · '+s.rank:''}`)),h('span',{class:'dot on'}))}),
+      here.map(id=>{const s=SAMPLES[id];return h('button',{class:'person',onclick:()=>openSheet(id)},avEl(s),h('span',null,h('b',null,(s.name)),(typeof isNewbie==='function'&&isNewbie(s))?h('span',{class:'nbmark'},'새 입주자'):null,h('div',{class:'mute',style:'font-size:12px'},s.fac?facMark(s.fac,13,'margin-right:5px;vertical-align:-2px'):'',`${FACS[s.fac]||''}${s.rank?' · '+s.rank:''}`)),h('span',{class:'dot on'}))}),
       ghost?h('div',{class:'person',style:'cursor:default'},h('div',{class:'av',style:'background:#2a2a2a'}),h('span',null,h('b',{class:'dim'},'아는 사람'),h('div',{class:'dim',style:'font-size:12px'},'명부에 없음')),h('span',{class:'dot on'})):null,
       !here.length&&m&&!ghost?h('div',{class:'mute',style:'font-size:13px;padding:6px 0'},quietTxt('지금 이 칸엔 아무도 없다.')):null))}
 
@@ -4139,6 +4140,40 @@ const intrNext=m=>m&&m.intr&&m.debt>0?Math.max(0,Math.min(Math.ceil(m.debt*INTR_
   try{if(m&&m.intr&&prev!=null&&w>prev){for(let i=0;i<w-prev;i++){const x=intrNext(m);if(x>0){m.debt+=x;m.intrTot=(m.intrTot||0)+x;log(`적등방 장부에 이번 주 이자 $${x}가 붙었다. 남은 빚 $${m.debt}.`,'fac')}else if(m.debt>0&&m.debt>=intrCap(m)){log(`장부의 이자 칸이 꽉 찼다. 더는 붙지 않는다. 남은 빚 $${m.debt}.`,'fac');break}}}}catch(e){}return r}}
 {const fc2=factionCard;factionCard=function(){const el=fc2.apply(this,arguments);try{const m=G.me;if(el&&m&&m.intr&&m.debt>0){const x=intrNext(m);
   el.append(h('p',{class:'mute',style:'margin:0;font-size:12px'},x>0?`남은 빚에 매주 10% 이자가 붙어요. 다음 주 이자 $${x}. 이자로는 빚이 $${intrCap(m)}까지만 불어나요.`:`이자 칸이 꽉 찼어요. 빚이 $${intrCap(m)}을 넘게 불어나지는 않아요.`))}}catch(e){}return el}}
+
+/* ---------- 새 입주자: 들어온 지 7일 동안 표시 + 첫 주 할 일 ---------- */
+const NB_DAYS=7;
+const nbAge=p=>p&&p.created?Date.now()-p.created:Infinity;
+function isNewbie(p){return!!(p&&!p.isNpc&&p.created&&nbAge(p)<NB_DAYS*86400e3)}
+const nbDay=p=>Math.min(NB_DAYS,Math.floor(nbAge(p)/86400e3)+1);
+const NB_TASKS=[
+ ['explore','단면도 둘러보기','「단면도」 탭에서 「둘러보기」를 한 번 해 보세요. 기력 1이 들어요.',()=>G.me.nb.done.explore],
+ ['work','생업 한 번 마치기','「나」 탭의 생업 칸에서 출근하고, 시간이 지나면 퇴근해요.',()=>G.me.nb.done.work],
+ ['haunt','괴담 하나 겪기','국숫집, 공중전화, 옛 우물처럼 괴담이 도는 장소에 들러 보세요. 괴담 도감에 첫 장이 생겨요.',()=>Object.keys(G.me.dex||{}).length>0],
+ ['chat','무전에 한마디','「무전」 탭의 현장·전체·오너 채널 어디든 한마디 남겨 보세요.',()=>G.me.nb.done.chat],
+ ['board','계단참 게시판 읽기','「수첩」 탭의 게시판에서 먼저 온 사람들이 남긴 괴담 팁을 읽어 보세요.',()=>G.me.nb.done.board],
+ ['friend','지인 한 명 사귀기','「사람들」 탭에서 마음에 드는 주민에게 지인 신청을 보내 보세요. 받아 주면 끝나요.',()=>Object.values(G.rel||{}).some(r=>r&&r.friend)],
+ ['room','내 방 꾸미기','집 칸에서 「내 방」을 열어 물건을 놓거나 방문에 쪽지를 붙여 보세요.',()=>(G.me.room||[]).length>0||!!G.me.roomNote]];
+const NB_REWARD=20,NB_ALL=100;
+function nbInit(){const m=G.me;if(!m)return null;m.nb=m.nb||{};m.nb.done=m.nb.done||{};m.nb.got=m.nb.got||{};return m.nb}
+function nbMark(k){const m=G.me;if(!m||!isNewbie(m))return;const nb=nbInit();if(nb.done[k])return;nb.done[k]=1;save();try{renderLeft()}catch(e){}}
+function nbClaim(k){const m=G.me,nb=nbInit();const t=NB_TASKS.find(x=>x[0]===k);if(!t||nb.got[k]||!t[3]())return;nb.got[k]=1;give({money:NB_REWARD});log(`첫 주 할 일 「${t[1]}」을(를) 마쳤다. ($+${NB_REWARD})`,'life');
+  if(NB_TASKS.every(x=>nb.got[x[0]])&&!nb.all){nb.all=1;give({money:NB_ALL});log(`첫 주 할 일을 다 마쳤다. 관리실 문틈에 봉투가 끼워져 있다. 「입주를 환영합니다. 방주.」 ($+${NB_ALL})`,'fac');toast(`첫 주 할 일을 다 마쳤어요. $${NB_ALL}를 받았어요.`)}
+  else toast(`$${NB_REWARD}를 받았어요.`);save();render()}
+function nbCard(){const m=G.me;if(!m||!isNewbie(m))return null;const nb=nbInit();if(nb.all||nb.hide)return null;
+  const got=NB_TASKS.filter(x=>nb.got[x[0]]).length;const left=NB_DAYS-nbDay(m)+1;
+  return h('div',{class:'card stack nbcard',style:'gap:8px'},
+    h('div',{class:'row'},h('span',{class:'lbl'},'첫 주 할 일'),h('span',{class:'mute num',style:'font-size:12px'},`${got} / ${NB_TASKS.length} · ${left}일 남음`)),
+    h('div',{style:'height:4px;background:var(--line);border-radius:2px;overflow:hidden'},h('div',{style:`height:100%;width:${Math.round(got/NB_TASKS.length*100)}%;background:var(--tube)`})),
+    h('div',{class:'stack',style:'gap:4px'},NB_TASKS.map(([k,n,hint,ok])=>{const g=nb.got[k],d=!g&&ok();
+      return h('div',{class:'nbrow'+(g?' got':'')},h('div',{style:'min-width:0'},h('div',{style:'font-size:13.5px'},(g?'☑ ':d?'☐ ':'☐ ')+n),g?null:h('div',{class:'dim',style:'font-size:11.5px;line-height:1.5'},hint)),
+        g?h('span',{class:'dim',style:'font-size:11.5px;flex:none'},'받음'):d?h('button',{class:'sm pri',style:'flex:none',onclick:()=>nbClaim(k)},`$${NB_REWARD} 받기`):null)})),
+    h('div',{class:'row'},h('span',{class:'dim',style:'font-size:11.5px'},`하나마다 $${NB_REWARD}, 다 마치면 $${NB_ALL}를 더 받아요.`),h('button',{class:'ghost sm',style:'flex:none;white-space:nowrap',onclick:()=>{nb.hide=1;save();render()}},'접기')))}
+{const rl0=renderLeft;renderLeft=function(){const r=rl0.apply(this,arguments);try{const c=nbCard();const L=$('left');if(c&&L){const first=L.firstElementChild;if(first&&first.nextSibling)L.insertBefore(c,first.nextSibling);else L.append(c)}}catch(e){}return r}}
+{const ex0=explore;explore=function(){const m=G.me,en=m&&m.en;const r=ex0.apply(this,arguments);try{if(G.me&&G.me.en<en)nbMark('explore')}catch(e){}return r}}
+{const fw0=finishWork;finishWork=function(){const r=fw0.apply(this,arguments);try{nbMark('work')}catch(e){}return r}}
+{const po0=post;post=function(ch,who){const r=po0.apply(this,arguments);try{if(who==='me')nbMark('chat')}catch(e){}return r}}
+if(typeof tipsBody==='function'){const tb0=tipsBody;tipsBody=function(){const r=tb0.apply(this,arguments);try{if(TIPS&&TIPS.length!==undefined)nbMark('board')}catch(e){}return r}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
