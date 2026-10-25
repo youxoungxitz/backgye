@@ -257,6 +257,7 @@ body.build{background:#0E1110}
 #rainfx{position:fixed;inset:0;pointer-events:none;z-index:4;background-image:repeating-linear-gradient(100deg,transparent 0 18px,rgba(170,210,225,.16) 18px 19px,transparent 19px 41px);background-size:240px 240px;animation:rainfall .55s linear infinite;-webkit-mask-image:linear-gradient(90deg,#000 0,transparent 9%,transparent 91%,#000 100%);mask-image:linear-gradient(90deg,#000 0,transparent 9%,transparent 91%,#000 100%)}
 .toymachine,.toycap{display:inline-block;line-height:0;image-rendering:pixelated}.toycap.shake{animation:toyshake .16s linear 4}@keyframes toyshake{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
 .sheet dd{white-space:pre-wrap;overflow-wrap:anywhere}
+.tcms{border-top:1px solid var(--line);padding-top:8px}.tcm{display:flex;flex-direction:column;gap:3px;padding:6px 0;border-top:1px dashed var(--line)}.tcms>.tcm:first-of-type{border-top:0}.tcm.re{margin-left:16px;padding-left:10px;border-left:2px solid var(--line);border-top:0}
 @keyframes rainfall{from{background-position:0 0}to{background-position:-40px 240px}}
 @keyframes quake{0%,6%,33%,39%,66%,72%,100%{transform:translate(0,0)}2%{transform:translate(1px,1px)}35%{transform:translate(-1px,1px)}68%{transform:translate(1px,-1px)}}
 body.build #view{animation:quake 2.7s infinite}
@@ -3235,7 +3236,7 @@ function loanScene(){return{id:'loan',title:'홍등루',red:true,text:'초록 �
 /* ---------- 지인 신청 받는지 시트·주민증에 표시 ---------- */
 const FOPEN={yes:['지인 신청 환영','good'],ask:['먼저 말 걸어 주세요','amb'],no:['지금은 지인 신청 안 받아요','red']};
 if(typeof SHEETK!=='undefined'&&!SHEETK.includes('fopen'))SHEETK.push('fopen');
-{const pf0=personFromRow;personFromRow=function(r){const p=pf0.apply(this,arguments);try{p.fopen=(r.sheet||{}).fopen||''}catch(e){}return p}}
+if(typeof personFromRow==='function'){const pf0=personFromRow;personFromRow=function(r){const p=pf0.apply(this,arguments);try{p.fopen=(r.sheet||{}).fopen||''}catch(e){}return p}}
 function fopenTag(p){const f=p&&FOPEN[p.fopen];return f?h('span',{class:'tag '+f[1],style:'font-size:11.5px'},f[0]):''}
 {const o0=openForm;openForm=function(edit){const r=o0.apply(this,arguments);try{const form=document.querySelector('#modalRoot form');const memo=document.getElementById('f-memo');if(!form||!memo)return r;
   const s=h('select',{id:'f-fopen'},[['','표시 안 함'],['yes','지인 신청 환영'],['ask','먼저 말 걸어 주세요 (1:1이나 채팅으로)'],['no','지금은 지인 신청 안 받아요']].map(([v,l])=>h('option',{value:v},l)));s.value=edit&&G.me?G.me.fopen||'':'';
@@ -3830,7 +3831,7 @@ function tipsBody(){if(typeof sb==='undefined'||!sb)return[h('p',{class:'mute'},
   const post=x=>{const mine=m&&x.author===m.id,n=tipVotes(x.id),voted=tipMine(x.id);const body=h('div',{style:'white-space:pre-wrap;line-height:1.7;font-size:14px'},x.body);
     return h('div',{class:'tip'},h('div',{class:'row',style:'gap:6px;justify-content:flex-start;flex-wrap:wrap'},h('span',{class:'tag'},TIP_CAT[x.cat]||'기타'),typeof facMark==='function'?facMark(tipFac(x.author),12):'',h('b',{style:'font-size:13px'},tipName(x.author)),h('span',{class:'dim',style:'font-size:11.5px',title:mdhm(Date.parse(x.created_at))},castleDate(Date.parse(x.created_at))+(x.edited_at?' · 수정됨':''))),
       x.spoiler?h('details',null,h('summary',{style:'cursor:pointer;font-size:13px;color:var(--mute)'},'스포일러 · 눌러서 보기'),body):body,
-      h('div',{class:'wrap',style:'gap:6px'},h('button',{class:'sm'+(voted?' pri':''),onclick:()=>tipVote(x)},`도움 됐어요 ${n}`),mine?h('button',{class:'sm ghost',onclick:()=>tipEdit(x)},'고치기'):null,!mine&&isAdminUser()?h('button',{class:'sm ghost',style:'color:var(--bad)',onclick:async()=>{await sb.from('tip_posts').delete().eq('id',x.id);await loadTips();renderView()}},'운영자 삭제'):null))};
+      h('div',{class:'wrap',style:'gap:6px'},h('button',{class:'sm'+(voted?' pri':''),onclick:()=>tipVote(x)},`도움 됐어요 ${n}`),mine?h('button',{class:'sm ghost',onclick:()=>tipEdit(x)},'고치기'):null,!mine&&isAdminUser()?h('button',{class:'sm ghost',style:'color:var(--bad)',onclick:async()=>{await sb.from('tip_posts').delete().eq('id',x.id);await loadTips();renderView()}},'운영자 삭제'):null),typeof tipCmtEl==='function'?tipCmtEl(x):null)};
   return[h('div',{class:'card stack'},h('span',{class:'lbl'},'계단참 게시판 · 괴담 정보와 팁'),h('p',{class:'mute',style:'margin:0;font-size:12.5px'},'겪은 괴담, 수칙, 탐사 요령을 나눠요. 하루 첫 글에 평판 +1. 내용이 직접적이면 스포일러로 접어 주세요.'),
       m?h('form',{class:'stack',style:'gap:6px',onsubmit:e=>{e.preventDefault();tipPost(cat.value,ta.value,sp.checked)}},h('div',{class:'row',style:'gap:8px'},cat,h('label',{class:'row',style:'gap:6px;justify-content:flex-start;font-size:13px;white-space:nowrap;flex:none'},sp,'스포일러')),ta,h('button',{type:'submit',class:'sm pri',style:'align-self:flex-start'},'붙이기')):null,
       TIP_ERR?h('p',{style:'margin:0;color:var(--bad);font-size:13px'},TIP_ERR):null),
@@ -3841,7 +3842,7 @@ const RUMORS=['국숫집 4번 테이블은 세 번째부터 무언가 같이 앉
 function todayRumor(){const d=dayIdx(T());return RUMORS[((d*7)%RUMORS.length+RUMORS.length)%RUMORS.length]}
 /* 생일 · 입주 기념일 */
 if(typeof SHEETK!=='undefined'&&!SHEETK.includes('bday'))SHEETK.push('bday');
-{const pf1=personFromRow;personFromRow=function(r){const p=pf1.apply(this,arguments);try{p.bday=(r.sheet||{}).bday||''}catch(e){}return p}}
+if(typeof personFromRow==='function'){const pf1=personFromRow;personFromRow=function(r){const p=pf1.apply(this,arguments);try{p.bday=(r.sheet||{}).bday||''}catch(e){}return p}}
 function todayMD(){const d=kd(T());return `${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`}
 const ANNIV=[30,100,200,365];
 function annivOf(p){if(!p||!p.created)return 0;const n=dayIdx(T())-dayIdx(p.created);return ANNIV.includes(n)?n:0}
@@ -3894,25 +3895,55 @@ const TOYS={
  toy_ring:{n:'플라스틱 반지',r:'c',d:'빨간 보석이 박힌 반지. 새끼손가락에도 안 들어간다.'},
  toy_bell:{n:'고양이 방울',r:'c',d:'흔들면 딸랑. 수로 고양이들이 이 소리를 좋아한다.'},
  toy_whistle:{n:'물새 피리',r:'c',d:'물을 넣고 불면 새 소리가 난다. 성채에서 새를 본 사람은 별로 없다.'},
+ toy_bubble:{n:'비눗방울 통',r:'c',d:'불면 방울 하나가 늘 한 박자 늦게 터진다.'},
+ toy_yoyo:{n:'형광 요요',r:'c',d:'불을 끄면 초록빛으로 돈다. 줄이 손가락에 감기면 잘 안 풀린다.'},
+ toy_hwatu:{n:'꼬마 화투패',r:'c',d:'한 장짜리 비 광. 우산 쓴 사람의 얼굴이 지워져 있다.'},
+ toy_gum:{n:'풍선껌 만화',r:'c',d:'껌 포장지 속 네 칸 만화. 마지막 칸은 늘 찢겨 있다.'},
+ toy_band:{n:'고무줄 뭉치',r:'c',d:'고무줄놀이용. 같이 부르던 노래 가사가 한 줄 기억나지 않는다.'},
+ toy_jacks:{n:'공기돌',r:'c',d:'다섯 알. 세어 보면 여섯 알일 때가 있다.'},
+ toy_sticker:{n:'반짝이 스티커',r:'c',d:'하트 스티커. 떼어 보면 뒷면에 일곱 자리 숫자가 적혀 있다.'},
+ toy_pinwheel:{n:'바람개비',r:'c',d:'바람 한 점 없는 복도에서도 천천히 돈다.'},
  toy_star:{n:'야광 별 스티커',r:'u',d:'불을 끄면 천장에 별이 뜬다. 세어 보면 하나가 늘 모자라다.'},
  toy_frog:{n:'태엽 개구리',r:'u',d:'태엽을 감으면 세 번 뛰고 멈춘다. 꼭 세 번.'},
  toy_lamp:{n:'꼬마 홍등',r:'u',d:'손가락만 한 홍등. 건전지 넣는 곳이 없는데 켜진다.'},
  toy_chick:{n:'전자 병아리',r:'u',d:'액정 속에서 삑삑거린다. 밥을 안 주면 하루 만에 하늘나라로 간다.'},
+ toy_walkie:{n:'장난감 무전기',r:'u',d:'건전지 없이 지직거린다. 짝이 없는데 가끔 대답이 온다.'},
+ toy_robot:{n:'합체 로봇',r:'u',d:'팔 하나가 없다. 이 기계에서 나온 로봇은 다 왼팔이 없다고 한다.'},
+ toy_kaleido:{n:'만화경',r:'u',d:'돌리면 무늬가 바뀐다. 가끔 무늬 사이에 눈 하나가 끼어 있다.'},
+ toy_minitape:{n:'꼬마 카세트',r:'u',d:'손톱만 한 테이프 열쇠고리. 끝까지 감으면 누가 숫자를 센다.'},
+ toy_compass:{n:'장난감 나침반',r:'u',d:'바늘이 북쪽 대신 늘 성채 안쪽을 가리킨다.'},
+ toy_doll:{n:'종이 인형 옷',r:'u',d:'옷만 있고 인형이 없다. 대 보면 치수가 내 몸에 맞다.'},
+ toy_slime:{n:'액체 괴물',r:'u',d:'통 안에서 혼자 모양을 바꾼다. 밤이면 뚜껑 쪽에 몰려 있다.'},
+ toy_taxi:{n:'양철 택시',r:'u',d:'태엽 택시. 문짝에 「레이란 개인택시」라고 적혀 있다.'},
  toy_lift:{n:'엘리베이터 열쇠고리',r:'r',d:'버튼을 누르면 「땡」 소리가 난다. 층 표시는 늘 같은 숫자다.'},
  toy_coin:{n:'금박 행운 동전',r:'r',d:'던지면 늘 앞면이 나온다. 뒤집어 봐도 앞면이다.'},
  toy_globe:{n:'성채 스노볼',r:'r',d:'유리 안에 작은 성채가 있다. 흔들면 눈 대신 재가 내린다.'},
+ toy_ship:{n:'병 속의 배',r:'r',d:'병 안 바다가 가끔 출렁인다. 성채에는 바다가 보이는 창이 없다.'},
+ toy_music:{n:'오르골',r:'r',d:'뚜껑을 열면 낯익은 자장가가 흐른다. 누가 불러 줬는지는 기억나지 않는다.'},
+ toy_tram:{n:'2층 전차 모형',r:'r',d:'레이란 시내를 달리던 전차. 행선지 판이 비어 있다.'},
+ toy_camera:{n:'장난감 카메라',r:'r',d:'셔터를 누르면 찰칵 소리만 난다. 그런데 금성 사진관에 맡기면 뭔가 나온다고.'},
+ toy_badge:{n:'은빛 배지',r:'r',d:'누구 것인지 모를 배지. 뒷면에 「方舟」라고 새겨져 있다.'},
  toy_tag:{n:'남의 이름표',r:'x',d:'반 이름과 번호가 적힌 국민학교 이름표. 이 동네에 국민학교는 없다.'},
  toy_eye:{n:'미지근한 구슬',r:'x',d:'눈동자 무늬 구슬. 쥐면 미지근하다. 내려놓으면 굴러서 나를 본다.'},
  toy_hair:{n:'젖은 캡슐',r:'x',d:'열리지 않는 캡슐. 안에서 물소리가 나고, 흔들면 머리카락이 비친다.'},
+ toy_tooth:{n:'젖니 캡슐',r:'x',d:'작은 이 하나. 캡슐 뚜껑에 내 이름 첫 글자가 적혀 있다.'},
+ toy_key:{n:'번호 없는 열쇠',r:'x',d:'어느 문에도 맞지 않는다. 그런데 밤마다 내 방 손잡이에 꽂혀 있다.'},
+ toy_fog:{n:'흰 안개 구슬',r:'x',d:'속이 하얗게 차 있다. 오래 들여다보면 아는 이름이 하나씩 떠오르지 않는다.'},
 };
-const TOY_W={c:58,u:28,r:11,x:3};
+const TOY_W={c:64,u:26,r:7,x:3},TOY_PITY=30,TOY_SWAP=3;
 const TOY_CAP={c:['#F2C14E','#F0F0E8'],u:['#4A8AC8','#F0F0E8'],r:['#E86AA0','#FFF0B0'],x:['#14181A','#3A4A50']};
 const TOY_OWNER=['「동전은 위로, 손잡이는 오른쪽으로. 거꾸로 돌리면 안 돼.」','「그 기계는 가끔 내가 넣은 적 없는 걸 뱉어. 그런 건 나한테 가져오지 마.」','「껍데기는 여기 바구니에 버리고 가. 모으는 애가 있어.」','「겹친 거 있으면 세 개 가져와. 한 판 돌리게 해 줄게.」','「밤에는 기계 안 돌려. 혼자 도는 소리가 나도 신경 쓰지 마.」'];
 Object.assign(ROOMFX,{
  toy_frog:'태엽을 감은 적 없는 개구리가 아침에 문 앞까지 가 있었다. 세 칸.',
  toy_tag:'이름표 번호 칸이 지워졌다가 다시 적혀 있다. 아까와 다른 번호다.',
  toy_eye:'구슬이 밤새 굴러 침대 쪽을 보고 있었다.',
- toy_hair:'캡슐 안 물소리가 밤새 조금씩 커졌다. 아침엔 바닥이 젖어 있었다.'});
+ toy_hair:'캡슐 안 물소리가 밤새 조금씩 커졌다. 아침엔 바닥이 젖어 있었다.',
+ toy_walkie:'장난감 무전기가 밤새 지직거렸다. 「…거기 누구 있어요?」',
+ toy_slime:'아침에 보니 액체 괴물이 뚜껑을 밀고 반쯤 나와 있었다.',
+ toy_music:'아무도 안 열었는데 오르골이 한 소절 울렸다.',
+ toy_tooth:'젖니 캡슐 뚜껑의 글자가 내 이름 두 번째 글자로 바뀌어 있었다.',
+ toy_key:'번호 없는 열쇠가 또 손잡이에 꽂혀 있었다. 밖에서.',
+ toy_fog:'구슬 속 안개가 방 안까지 번져 나왔다. 아침까지 이름 하나가 생각나지 않았다.'});
 Object.assign(RA_SPR,{
  toy_eraser:{c:{k:'#5A3A3A',p:'#F2B8B8',d:'#3A2A2A'},p:['.kkkkkkkk.','kppppppppk','kpdppppdpk','kppppppppk','kppddddppk','kppppppppk','.kkkkkkkk.']},
  toy_marble:{c:{k:'#1A2A3A',w:'#E8F4F8',b:'#4A8AC8',l:'#9AC8E8'},p:['...kkkk...','..kllllk..','.klwlbblk.','.kllbbblk.','.klbbbllk.','..kllllk..','...kkkk...']},
@@ -3929,7 +3960,31 @@ Object.assign(RA_SPR,{
  toy_globe:{c:{k:'#2A3A4A',b:'#A8C8D8',w:'#E8E8E8',d:'#3A3A3A',r:'#8A3A2A'},p:['...kkkk...','..kbwbbk..','.kbbbwbbk.','.kbdbdbbk.','.kbdddddk.','..kddddk..','.krrrrrrk.','.kkkkkkkk.']},
  toy_tag:{c:{k:'#3A3428',w:'#EDE6D0',r:'#9A2A2A',b:'#3A3A8A'},p:['kkkkkkkkkk','kwwwwwwwwk','kwbbwbbbwk','kwwwwwwwwk','kwbbbbwwrk','kkkkkkkkkk']},
  toy_eye:{c:{k:'#1A1A1A',w:'#F0ECE0',r:'#B03030',p:'#101010',v:'#D88080'},p:['...kkkk...','..kwwvwk..','.kwvrrwvk.','.kwrppvwk.','.kwrpprwk.','.kvwrrwwk.','..kwwvwk..','...kkkk...']},
- toy_hair:{c:{k:'#1A2A30',b:'#5A8AA0',w:'#C8E0E8',h:'#0A0A0A'},p:['...kkkk...','..kbbbbk..','.kbbhbbbk.','.kkkkkkkk.','.kwwhwwwk.','.kwhwwhwk.','..kwwhwk..','...kkkk...']}});
+ toy_hair:{c:{k:'#1A2A30',b:'#5A8AA0',w:'#C8E0E8',h:'#0A0A0A'},p:['...kkkk...','..kbbbbk..','.kbbhbbbk.','.kkkkkkkk.','.kwwhwwwk.','.kwhwwhwk.','..kwwhwk..','...kkkk...']},
+ toy_bubble:{c:{k:'#3A4A5A',b:'#9AD0F0',w:'#F0F8FF',p:'#E86AA0'},p:['.....bb...','....b..b..','....bw.b..','.....bb...','..kk......','..pp......','..pp......','..pp......','..kk......']},
+ toy_yoyo:{c:{k:'#1A1A1A',g:'#7CFC5A',d:'#3A8A2A',s:'#C8C8C0'},p:['....s.....','....s.....','....s.....','..kkkkk...','.kgggggk..','.kdddddk..','.kgggggk..','..kkkkk...']},
+ toy_hwatu:{c:{k:'#1A1A1A',r:'#B0262A',w:'#E8E0C8',y:'#E8C040',b:'#2A2A6A'},p:['kkkkkkk...','krrrrrk...','kryrrrk...','krrbbrk...','krbbbrk...','krrbrrk...','kwrrrrk...','kkkkkkk...']},
+ toy_gum:{c:{k:'#5A2A3A',p:'#F2A0C0',w:'#FFF0F5',r:'#C03050'},p:['kkkkkkkkkk','kppppppppk','kpwwwwwwpk','kpwrrwrwpk','kpwwwwwwpk','kppppppppk','kkkkkkkkkk']},
+ toy_band:{c:{y:'#E8C040',r:'#D04040',g:'#40A060'},p:['..yyyyy...','.y.....y..','.r.rrr.r..','.r.r.r.y..','.g.ggg.g..','.y.....y..','..ggrrr...']},
+ toy_jacks:{c:{r:'#C04040',b:'#4070C0',y:'#E0B040',g:'#40A060',p:'#B060B0'},p:['.rr...bb..','.rr...bb..','....yy....','....yy....','.gg...pp..','.gg...pp..']},
+ toy_sticker:{c:{p:'#F070B0',w:'#FFE0F0',s:'#C8C8D0'},p:['ssssssssss','s.pp.pp..s','spwpppp..s','spppppp..s','s.ppppp..s','s..ppp...s','s...p....s','ssssssssss']},
+ toy_pinwheel:{c:{r:'#D04040',y:'#E8C040',b:'#4070C0',g:'#40A060',k:'#6A4A2A'},p:['rr....yy..','rrr..yyy..','.rrr.yy...','...kk.....','..bb.ggg..','.bbb..ggg.','bb.....gg.','....k.....','....k.....','....k.....']},
+ toy_walkie:{c:{k:'#1A1A1A',y:'#E8C040',d:'#3A3A3A',g:'#7CFC5A'},p:['..k.......','..k.......','.kkkkkk...','.kyyyyk...','.kdddgk...','.kydydk...','.kyyyyk...','.kydydk...','.kyyyyk...','.kkkkkk...']},
+ toy_robot:{c:{k:'#1A1A1A',s:'#A8B0B8',r:'#D04040',y:'#F2C14E',b:'#4070C0'},p:['...kkkk...','...kyyk...','...kkkk...','.kbbbbbk..','kskbrbk...','kskbbbk...','..kbbbk...','..kk.kk...','..kk.kk...']},
+ toy_kaleido:{c:{k:'#2A2A2A',r:'#B0262A',y:'#E8C040',b:'#4070C0',w:'#E0E0E0'},p:['.kkkkkkk..','krryybbbwk','kyybbrrrwk','.kkkkkkk..']},
+ toy_minitape:{c:{k:'#151515',d:'#3A3A44',w:'#D8D0B8',s:'#B8B8B0'},p:['s.........','.s........','..kkkkkkk.','..kdddddk.','..kdwkwdk.','..kdddddk.','..kkkkkkk.']},
+ toy_compass:{c:{k:'#3A3020',g:'#C9A84A',w:'#F0ECE0',r:'#C03030',d:'#3A3A3A'},p:['....gg....','...kkkk...','..kwwrwk..','.kwwwrwwk.','.kwwdwwwk.','.kwwdwwwk.','..kwwwwk..','...kkkk...']},
+ toy_doll:{c:{p:'#E890B0',b:'#70A0D0'},p:['.pp...b.b.','pppp..bbb.','pppp..bbb.','.pp...bbb.','pppp..b.b.','pppp..b.b.']},
+ toy_slime:{c:{k:'#1A3A2A',g:'#5AE0A0',l:'#B0F8D0',w:'#E0E0E0'},p:['.wwwwwww..','.kkkkkkk..','.kgglggk..','.kgggggk..','.kglgggk..','.kgggggk..','.kkkkkkk..']},
+ toy_taxi:{c:{k:'#1A1A1A',r:'#C03030',w:'#E0E8F0',y:'#F2C14E'},p:['...yy.....','..krrrk...','.krwwwrk..','krrrrrrrk.','krrrrrrrk.','.kk...kk..']},
+ toy_ship:{c:{k:'#2A3A2A',g:'#A0C8B0',b:'#3A6AA8',w:'#F0ECE0',r:'#8A5A2A'},p:['....kk....','....gg....','..gggggg..','.gg.w...g.','.g.www..g.','.gbrrrbbg.','.gbbbbbbg.','..gggggg..']},
+ toy_music:{c:{k:'#2A1A0E',b:'#8A5A2A',g:'#D9A441',p:'#F2D0E0'},p:['kkkkkkkk..','kbbbbbbk..','kggggggk..','kbpbbpbk..','kbbbbbbkg.','kkkkkkkkg.']},
+ toy_tram:{c:{k:'#1A1A1A',g:'#2F7A4A',w:'#E8E0C8',y:'#E8C040'},p:['....k.....','.kkkkkkk..','.kgwgwgk..','.kgggggk..','.kgwgwgk..','.kyyyyyk..','.kkkkkkk..','..k...k...']},
+ toy_camera:{c:{k:'#1A1A1A',d:'#4A4A4A',b:'#3A6AA8',w:'#E8F0F8'},p:['.kk.......','kkkkkkkkk.','kdddkkddk.','kddkbbkdk.','kddkbwkdk.','kdddkkddk.','kkkkkkkkk.']},
+ toy_badge:{c:{k:'#3A3A3A',s:'#C8CCD0',w:'#F0F4F8',d:'#7A8088'},p:['...kkkk...','..kswssk..','.ksdssdsk.','.ksssdssk.','.ksdssdsk.','..ksssk...','...kkkk...']},
+ toy_tooth:{c:{k:'#3A3428',w:'#F2EEDC',r:'#B03030'},p:['...kkkk...','..kwwwwk..','..kwwwwk..','..kwwwwk..','...kwwk...','...krrk...']},
+ toy_key:{c:{k:'#2A2A26',w:'#C8C8C0'},p:['.kkk......','kwwwk.....','kw.wkkkkkk','kwwwk.k.k.','.kkk......']},
+ toy_fog:{c:{k:'#3A3A3A',w:'#F4F4F2',g:'#C8CCCC'},p:['...kkkk...','..kwwwgk..','.kwwgwwwk.','.kwwwwgwk.','.kgwwwwwk.','..kwwgwk..','...kkkk...']}});
 try{MAPI.capsule={c:{r:'#E05A4A',g:'#BFD8E0',y:'#F2C14E'},p:['.gggggg.','gyggrgyg','gggyggg.','rrrrrrrr','rr.rrrrr','rrrrrrrr']};MAP_PLACE_ICON.toyshop='capsule';MAP_PRI.push('toyshop')}catch(e){}
 PLACES.toyshop={n:'대성문구',act:()=>openGacha(),btn:'문방구 뽑기'};
 try{const c=CELLS['2-2'];c.p=(c.p||[]).concat('toyshop');c.d+=' 1층 구석엔 「대성문구」가 붙어 있고, 문 앞에 캡슐 뽑기 기계가 서 있다.'}catch(e){}
@@ -3938,9 +3993,11 @@ try{SFX.crank=t=>{for(let i=0;i<5;i++)noise(t+i*.11,.04,.32,'bandpass',1700+i*90
 
 const toyName=k=>TOYS[k]?TOYS[k].n:(ITEMS[k]?ITEMS[k].n:k);
 const toyDesc=k=>TOYS[k]?TOYS[k].d:(ITEMS[k]?ITEMS[k].d:'');
-function toyRoll(){const W=Object.entries(TOY_W);let n=Math.random()*W.reduce((a,[,w])=>a+w,0),rar='c';for(const[r,w]of W){n-=w;if(n<0){rar=r;break}}
+function toyRoll(){const m=G.me;const W=Object.entries(TOY_W);let n=Math.random()*W.reduce((a,[,w])=>a+w,0),rar='c';for(const[r,w]of W){n-=w;if(n<0){rar=r;break}}
+  m.toyPity=(+m.toyPity||0)+1;if(rar!=='r'&&m.toyPity>=TOY_PITY)rar='r';if(rar==='r')m.toyPity=0;
   return pick(Object.keys(TOYS).filter(k=>TOYS[k].r===rar))}
 function toyDupes(m){return Object.values(m.toys||{}).reduce((a,n)=>a+Math.max(0,n-1),0)}
+const TOY_TIER=[['c',30,'흔한 장난감 칸을 다 채웠다. 할머니가 눈깔사탕을 하나 줬다.'],['u',80,'드문 장난감 칸을 다 채웠다. 할머니가 안경을 고쳐 쓰고 진열장을 한참 봤다.'],['r',200,'귀한 장난감 칸까지 다 채웠다. 할머니가 금고에서 봉투를 꺼냈다.'],['all',300,'진열장을 다 채웠다. 「다 모은 애는 오랜만이네.」 할머니가 진열장 열쇠를 하나 쥐여 줬다.']];
 function toyFull(){return Object.keys(TOYS).filter(k=>TOYS[k].r!=='x')}
 function toyCapEl(rar,cls){const[a,b]=TOY_CAP[rar]||TOY_CAP.c;const s=h('span',{class:'toycap '+(cls||''),'aria-hidden':'true'});
   s.innerHTML=`<svg viewBox="0 0 10 10" width="56" height="56" shape-rendering="crispEdges"><rect x="3" y="1" width="4" height="1" fill="#111"/><rect x="2" y="2" width="6" height="1" fill="${a}"/><rect x="1" y="3" width="8" height="2" fill="${a}"/><rect x="2" y="3" width="1" height="1" fill="#fff" opacity=".7"/><rect x="1" y="5" width="8" height="1" fill="#111"/><rect x="1" y="6" width="8" height="1" fill="${b}"/><rect x="2" y="7" width="6" height="1" fill="${b}"/><rect x="3" y="8" width="4" height="1" fill="#111"/></svg>`;return s}
@@ -3952,12 +4009,14 @@ function toyMachine(){const P=['..kkkkkkkkkk..','.kggggggggggk.','kggyygbbggppgk
 function toyGet(k,how){const m=G.me;m.toys=m.toys||{};const first=!m.toys[k];m.toys[k]=(m.toys[k]||0)+1;const T=TOYS[k];
   log(`대성문구 뽑기${how?' ('+how+')':''}: 「${T.n}」${first?' · 처음 나온 것':''}`,T.r==='x'?'haunt':'life');
   if(T.r==='x'){give({mind:-4});try{sfx('static')}catch(e){}}
-  let bonus='';const full=toyFull();if(!m.toyDone&&full.every(x=>m.toys[x])){m.toyDone=1;give({money:100});log('문방구 할머니가 진열장 사탕을 한 줌 쥐여 줬다. 「다 모은 애는 오랜만이네.」 ($+100)','life');bonus='진열장 칸을 다 채웠다. 할머니가 $100과 사탕을 쥐여 줬다.'}
+  let bonus='';if(typeof m.toyDone!=='object'||!m.toyDone)m.toyDone={};const D=m.toyDone,bs=[];
+  for(const[r,amt,line]of TOY_TIER){const ks=r==='all'?toyFull():Object.keys(TOYS).filter(x=>TOYS[x].r===r);if(!D[r]&&ks.every(x=>m.toys[x])){D[r]=1;give({money:amt});log(`${line} ($+${amt})`,'life');bs.push(`${line} $${amt}을 받았다.`)}}
+  bonus=bs.join('\n');
   save();return{first,bonus}}
 function toyPull(free){if(!ready())return;const m=G.me;const dl=daily();dl.gacha=dl.gacha||0;
   if(dl.gacha>=TOY_DAY)return toast('기계가 동전을 더 먹지 않는다. 내일 다시.');
   if(!free&&m.money<TOY_PRICE)return toast(`동전이 모자라요. $${TOY_PRICE}`);
-  if(free){if(toyDupes(m)<3)return;let left=3;const ks=Object.keys(m.toys).sort((a,b)=>m.toys[b]-m.toys[a]);for(const k of ks){while(left&&m.toys[k]>1){m.toys[k]--;left--}}}
+  if(free){if(toyDupes(m)<TOY_SWAP)return;let left=TOY_SWAP;const ks=Object.keys(m.toys).sort((a,b)=>m.toys[b]-m.toys[a]);for(const k of ks){while(left&&m.toys[k]>1){m.toys[k]--;left--}}}
   else m.money-=TOY_PRICE;
   dl.gacha++;const k=toyRoll(),T=TOYS[k];const res=toyGet(k,free?'겹친 것 셋과 바꿈':'');
   const box=document.getElementById('toyOut');if(!box){render();return}
@@ -3967,24 +4026,25 @@ function toyPull(free){if(!ready())return;const m=G.me;const dl=daily();dl.gacha
   setTimeout(()=>{try{sfx('capsule')}catch(e){}const[rn,rc]=TOY_RAR[T.r];
     box.replaceChildren(...[h('div',{class:'row',style:'gap:12px;align-items:center;justify-content:flex-start'},itemIcon(k,48),h('div',{class:'stack',style:'gap:4px'},h('div',{class:'wrap',style:'gap:6px'},h('b',null,T.n),h('span',{class:'tag '+rc},rn),res.first?h('span',{class:'tag tube'},'새로 나옴'):h('span',{class:'tag'},`× ${m.toys[k]}`)),h('p',{class:'mute',style:'margin:0;font-size:13px'},T.d))),
       T.r==='x'?h('p',{class:'hand',style:'margin:0;color:var(--lantern)'},'할머니가 캡슐을 보더니 눈을 피한다. 「…그건 내가 넣은 게 아니야.」 (정신력 -4)'):null,
-      res.bonus?h('p',{class:'hand',style:'margin:0;color:var(--good)'},res.bonus):null].filter(Boolean));
+      res.bonus?h('p',{class:'hand',style:'margin:0;color:var(--good);white-space:pre-line'},res.bonus):null].filter(Boolean));
     const bk=document.getElementById('toyBook');if(bk)bk.replaceWith(toyBook());
     gachaStatus();render()},still?150:1350)}
 function gachaStatus(){const m=G.me,dl=daily();const el=document.getElementById('toyStat');if(el)el.textContent=`가진 돈 $${m.money} · 오늘 ${dl.gacha||0} / ${TOY_DAY}판 · 겹친 것 ${toyDupes(m)}개`;
-  const fb=document.getElementById('toyFree');if(fb)fb.hidden=toyDupes(m)<3;document.querySelectorAll('#toyBtns button').forEach(b=>b.disabled=false)}
+  const fb=document.getElementById('toyFree');if(fb)fb.hidden=toyDupes(m)<TOY_SWAP;document.querySelectorAll('#toyBtns button').forEach(b=>b.disabled=false)}
 function toyBook(){const m=G.me,got=m.toys||{};const all=Object.keys(TOYS);const full=toyFull();const n=full.filter(k=>got[k]).length;
   return h('div',{class:'stack',id:'toyBook',style:'gap:8px'},h('div',{class:'row'},h('span',{class:'lbl'},'진열장'),h('b',{class:'num'},`${n} / ${full.length}`)),
+    h('div',{class:'wrap',style:'gap:6px'},['c','u','r','x'].map(r=>{const ks=all.filter(k=>TOYS[k].r===r),g=ks.filter(k=>got[k]).length;const[rn,rc]=TOY_RAR[r];return h('span',{class:'tag '+(r!=='x'&&g===ks.length?'good':rc)},`${rn} ${g}/${ks.length} · ${TOY_W[r]}%`)})),
     h('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:6px'},all.map(k=>{const T=TOYS[k],c=got[k];const[rn,rc]=TOY_RAR[T.r];
       return c?h('div',{class:'pl',style:'flex-direction:column;align-items:flex-start;gap:2px',title:T.d},h('div',null,itemIcon(k),h('b',{style:'font-size:13px'},T.n)),h('span',{class:'dim num',style:'font-size:11px'},`${rn} · × ${c}`))
-        :h('div',{class:'pl dim',style:'font-size:13px'+(T.r==='x'?';border-style:dashed':'')},T.r==='x'?'？？？ · 괴담':'？？？')})),
-    h('p',{class:'dim',style:'margin:0;font-size:12px'},'괴담 칸을 뺀 진열장을 다 채우면 할머니가 뭔가 준대요. 뽑은 건 내 방에 놓을 수 있어요.'))}
+        :h('div',{class:'pl dim',style:'font-size:13px'+(T.r==='x'?';border-style:dashed':'')},'？？？ · '+rn)})),
+    h('p',{class:'dim',style:'margin:0;font-size:12px'},`흔함·드묾·귀함 칸을 하나씩 다 채울 때마다, 그리고 괴담 칸을 뺀 진열장을 다 채우면 할머니가 뭔가 줘요. 귀한 것이 ${TOY_PITY}판 동안 안 나오면 다음 판엔 꼭 나와요 (앞으로 ${Math.max(1,TOY_PITY-(+m.toyPity||0))}판). 뽑은 건 내 방에 놓을 수 있어요.`))}
 function openGacha(){if(!ready())return;const m=G.me;m.toys=m.toys||{};const dl=daily();dl.gacha=dl.gacha||0;
   openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'대성문구'),h('button',{class:'ghost',onclick:closeModal},'닫기')),
     h('p',{class:'mute',style:'margin:0'},'인쇄소 1층 구석. 연필, 딱지, 색종이 사이로 할머니가 졸고 있다. 문 앞에 빨간 캡슐 뽑기 기계.'),
     h('p',{class:'hand',style:'margin:0'},pick(TOY_OWNER)),
     h('div',{class:'row',style:'gap:14px;align-items:center;justify-content:flex-start;flex-wrap:wrap'},toyMachine(),h('div',{id:'toyOut',class:'stack',style:'gap:6px;flex:1;min-width:200px'},h('p',{class:'mute',style:'margin:0'},`한 판 $${TOY_PRICE}. 하루 ${TOY_DAY}판까지.`))),
     h('div',{class:'mute num',id:'toyStat',style:'font-size:12.5px'}),
-    h('div',{class:'wrap',id:'toyBtns'},h('button',{class:'pri',onclick:()=>toyPull(false)},`동전 넣고 돌리기 ($${TOY_PRICE})`),h('button',{id:'toyFree',hidden:toyDupes(m)<3,onclick:()=>toyPull(true)},'겹친 것 셋 주고 한 판'),h('button',{onclick:()=>{closeModal();openRoom()}},'내 방에 놓으러')),
+    h('div',{class:'wrap',id:'toyBtns'},h('button',{class:'pri',onclick:()=>toyPull(false)},`동전 넣고 돌리기 ($${TOY_PRICE})`),h('button',{id:'toyFree',hidden:toyDupes(m)<TOY_SWAP,onclick:()=>toyPull(true)},'겹친 것 셋 주고 한 판'),h('button',{onclick:()=>{closeModal();openRoom()}},'내 방에 놓으러')),
     toyBook()));gachaStatus()}
 
 /* 내 방에 뽑기 장난감도 놓을 수 있게 */
@@ -4021,6 +4081,55 @@ window.addEventListener('focus',()=>syncCheck());window.addEventListener('pagesh
 setInterval(()=>{if(!document.hidden)syncCheck()},40000);
 
 {const de0=deepEnd;deepEnd=function(){const r=de0.apply(this,arguments);try{clearTimeout(SYNC_T);SYNC_T=null;dirty=true;flush()}catch(e){}return r}}
+
+/* ---------- 계단참 게시판 댓글 · 답글 ---------- */
+let TIP_CMT=[],TIP_CMT_OFF=false;const TIP_OPEN=new Set();let TIP_REPLY=null;
+async function loadTipCmts(){if(!sb||!TIPS)return;const ids=TIPS.map(x=>x.id);if(!ids.length){TIP_CMT=[];return}
+  try{const{data,error}=await sb.from('tip_comments').select('*').in('post_id',ids).order('created_at',{ascending:true});if(error){TIP_CMT_OFF=true;TIP_CMT=[];return}TIP_CMT_OFF=false;TIP_CMT=data||[]}catch(e){TIP_CMT=[]}}
+{const lt0=loadTips;loadTips=async function(){const r=await lt0.apply(this,arguments);await loadTipCmts();return r}}
+const tipCmtN=id=>TIP_CMT.filter(c=>c.post_id===id&&!c.deleted).length;
+async function tipCmtAdd(post,parent,body){const m=G.me;body=String(body||'').trim();if(!m)return;if(!body)return toast('내용을 적어 주세요.');
+  const{error}=await sb.from('tip_comments').insert({post_id:post.id,parent_id:parent||null,author:m.id,body:body.slice(0,300)});
+  if(error)return toast('달지 못했어요. 운영자에게 13_comments.sql 실행을 부탁해 주세요.');TIP_REPLY=null;TIP_OPEN.add(post.id);await loadTipCmts();renderView()}
+async function tipCmtDel(c){const hasKids=TIP_CMT.some(x=>x.parent_id===c.id&&!x.deleted);
+  const{error}=hasKids?await sb.from('tip_comments').update({deleted:true,body:'.'}).eq('id',c.id):await sb.from('tip_comments').delete().eq('id',c.id);
+  if(error)return toast('지우지 못했어요.');await loadTipCmts();renderView();toast('지웠어요.')}
+function tipCmtEdit(c){const ta=h('textarea',{maxlength:300,rows:4});ta.value=c.body;
+  openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'댓글 고치기'),h('button',{class:'ghost',onclick:closeModal},'닫기')),ta,
+    h('div',{class:'wrap'},h('button',{class:'sm pri',onclick:async()=>{const v=ta.value.trim();if(!v)return;const{error}=await updWithEdited('tip_comments',c.id,{body:v.slice(0,300)});if(error)return toast('고치지 못했어요.');closeModal();await loadTipCmts();renderView();toast('고쳤어요.')}},'고친 대로 달기'))))}
+function tipCmtForm(post,parent,ph,pre){const inp=h('input',{maxlength:300,placeholder:ph,value:pre||''});
+  const f=h('form',{class:'composer',onsubmit:e=>{e.preventDefault();tipCmtAdd(post,parent,inp.value)}},inp,h('button',{type:'submit',class:'sm pri'},'달기'));
+  if(pre!=null)setTimeout(()=>{try{inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length)}catch(e){}},30);return f}
+function tipCmtOne(post,c,isReply){const m=G.me;const mine=m&&c.author===m.id;const root=isReply?c.parent_id:c.id;
+  if(c.deleted)return h('div',{class:'tcm'+(isReply?' re':'')},h('span',{class:'dim',style:'font-size:12.5px'},'지운 댓글이에요.'));
+  return h('div',{class:'tcm'+(isReply?' re':'')},
+    h('div',{class:'row',style:'gap:6px;justify-content:flex-start;flex-wrap:wrap'},isReply?h('span',{class:'dim','aria-hidden':'true'},'└'):null,typeof facMark==='function'?facMark(tipFac(c.author),11):'',h('b',{style:'font-size:12.5px'},tipName(c.author)),c.author===post.author?h('span',{class:'tag',style:'font-size:10.5px'},'글쓴이'):null,h('span',{class:'dim',style:'font-size:11px',title:mdhm(Date.parse(c.created_at))},castleDate(Date.parse(c.created_at))+(c.edited_at?' · 수정됨':''))),
+    h('div',{style:'white-space:pre-wrap;line-height:1.6;font-size:13.5px'},c.body),
+    m?h('div',{class:'wrap',style:'gap:4px'},h('button',{class:'ghost sm',onclick:()=>{TIP_REPLY={post:post.id,root,to:isReply?tipName(c.author):null};renderView()}},'답글'),mine?h('button',{class:'ghost sm',onclick:()=>tipCmtEdit(c)},'고치기'):null,
+      mine||isAdminUser()?h('button',{class:'ghost sm',style:'color:var(--bad)',onclick:e=>{const bt=e.currentTarget;if(!bt.dataset.arm){bt.dataset.arm='1';bt.textContent='한 번 더 누르면 지워요';return}tipCmtDel(c)}},mine?'지우기':'운영자 삭제'):null):null)}
+function tipCmtEl(post){const n=tipCmtN(post.id),open=TIP_OPEN.has(post.id);
+  const btn=h('button',{class:'sm ghost',style:'align-self:flex-start',onclick:()=>{if(open)TIP_OPEN.delete(post.id);else TIP_OPEN.add(post.id);renderView()}},open?`댓글 접기`:`댓글 ${n}`);
+  if(!open)return btn;
+  if(TIP_CMT_OFF)return h('div',{class:'stack',style:'gap:6px'},btn,h('p',{class:'mute',style:'margin:0;font-size:12.5px'},'댓글은 운영자가 13_comments.sql을 실행하면 열려요.'));
+  const all=TIP_CMT.filter(c=>c.post_id===post.id),roots=all.filter(c=>!c.parent_id);
+  const out=[];for(const r of roots){const kids=all.filter(c=>c.parent_id===r.id);if(r.deleted&&!kids.some(k=>!k.deleted))continue;out.push(tipCmtOne(post,r,false));for(const k of kids)if(!k.deleted)out.push(tipCmtOne(post,k,true));
+    if(G.me&&TIP_REPLY&&TIP_REPLY.post===post.id&&TIP_REPLY.root===r.id)out.push(h('div',{class:'tcm re'},tipCmtForm(post,r.id,'답글 (300자)',TIP_REPLY.to?'@'+TIP_REPLY.to+' ':''),h('button',{class:'ghost sm',style:'margin-top:4px',onclick:()=>{TIP_REPLY=null;renderView()}},'답글 그만두기')))}
+  return h('div',{class:'stack tcms',style:'gap:6px'},btn,out.length?out:h('p',{class:'dim',style:'margin:0;font-size:12.5px'},'아직 댓글이 없어요.'),G.me?tipCmtForm(post,null,'댓글 (300자)'):null)}
+/* 내 글에 댓글, 내 댓글에 답글이 달리면 삐삐함으로 */
+let CMT_IN=[];
+async function loadCmtInbox(){const m=G.me;if(!m||!sb||TIP_CMT_OFF)return;const me=m.id;
+  try{const[p,c]=await Promise.all([sb.from('tip_posts').select('id').eq('author',me).limit(200),sb.from('tip_comments').select('id').eq('author',me).limit(300)]);
+    const pids=(p.data||[]).map(x=>x.id),cids=(c.data||[]).map(x=>x.id);const got=[];
+    if(pids.length){const r=await sb.from('tip_comments').select('*').in('post_id',pids).order('created_at',{ascending:false}).limit(40);if(r.error){if(/tip_comments/.test(r.error.message||''))TIP_CMT_OFF=true}else got.push(...(r.data||[]))}
+    if(cids.length){const r=await sb.from('tip_comments').select('*').in('parent_id',cids).order('created_at',{ascending:false}).limit(40);got.push(...(r.data||[]))}
+    const seen={};CMT_IN=got.filter(x=>x.author!==me&&!x.deleted&&!seen[x.id]&&(seen[x.id]=1)).map(x=>({...x,toMine:cids.includes(x.parent_id)})).sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at)).slice(0,30)}catch(e){CMT_IN=[]}}
+if(typeof loadInboxExtra==='function'&&typeof inboxItems==='function'){
+{const li0=loadInboxExtra;loadInboxExtra=async function(){await loadCmtInbox();return li0.apply(this,arguments)}}
+{const ib1=inboxItems;inboxItems=function(){const out=ib1.apply(this,arguments);if(!G.me)return out;const seen=inboxSeen();
+  for(const x of CMT_IN){const t=Date.parse(x.created_at)||0;out.push({k:'댓글',t,title:`${tipName(x.author)}이(가) ${x.toMine?'내 댓글에 답글을':'내 글에 댓글을'} 달았어요`,body:x.body,unread:t>seen,go:()=>{closeModal();TIP_OPEN.add(x.post_id);TIPS=null;tab='note';sub.note='tips';render()}})}
+  return out.sort((a,b)=>b.t-a.t).slice(0,60)}}
+INBOX_C['댓글']='var(--tube)';
+}
 
 /* ---------- 시작 ---------- */
 async function boot(){
