@@ -1336,7 +1336,7 @@ function doorbellEvent(){openScene({id:'doorbell',title:'문패 없는 집',text
      {l:'대꾸한다',run:()=>{const out=give({mind:-15,item:'plate',fx:'followed'});log('문패 없는 집에 대꾸했다. 수칙 4번을 어겼다.','haunt');flicker();done('대꾸','「…저예요.」\n문이 열리지 않았다. 대신 발밑에 이름 칸이 빈 문패가 떨어졌다. 안에서 누군가 내 목소리로 따라 말한다. 「저예요.」'+fearLine(),out,true)}},
      {l:'도망친다',s:'agi',run:()=>{const c=chk('agi',10);done('도망',c.ok?'계단을 두 칸씩 뛰어 내려왔다.':'발이 꼬였다. 등 뒤에서 문고리 돌아가는 소리가 난다.',[c.txt,...give({mind:c.ok?-5:-10})],true)}}]})},
   {l:'지나친다',run:()=>done('지나쳤다','문패 없는 집을 지나쳤다. 문 뒤에서 누군가 숨을 쉬는 것 같았다.',give({mind:-1}))},
-  G.me&&G.me.items.bowl?{l:'「네 번째 그릇」에 국수를 담아 두고 온다 ($8)',run:()=>{if(G.me.money<8)return toast('돈이 모자라요.');G.me.money-=8;G.me.items.bowl--;G.me.bowlAt=T();log('네 번째 그릇에 국수를 담아 문패 없는 집 앞에 두고 왔다.','haunt');done('그릇','그릇을 문 앞에 내려놓았다. 김이 오르는 국수. 문 안쪽에서 수저 드는 소리가 났다.\n(내일 다시 와 보면…)',[])}}:null].filter(Boolean)})}
+  G.me&&G.me.items.bowl&&!G.me.bowlAt?{l:'「네 번째 그릇」에 국수를 담아 두고 온다 ($8)',run:()=>{if(G.me.money<8)return toast('돈이 모자라요.');G.me.money-=8;G.me.items.bowl--;G.me.bowlAt=T();log('네 번째 그릇에 국수를 담아 문패 없는 집 앞에 두고 왔다.','haunt');done('그릇','그릇을 문 앞에 내려놓았다. 김이 오르는 국수. 문 안쪽에서 수저 드는 소리가 났다.\n(내일 다시 와 보면…)',[])}}:null].filter(Boolean)})}
 
 /* ---------- 괴담 장소: 평소 → 흔적 → 조우 ---------- */
 function hauntRoll(id){const m=G.me;const tr=m.traces[id]||0;let pe=.08+.07*tr+(isBuild()?.15:0)+(m.mind<40?.1:0)+(isGate()?.2:0)+rumorBoost(id);if(G.opts.forceEnc)pe=1;
@@ -4766,6 +4766,17 @@ function feelPublicEl(pid){const list=FEEL.filter(x=>x.vis==='all'&&(x.from_char
     else{const r0=G.rel&&G.rel[id];const a=relPointsEl(id,r0),b=feelEl(id),c=feelPublicEl(id);[a,b,c].forEach(x=>{if(x)zone.append(x)})}
     if(zone.children.length){const tb=sh.querySelector('.talkbox');if(tb)tb.before(zone);else{const dl=sh.querySelector('dl');if(dl)dl.after(zone);else sh.append(zone)}}};
   put();if(sb)loadFeel().then(()=>{if(document.querySelector('#modalRoot .sheet')===sh)put()})}catch(e){}return r}}
+
+/* ---------- 좌상단 로고를 누르면 첫 화면(단면도)으로 ---------- */
+(function(){try{const lg=document.querySelector('header.top .logo');if(!lg)return;lg.style.cursor='pointer';lg.setAttribute('role','link');lg.setAttribute('tabindex','0');lg.title='첫 화면으로';
+  const go=()=>{try{closeModal()}catch(e){}if(typeof scene!=='undefined'&&scene&&scene.red)return toast('지금 장면부터 마무리해 주세요.');tab='map';if(typeof sub!=='undefined')sub.mapv='castle';result=null;render();window.scrollTo({top:0,behavior:'smooth'})};
+  lg.addEventListener('click',go);lg.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}})}catch(e){}})();
+/* ---------- 네 번째 그릇: 두고 온 동안엔 다시 못 두고, 다음 날 찾아가면 결과가 장면으로 보인다 ---------- */
+{const db0=doorbellEvent;doorbellEvent=function(){const m=G.me;
+  if(m&&m.bowlAt&&dayIdx(T())<=dayIdx(m.bowlAt))return openScene({id:'doorbell',title:'문패 없는 집',text:'문 앞에 두고 간 그릇이 그대로 있다. 국수는 아직 식지 않았다. 문 안쪽이 조용하다.\n내일 다시 와 봐야 할 것 같다.',choices:[{l:'조용히 돌아선다',run:()=>done('문패 없는 집','발소리를 죽이고 돌아섰다. 등 뒤에서 수저 내려놓는 소리가 났다.',[])}]});
+  if(m&&m.bowlSeen===false){m.bowlSeen=true;save();return openScene({id:'doorbell',title:'문패 없는 집',red:true,text:'문 앞에 그릇이 엎어져 있다. 국물 한 방울 남지 않았다. 젓가락이 가지런히 그릇 위에 놓여 있다.\n그릇 옆에 이름 칸이 빈 문패가 하나 기대어 있었다. 그건 이미 내 주머니에 들어와 있다.',choices:[{l:'그릇을 챙겨 돌아선다',run:()=>done('문패 없는 집','빈 그릇은 생각보다 무거웠다. 안쪽 바닥에 손톱으로 긁은 글씨가 있다. 「잘 먹었습니다」.',[])}]})}
+  return db0.apply(this,arguments)}}
+{const tkb=tick;tick=function(){const m=G.me;const had=!!(m&&m.bowlAt);const r=tkb.apply(this,arguments);try{if(had&&G.me&&!G.me.bowlAt){G.me.bowlSeen=false;save()}}catch(e){}return r}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
