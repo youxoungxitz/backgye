@@ -245,6 +245,7 @@ body.build{background:#0E1110}
 .roomfig figcaption{font-size:11.5px;color:var(--dim);font-family:var(--f-mono)}
 @media (max-width:1200px){.shell[data-tab="chat"]{grid-template-rows:auto 1fr} .shell[data-tab="chat"] .left{grid-row:1 / span 2} .shell[data-tab="chat"] .center{grid-row:1;grid-column:2} .shell[data-tab="chat"] .right{grid-row:2;grid-column:2}}
 @media (max-width:780px){.shell[data-tab="chat"] .center{grid-column:1} .shell[data-tab="chat"] .right{grid-column:1}}
+.deepart{width:100%;max-width:560px;aspect-ratio:112/64;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;border:1px solid var(--line);border-radius:4px;background:#000;align-self:center}
 </style>
 </head>
 <body>
@@ -3583,6 +3584,85 @@ function roomArt(p,isMe){const kind=raKind(p);const cv=document.createElement('c
 {const o0=openRoom;openRoom=function(){const r=o0.apply(this,arguments);try{const st=document.querySelector('#modalRoot .stack');if(st&&G.me&&st.children[1])st.insertBefore(roomArt(G.me,true),st.children[1])}catch(e){}return r}}
 {const e0=roomEl;roomEl=function(p,isMe,id){const el=e0.apply(this,arguments);try{if(el&&el.children[0])el.children[0].after(roomArt(p,isMe))}catch(e){}return el}}
 
+
+/* ---------- 집중 탐사 도트 그림: 장소마다 다른 복도, 깊어질수록 징그러워지고, 등불이 줄면 어두워진다 ---------- */
+const DA_W=112,DA_H=64,DA_IN=[46,22,66,38];let DA_GLOW=[];
+function daRng(seed){let x=(seed*2654435761)>>>0||1;return()=>{x^=x<<13;x>>>=0;x^=x>>17;x^=x<<5;x>>>=0;return(x%10000)/10000}}
+function daRing(t){const L=(a,b)=>a+(b-a)*t;return{x0:L(0,DA_IN[0]),y0:L(0,DA_IN[1]),x1:L(DA_W,DA_IN[2]),y1:L(DA_H,DA_IN[3])}}
+const DA_PAL={build:{c:'#3E403C',w:'#5E605A',w2:'#54564F',f:'#4A4A44',e:'#6E7470',ln:'#2E302C'},f13:{c:'#2A2620',w:'#6B6250',w2:'#5E5646',f:'#4A2420',e:'#3A3428',ln:'#2A2218'},drain:{c:'#1E2624',w:'#3A4A44',w2:'#33423C',f:'#1E3A40',e:'#14201E',ln:'#26302C'}};
+function daPoly(g,pts,c){g.fillStyle=c;g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(const p of pts.slice(1))g.lineTo(p[0],p[1]);g.closePath();g.fill()}
+function daWallPt(side,t,f){const r=daRing(t);return[side<0?r.x0:r.x1,r.y0+(r.y1-r.y0)*f]}
+function daOnWall(g,side,t,f,w,h,c){const r=daRing(t),s=1-t*.7;const[x,y]=daWallPt(side,t,f);g.fillStyle=c;g.fillRect(Math.round(x+(side<0?1:-1-w*s)),Math.round(y),Math.max(1,Math.round(w*s)),Math.max(1,Math.round(h*s)))}
+function daFloorPt(t,u){const r=daRing(t);return[r.x0+(r.x1-r.x0)*u,r.y1]}
+function daFigure(g,t,dark,eyes){const r=daRing(t),s=1-t*.78;const cx=(r.x0+r.x1)/2,by=r.y1;const hgt=Math.max(6,Math.round(34*s)),wd=Math.max(2,Math.round(8*s));
+  g.fillStyle=dark;g.fillRect(Math.round(cx-wd/2),Math.round(by-hgt),wd,Math.round(hgt*.7));g.fillRect(Math.round(cx-wd/4),Math.round(by-hgt-wd*.6),Math.max(1,Math.round(wd/2)),Math.max(1,Math.round(wd*.6)));
+  g.fillRect(Math.round(cx-wd/2),Math.round(by-hgt*.3),Math.max(1,Math.round(wd/3)),Math.round(hgt*.3));g.fillRect(Math.round(cx+wd/6),Math.round(by-hgt*.3),Math.max(1,Math.round(wd/3)),Math.round(hgt*.3));
+  if(eyes){DA_GLOW.push(['r',Math.round(cx-wd/4),Math.round(by-hgt-wd*.4)],['r',Math.round(cx+wd/4-1),Math.round(by-hgt-wd*.4)])}}
+function daEye(g,x,y,big){g.fillStyle='#E8E2D6';g.fillRect(x-1,y,big?4:3,2);g.fillStyle='#1A0A0A';g.fillRect(x,y,big?2:1,big?2:1);if(big){g.fillStyle='#8A1A1A';g.fillRect(x-1,y+2,4,1)}}
+function daBase(g,sp){const P=DA_PAL[sp],I=DA_IN;
+  daPoly(g,[[0,0],[DA_W,0],[I[2],I[1]],[I[0],I[1]]],P.c);daPoly(g,[[0,DA_H],[DA_W,DA_H],[I[2],I[3]],[I[0],I[3]]],P.f);
+  daPoly(g,[[0,0],[I[0],I[1]],[I[0],I[3]],[0,DA_H]],P.w);daPoly(g,[[DA_W,0],[I[2],I[1]],[I[2],I[3]],[DA_W,DA_H]],P.w2);g.fillStyle=P.e;g.fillRect(I[0],I[1],I[2]-I[0],I[3]-I[1]);
+  for(const t of[.3,.55,.75,.9]){const r=daRing(t);g.fillStyle=P.ln;g.fillRect(Math.round(r.x0),Math.round(r.y0),1,Math.round(r.y1-r.y0));g.fillRect(Math.round(r.x1)-1,Math.round(r.y0),1,Math.round(r.y1-r.y0));g.fillRect(Math.round(r.x0),Math.round(r.y1)-1,Math.round(r.x1-r.x0),1)}
+  if(sp==='build'){for(const t of[.15,.45,.7]){const r=daRing(t);g.fillStyle='#8A8C88';g.fillRect(Math.round(r.x0)+2,Math.round(r.y0),1,Math.round(r.y1-r.y0));g.fillRect(Math.round(r.x1)-3,Math.round(r.y0),1,Math.round(r.y1-r.y0))}
+   g.fillStyle='rgba(150,170,175,.35)';g.fillRect(I[0],I[1],I[2]-I[0],I[3]-I[1]);g.fillStyle='rgba(200,215,220,.25)';g.fillRect(I[0]+3,I[1],1,I[3]-I[1]);g.fillRect(I[0]+12,I[1],1,I[3]-I[1]);
+   for(const[t,u]of[[.2,.12],[.35,.82]]){const[x,y]=daFloorPt(t,u);const s=1-t*.7;g.fillStyle='#9A8A6A';g.fillRect(Math.round(x),Math.round(y-5*s),Math.round(8*s),Math.round(5*s));g.fillStyle='#7A6A4A';g.fillRect(Math.round(x),Math.round(y-5*s),Math.round(8*s),1)}
+   g.fillStyle='#2A2A26';g.fillRect(55,0,1,10);g.fillStyle='#F2E6A0';g.fillRect(54,10,3,3)}
+  else if(sp==='f13'){for(const t of[.1,.4,.65,.85]){const r=daRing(t),cx=(r.x0+r.x1)/2,s=1-t*.75;g.fillStyle='#D8F0E8';g.fillRect(Math.round(cx-8*s),Math.round(r.y0+1),Math.max(2,Math.round(16*s)),1)}
+   for(const side of[-1,1])for(const[a,b]of[[.12,.3],[.42,.55],[.68,.78]]){const A=daWallPt(side,a,.3),B=daWallPt(side,b,.3),C=daWallPt(side,b,1),D=daWallPt(side,a,1);daPoly(g,[A,B,C,D],'#4A3020');const m=daWallPt(side,(a+b)/2,.45);g.fillStyle='#C9A84A';g.fillRect(Math.round(m[0])-1,Math.round(m[1]),2,1)}
+   daPoly(g,[daFloorPt(0,.3),daFloorPt(0,.7),daFloorPt(1,.62),daFloorPt(1,.38)],'#6A2E26');g.fillStyle='#7A8A92';g.fillRect(I[0]+6,I[1]+2,8,13);g.fillStyle='#5A6A72';g.fillRect(I[0]+9,I[1]+8,2,7)}
+  else{daPoly(g,[[0,0],[DA_W,0],[I[2],I[1]],[I[0],I[1]]],'#18201E');for(let t=.05;t<1;t+=.12){const r=daRing(t);g.fillStyle='rgba(20,30,28,.6)';g.fillRect(Math.round(r.x0),Math.round(r.y0+(r.y1-r.y0)*.4),Math.max(1,Math.round(3*(1-t))),1);g.fillRect(Math.round(r.x1)-3,Math.round(r.y0+(r.y1-r.y0)*.6),Math.max(1,Math.round(3*(1-t))),1)}
+   for(const side of[-1,1]){const a=daWallPt(side,0,.22),b=daWallPt(side,1,.22);g.strokeStyle='#6A5A3A';g.lineWidth=2;g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke()}
+   for(const t of[.1,.3,.5,.7,.88]){const r=daRing(t),s=1-t*.7;g.fillStyle='#3A6A70';g.fillRect(Math.round(r.x0+8*s),Math.round(r.y1-2*s),Math.round((r.x1-r.x0)*.3),1);g.fillRect(Math.round(r.x1-(r.x1-r.x0)*.45),Math.round(r.y1-3*s),Math.round((r.x1-r.x0)*.25),1)}
+   g.fillStyle='#0A1412';g.fillRect(I[0]+4,I[1]+3,12,13)}}
+function daProps(g,sp,txt,rnd){const has=w=>txt.includes(w);
+  if(has('신발')){for(let i=0;i<4;i++){const[x,y]=daFloorPt(.2+i*.15,.2);const s=1-(.2+i*.15)*.7;g.fillStyle=i%2?'#2A1A14':'#5A3A2A';g.fillRect(Math.round(x),Math.round(y-2*s)-1,Math.max(2,Math.round(4*s*(1-i*.15))),Math.max(1,Math.round(2*s)))}}
+  if(has('의자')){const[x,y]=daFloorPt(.45,.45);g.fillStyle='#4A3020';g.fillRect(Math.round(x),Math.round(y-9),6,1);g.fillRect(Math.round(x),Math.round(y-14),1,14);g.fillRect(Math.round(x+5),Math.round(y-9),1,9);g.fillRect(Math.round(x),Math.round(y-9),1,9);if(has('사진')){g.fillStyle='#E8E0C8';g.fillRect(Math.round(x+1),Math.round(y-11),3,2)}}
+  if(has('식탁')||has('밥')){const[x,y]=daFloorPt(.5,.3);g.fillStyle='#5A3A20';g.fillRect(Math.round(x),Math.round(y-8),14,2);g.fillRect(Math.round(x+1),Math.round(y-6),1,6);g.fillRect(Math.round(x+12),Math.round(y-6),1,6);g.fillStyle='#F2EEE4';g.fillRect(Math.round(x+3),Math.round(y-10),3,2);g.fillRect(Math.round(x+8),Math.round(y-10),3,2)}
+  if(has('거울')){g.fillStyle='#8AA6B4';g.fillRect(DA_IN[0]+5,DA_IN[1]+1,10,14);g.fillStyle='#C8DDE6';g.fillRect(DA_IN[0]+6,DA_IN[1]+2,2,6);g.fillStyle='#1A1A1A';g.fillRect(DA_IN[0]+10,DA_IN[1]+7,2,7)}
+  if(has('엘리베이터')){g.fillStyle='#9A9C98';g.fillRect(DA_IN[0]+3,DA_IN[1],14,16);g.fillStyle='#D8F0E8';g.fillRect(DA_IN[0]+5,DA_IN[1]+2,10,14);g.fillStyle='#6A6C68';g.fillRect(DA_IN[0]+10,DA_IN[1]+2,1,14)}
+  if(has('계단')){for(let i=0;i<5;i++){g.fillStyle=i%2?'#5A5A52':'#6A6A60';g.fillRect(DA_IN[0]+2+i*3,DA_IN[3]-3-i*3,DA_IN[2]-DA_IN[0]-4-i*3,3)}}
+  if(has('웅덩이')||has('고인 물')){g.fillStyle='rgba(60,90,110,.7)';g.fillRect(38,52,30,4);g.fillRect(42,51,20,1)}
+  if(has('상자')){for(let i=0;i<3;i++){const[x,y]=daFloorPt(.3+i*.05,.75);g.fillStyle=i%2?'#8A6A3A':'#9A7A4A';g.fillRect(Math.round(x),Math.round(y-6-i*5),8,5)}}
+  if(has('전구')){g.fillStyle='#2A2A26';g.fillRect(56,0,1,12);g.fillStyle='#FFF2B0';g.fillRect(55,12,3,3)}
+  if(has('형광등')){g.fillStyle='#D8F0E8';g.fillRect(44,3,24,1)}
+  if(has('문')&&sp!=='f13'){const A=daWallPt(1,.35,.3),B=daWallPt(1,.5,.3),C=daWallPt(1,.5,1),D=daWallPt(1,.35,1);daPoly(g,[A,B,C,D],'#3A2A1A')}
+  if(has('사람')||has('누가')||has('누군가')){if(rnd()<.6)daFigure(g,.85+rnd()*.1,'rgba(0,0,0,.85)',false)}}
+function daHorror(g,sp,tier,rnd,soft){const P=DA_PAL[sp];if(tier<2)return;
+  for(let i=0;i<4+tier*2;i++){const side=rnd()<.5?-1:1,t=rnd()*.8,f=.2+rnd()*.7;daOnWall(g,side,t,f,3+rnd()*5,2+rnd()*4,'rgba(10,8,6,.35)')}
+  if(tier>=2&&rnd()<.7)daFigure(g,.95,'rgba(0,0,0,.9)',tier>=3);
+  if(soft&&tier>=3){for(let i=0;i<6;i++){daOnWall(g,rnd()<.5?-1:1,rnd()*.8,rnd(),4,6,'rgba(0,0,0,.4)')}return}
+  if(tier>=3){g.strokeStyle='#6A1414';g.lineWidth=1;for(let i=0;i<6+tier*3;i++){const side=rnd()<.5?-1:1;let t=rnd()*.8,f=rnd();g.beginPath();let p=daWallPt(side,t,f);g.moveTo(p[0],p[1]);for(let k=0;k<4;k++){t=Math.min(.95,t+rnd()*.12);f=Math.max(0,Math.min(1,f+(rnd()-.5)*.3));p=daWallPt(side,t,f);g.lineTo(p[0],p[1])}g.stroke()}
+   for(let i=0;i<tier;i++){const t=rnd()*.6,r=daRing(t);DA_GLOW.push(['e',Math.round(r.x0+(r.x1-r.x0)*(.3+rnd()*.4)),Math.round(r.y0+2+rnd()*3),tier===4])}
+   for(let i=0;i<5;i++){const side=rnd()<.5?-1:1,t=rnd()*.7;const[x,y]=daWallPt(side,t,0);g.fillStyle='#7A1414';g.fillRect(Math.round(x+(side<0?2:-3)),Math.round(y),1,Math.round(6+rnd()*14))}
+   for(let i=0;i<3;i++){const side=rnd()<.5?-1:1;daOnWall(g,side,rnd()*.6,.4+rnd()*.4,1,4,'#D8C8B0');daOnWall(g,side,rnd()*.6,.4+rnd()*.4,4,1,'#D8C8B0')}}
+  if(tier>=4){g.fillStyle='rgba(150,40,50,.32)';daPoly(g,[[0,0],[DA_IN[0],DA_IN[1]],[DA_IN[0],DA_IN[3]],[0,DA_H]],'rgba(150,40,50,.32)');daPoly(g,[[DA_W,0],[DA_IN[2],DA_IN[1]],[DA_IN[2],DA_IN[3]],[DA_W,DA_H]],'rgba(150,40,50,.32)');
+   for(let i=0;i<10;i++){const side=rnd()<.5?-1:1,t=rnd()*.85,f=.1+rnd()*.8;const[x,y]=daWallPt(side,t,f);DA_GLOW.push(['e',Math.round(x+(side<0?3:-5)),Math.round(y),t<.4])}
+   for(let i=0;i<3;i++){DA_GLOW.push(['i',20+rnd()*70,8+rnd()*12,1+rnd()*4+12+rnd()*8])}
+   for(let i=0;i<3;i++){const[x,y]=daFloorPt(.1+rnd()*.5,.2+rnd()*.6);g.fillStyle='#1A0606';g.fillRect(Math.round(x),Math.round(y-3),7,3);g.fillStyle='#E8E2D6';for(let k=0;k<3;k++)g.fillRect(Math.round(x+1+k*2),Math.round(y-3),1,1)}
+   if(rnd()<.8)daFigure(g,.55,'rgba(0,0,0,.92)',true)}}
+function daLight(g,light,tier){const f=Math.max(0,Math.min(1,light/22));const rad=26+f*64;const gr=g.createRadialGradient(56,70,4,56,70,rad);
+  gr.addColorStop(0,'rgba(255,200,120,.10)');gr.addColorStop(.55,'rgba(4,4,6,'+(.28+tier*.04)+')');gr.addColorStop(1,'rgba(2,2,4,.94)');g.fillStyle=gr;g.fillRect(0,0,DA_W,DA_H)}
+function daLanding(g,sp){const P=DA_PAL[sp];g.fillStyle=P.e;g.fillRect(0,0,DA_W,DA_H);g.fillStyle=P.w;g.fillRect(0,0,DA_W,40);g.fillStyle=P.f;g.fillRect(0,40,DA_W,24);
+  for(let i=0;i<7;i++){g.fillStyle=i%2?P.w2:'#6A6A60';g.fillRect(58+i*7,40-i*5,54-i*7,5)}g.fillStyle='#2A2A26';for(let i=0;i<7;i++)g.fillRect(58+i*7,35-i*5,1,5);
+  g.fillStyle='rgba(255,230,170,.25)';g.fillRect(96,0,16,12);
+  if(sp==='build'){g.fillStyle='#E8B23A';g.fillRect(18,14,8,10);g.fillStyle='#C8C8C0';g.fillRect(19,18,6,1);g.fillStyle='#2A2A26';g.fillRect(21,12,2,2)}
+  else if(sp==='f13'){g.fillStyle='#E8E2D0';g.fillRect(16,12,14,7);g.fillStyle='#2A2A26';g.fillRect(18,14,2,3);g.fillRect(21,14,2,3);g.fillRect(25,14,1,3);g.fillRect(27,14,2,3)}
+  else{g.fillStyle='#6A5A3A';g.fillRect(20,0,1,40);g.fillRect(28,0,1,40);for(let y=4;y<40;y+=5)g.fillRect(20,y,9,1)}}
+function daFinal(g,sp){const I=DA_IN;
+  if(sp==='build'){g.fillStyle='#3A2A1A';g.fillRect(I[0]+2,I[1],16,16);g.fillStyle='#E8DCC0';g.fillRect(I[0]+5,I[1]+2,10,3);g.fillStyle='#1A1A1A';g.fillRect(I[0]+6,I[1]+3,8,1);g.fillStyle='rgba(255,220,150,.5)';g.fillRect(I[0]+8,I[1]+14,4,2)}
+  else if(sp==='f13'){g.fillStyle='#4A3020';g.fillRect(I[0]+2,I[1],16,16);g.fillStyle='rgba(255,180,90,.6)';g.fillRect(I[0]+4,I[1]+2,12,13);g.fillStyle='#F2EEE4';g.fillRect(I[0]+6,I[1]+11,8,3);g.fillStyle='#FFD27A';for(let k=0;k<4;k++)g.fillRect(I[0]+6+k*2,I[1]+9,1,1);g.fillStyle='#C9A84A';g.fillRect(I[0]+8,I[1]+1,4,1)}
+  else{g.fillStyle='rgba(220,230,235,.55)';g.fillRect(I[0]+7,0,6,I[1]);g.fillStyle='#0A1412';g.fillRect(I[0],I[1],20,16);g.fillStyle='rgba(220,230,235,.35)';g.fillRect(I[0]+5,I[1],10,16);daFigure(g,.97,'#0A0A0A',false)}}
+function daGlowDraw(g){for(const it of DA_GLOW){if(it[0]==='r'){g.fillStyle='#FF3D33';g.fillRect(it[1],it[2],1,1);g.fillStyle='rgba(255,61,51,.25)';g.fillRect(it[1]-1,it[2]-1,3,3)}else if(it[0]==='e'){g.globalAlpha=.85;daEye(g,it[1],it[2],it[3]);g.globalAlpha=1}else{g.strokeStyle='rgba(224,122,128,.8)';g.lineWidth=2;g.beginPath();g.moveTo(it[1],0);g.quadraticCurveTo(it[1]+it[2]/2,it[3],it[1]+it[2],0);g.stroke();g.strokeStyle='rgba(120,30,40,.8)';g.lineWidth=1;g.beginPath();g.moveTo(it[1]+1,0);g.quadraticCurveTo(it[1]+it[2]/2,it[3]-1,it[1]+it[2]-1,0);g.stroke()}}DA_GLOW=[]}
+function deepArt(){const d=G.me&&G.me.deep;if(!d)return null;const v=d.view||{k:'room'};const sp=d.sp,soft=!!(G.opts&&G.opts.soft);
+  const cv=document.createElement('canvas');cv.width=DA_W;cv.height=DA_H;cv.className='deepart';cv.setAttribute('role','img');cv.setAttribute('aria-label',`${DEEP_SP[sp].n} ${v.k==='land'?'계단참':v.k==='final'?'마지막 방':Math.min(d.turn,20)+'턴'} 그림`);
+  try{const g=cv.getContext('2d');const tier=v.k==='final'?4:deepTier(Math.min(d.turn,20));const rnd=daRng((d.day||1)*131+d.turn*17+sp.length);
+   if(v.k==='land'){daLanding(g,sp);daLight(g,Math.max(d.light,14),1)}
+   else{DA_GLOW=[];daBase(g,sp);if(v.k!=='final'){const R=v.id?deepRoomById(v.id):null;daProps(g,sp,R?R.t+(d.amb&&d.amb[d.turn]||''):'',rnd)}daHorror(g,sp,tier,rnd,soft);daLight(g,d.light,tier);if(v.k==='final')daFinal(g,sp);daGlowDraw(g)}}catch(e){}
+  return cv}
+{const r0=deepRoom;deepRoom=function(){const d=G.me&&G.me.deep;if(d)d.view={k:'room',id:d.seq[d.turn-1]};return r0.apply(this,arguments)}}
+{const l0=deepLanding;deepLanding=function(){const d=G.me&&G.me.deep;if(d)d.view={k:'land'};return l0.apply(this,arguments)}}
+{const f0=deepFinal;deepFinal=function(){const d=G.me&&G.me.deep;if(d)d.view={k:'final'};return f0.apply(this,arguments)}}
+{const s0=sceneEl;sceneEl=function(){const el=s0.apply(this,arguments);try{if(scene&&scene.id==='deep'&&G.me&&G.me.deep){const a=deepArt();if(a&&el.children[0])el.children[0].after(a)}}catch(e){}return el}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
