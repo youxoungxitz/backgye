@@ -246,6 +246,34 @@ body.build{background:#0E1110}
 @media (max-width:1200px){.shell[data-tab="chat"]{grid-template-rows:auto 1fr} .shell[data-tab="chat"] .left{grid-row:1 / span 2} .shell[data-tab="chat"] .center{grid-row:1;grid-column:2} .shell[data-tab="chat"] .right{grid-row:2;grid-column:2}}
 @media (max-width:780px){.shell[data-tab="chat"] .center{grid-column:1} .shell[data-tab="chat"] .right{grid-column:1}}
 .deepart{width:100%;max-width:560px;aspect-ratio:112/64;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;border:1px solid var(--line);border-radius:4px;background:#000;align-self:center}
+.itemicon{display:inline-block;vertical-align:-4px;margin-right:6px;line-height:0}.itemicon svg{display:block}
+.mapicon{display:inline-block;vertical-align:-2px;margin-right:3px;line-height:0;opacity:.9}.mapicon svg{display:block}
+.placeart{width:100%;max-width:448px;aspect-ratio:112/48;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;border:1px solid var(--line);border-radius:4px;background:#000;align-self:flex-start}
+.section-map .cell{position:relative}
+.section-map.foggy .cell.fog1::after,.section-map.foggy .cell.fog2::after,.section-map.foggy .cell.fog3::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(220,228,226,.10),rgba(220,228,226,.28));border-radius:inherit}
+.section-map.foggy .cell.fog2::after{background:linear-gradient(180deg,rgba(220,228,226,.2),rgba(220,228,226,.42))}
+.section-map.foggy .cell.fog3::after{background:linear-gradient(180deg,rgba(225,232,230,.35),rgba(225,232,230,.62))}
+.section-map.foggy .cell.fog3 b{filter:blur(.6px)}
+#rainfx{position:fixed;inset:0;pointer-events:none;z-index:4;background-image:repeating-linear-gradient(100deg,transparent 0 18px,rgba(170,210,225,.16) 18px 19px,transparent 19px 41px);background-size:240px 240px;animation:rainfall .55s linear infinite;-webkit-mask-image:linear-gradient(90deg,#000 0,transparent 9%,transparent 91%,#000 100%);mask-image:linear-gradient(90deg,#000 0,transparent 9%,transparent 91%,#000 100%)}
+@keyframes rainfall{from{background-position:0 0}to{background-position:-40px 240px}}
+@keyframes quake{0%,6%,33%,39%,66%,72%,100%{transform:translate(0,0)}2%{transform:translate(1px,1px)}35%{transform:translate(-1px,1px)}68%{transform:translate(1px,-1px)}}
+body.build #view{animation:quake 2.7s infinite}
+#planefx{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:-60px;z-index:6;pointer-events:none;animation:planefly 14s linear forwards;opacity:.85}
+#planefx .blink{animation:pblink 1s steps(1) infinite}
+@keyframes planefly{from{transform:translateX(0)}to{transform:translateX(calc(100vw + 120px))}}
+@keyframes pblink{50%{opacity:0}}
+.feed .it.alien span:last-child{font-family:var(--f-hand,cursive);transform:rotate(-1.6deg);display:inline-block;color:#C9A6A0;letter-spacing:.04em}
+@media (prefers-reduced-motion:reduce){#rainfx{animation:none}body.build #view{animation:none}#planefx{animation:planefly 14s linear forwards}}
+.stampgrid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px}
+.stampcell{position:relative;aspect-ratio:1;border:1px solid var(--line);border-radius:3px;background:var(--sunk);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:var(--dim);overflow:hidden}
+.stampcell .num{position:absolute;top:2px;left:3px;font-size:9px;opacity:.6}
+.stampcell i{font-style:normal;font-family:var(--f-zh,serif);font-weight:900;color:#C8372D;font-size:clamp(12px,3.4vw,20px);transform:rotate(-12deg);opacity:.9}
+.stampcell.ghost i{opacity:.35;color:#8A6A6A}
+.stampcell.rw{border-color:var(--lantern)}
+.stampcell small{font-size:9px;color:var(--lantern);position:absolute;bottom:2px}
+.tip{border:1px solid var(--line);border-radius:4px;padding:10px 12px;background:var(--panel);display:flex;flex-direction:column;gap:8px}
+.msg.rumor{color:var(--lantern);font-style:normal;opacity:.9}
+.msg.rumor time{color:var(--lantern)}
 </style>
 </head>
 <body>
@@ -847,9 +875,9 @@ function openRoom(){const m=G.me;if(!m)return;m.room=m.room||[];const own=Object
   openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'내 방'),h('button',{class:'ghost',onclick:closeModal},'닫기')),
     h('p',{class:'mute',style:'margin:0'},`${m.addr||''} · 밤물건을 최대 ${ROOM_MAX}개까지 둘 수 있어요. 지인이 놀러 와서 볼 수 있어요. 어떤 물건은 밤에 소리를 내요.`),
     h('span',{class:'lbl'},`놓아둔 물건 ${m.room.length} / ${ROOM_MAX}`),
-    m.room.length?m.room.map((k,i)=>h('div',{class:'pl'},h('div',null,h('b',null,ITEMS[k]?ITEMS[k].n:k),h('div',{class:'mute',style:'font-size:12.5px'},ITEMS[k]?ITEMS[k].d:'')),h('button',{class:'sm',onclick:()=>{m.room.splice(i,1);m.items[k]=(m.items[k]||0)+1;refresh()}},'치우기'))):h('p',{class:'mute',style:'margin:0;font-size:13px'},'아직 아무것도 없다. 침대 하나, 철망 문 하나.'),
+    m.room.length?m.room.map((k,i)=>h('div',{class:'pl'},h('div',null,itemIcon(k),h('b',null,ITEMS[k]?ITEMS[k].n:k),h('div',{class:'mute',style:'font-size:12.5px'},ITEMS[k]?ITEMS[k].d:'')),h('button',{class:'sm',onclick:()=>{m.room.splice(i,1);m.items[k]=(m.items[k]||0)+1;refresh()}},'치우기'))):h('p',{class:'mute',style:'margin:0;font-size:13px'},'아직 아무것도 없다. 침대 하나, 철망 문 하나.'),
     h('span',{class:'lbl'},'가진 밤물건'),
-    own.length?own.map(k=>h('div',{class:'pl'},h('div',null,h('b',null,ITEMS[k].n),` × ${m.items[k]}`),h('button',{class:'sm',disabled:m.room.length>=ROOM_MAX,onclick:()=>{m.items[k]--;m.room.push(k);refresh()}},'놓기'))):h('p',{class:'mute',style:'margin:0;font-size:13px'},'놓을 밤물건이 없어요. 수칙을 어기면 얻을 수 있어요.'),
+    own.length?own.map(k=>h('div',{class:'pl'},h('div',null,itemIcon(k),h('b',null,ITEMS[k].n),` × ${m.items[k]}`),h('button',{class:'sm',disabled:m.room.length>=ROOM_MAX,onclick:()=>{m.items[k]--;m.room.push(k);refresh()}},'놓기'))):h('p',{class:'mute',style:'margin:0;font-size:13px'},'놓을 밤물건이 없어요. 수칙을 어기면 얻을 수 있어요.'),
     h('form',{class:'composer',onsubmit:e=>{e.preventDefault();m.roomNote=note.value.trim();save();toast('쪽지를 붙였어요.');render()}},note,h('button',{type:'submit',class:'sm'},'붙이기'))))}
 function roomEl(p,isMe,id){const room=p.room||[];if(!isMe&&!room.length&&!p.roomNote)return null;const r=!isMe&&G.rel?G.rel[id]:null;
   return h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},'방'),
@@ -1778,7 +1806,7 @@ function viewMap(){const m=G.me;const here=m?m.cell:null;const nz=nightZone();co
 function openPawn(){if(!ready())return;const m=G.me;const own=Object.keys(m.items).filter(k=>m.items[k]>0&&k!=='anesth');
   openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'전당포'),h('button',{class:'ghost',onclick:closeModal},'닫기')),h('p',{class:'mute',style:'margin:0'},'「밤물건 삽니다. 어디서 났는지는 안 묻습니다.」 주인은 적등방에 보호비를 낸다.'),
     h('div',{class:'pl'},h('div',null,h('b',null,'뒷거래 각성제'),h('div',{class:'mute',style:'font-size:12.5px'},'기력 +4, 정신 -10, 가끔 섬망. 하루 2번')),h('button',{class:'sm',disabled:m.money<20,onclick:()=>stim(20,'전당포')},'$20')),
-    own.length?own.map(k=>h('div',{class:'pl'},h('div',null,h('b',null,ITEMS[k].n),` × ${m.items[k]}`,h('div',{class:'mute',style:'font-size:12.5px'},ITEMS[k].d)),h('button',{class:'sm',onclick:()=>{m.items[k]--;m.money+=pawnV(k);if(m.fac==='red')m.merit+=2;log(`전당포에 「${ITEMS[k].n}」을(를) $${pawnV(k)}에 팔았다.`,'life');save();closeModal();render();toast(`$${pawnV(k)}를 받았다.`)}},`$${pawnV(k)}에 판다`))):h('p',{class:'mute'},'팔 밤물건이 없어요.')))}
+    own.length?own.map(k=>h('div',{class:'pl'},h('div',null,itemIcon(k),h('b',null,ITEMS[k].n),` × ${m.items[k]}`,h('div',{class:'mute',style:'font-size:12.5px'},ITEMS[k].d)),h('button',{class:'sm',onclick:()=>{m.items[k]--;m.money+=pawnV(k);if(m.fac==='red')m.merit+=2;log(`전당포에 「${ITEMS[k].n}」을(를) $${pawnV(k)}에 팔았다.`,'life');save();closeModal();render();toast(`$${pawnV(k)}를 받았다.`)}},`$${pawnV(k)}에 판다`))):h('p',{class:'mute'},'팔 밤물건이 없어요.')))}
 function clinic(){if(!ready())return;const m=G.me;const bad=(m.fx||[]).filter(f=>f.until>T()&&FXDEF[f.id].bad&&f.id!=='watched'&&f.id!=='followed');
   openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'삼경 의원'),h('button',{class:'ghost',onclick:closeModal},'닫기')),h('p',{class:'mute',style:'margin:0'},'소독약 냄새. 벽에 수칙이 빼곡하다.'),
     h('div',{class:'pl'},h('div',null,h('b',null,'치료'),h('div',{class:'mute',style:'font-size:12.5px'},'체력 +30')),h('button',{class:'sm',disabled:m.money<clinicPrice(),onclick:()=>{m.money-=clinicPrice();give({hp:30});save();closeModal();render();toast('치료를 받았다.')}},'$'+clinicPrice())),
@@ -1806,7 +1834,7 @@ function viewPeople(){const m=G.me;const q=(sub.q||'').trim();
     m?h('div',{class:'wrap'},h('button',{class:'sm',onclick:()=>openCard('me')},'내 주민증 보기 · 코드 공유')):null,search,
     h('div',{class:'roster'},m?h('button',{class:'rc',style:`--c:${m.color}`,onclick:()=>openSheet('me')},h('div',{class:'wrap'},avEl(m),h('div',null,h('b',{class:'disp',style:'font-size:18px'},m.name),h('div',{class:'mute',style:'font-size:12px'},rankLabel(m)))),m.quote?h('span',{class:'mute',style:'font-size:13px'},'“'+m.quote+'”'):null):null,
       list.map(id=>{const s=SAMPLES[id],r=relOf(id);return h('button',{class:'rc',style:`--c:${s.color}`,onclick:()=>openSheet(id)},h('div',{class:'wrap'},avEl(s),h('div',null,h('b',{class:'disp',style:'font-size:18px'},(s.name)),h('div',{class:'mute',style:'font-size:12px'},facMark(s.fac,13,'margin-right:5px;vertical-align:-2px'),`${FACS[s.fac]}${s.rank?' · '+s.rank:''} · ${s.code}`))),h('span',{class:'mute',style:'font-size:13px'},'“'+s.quote+'”'),h('div',{class:'wrap'},h('span',{class:'tag amb'},'예시 주민'),r.friend?h('span',{class:'tag good'},STAGES[stageOf(r)]):r.req?h('span',{class:'tag'},'신청 보냄'):null,r.name?h('span',{class:'tag red'},r.name):null,h('span',{class:'tag'},CELLS[s.cell].n)))}))]}
-function viewNote(){const m=G.me;const S=[...(typeof NOTICES!=='undefined'?[['notice','공지']]:[]),['world','세계'],['plan','설계도'],['rules','수칙'],['items','밤물건'],['dex','도감'],['log','일지']];if(!S.some(x=>x[0]===sub.note))sub.note='world';
+function viewNote(){const m=G.me;const S=[...(typeof NOTICES!=='undefined'?[['notice','공지']]:[]),['world','세계'],['plan','설계도'],['rules','수칙'],['items','밤물건'],['dex','도감'],['log','일지'],['tips','게시판'],['stamp','출석']];if(!S.some(x=>x[0]===sub.note))sub.note='world';
   const nav=h('div',{class:'wrap'},S.map(([k,n])=>h('button',{class:'sm'+(sub.note===k?' pri':''),onclick:()=>{sub.note=k;renderView()}},n)));let body;
   if(sub.note==='world')body=worldBody();
   if(sub.note==='plan')body=planBody();
@@ -1817,9 +1845,9 @@ function viewNote(){const m=G.me;const S=[...(typeof NOTICES!=='undefined'?[['no
       m&&m.hidden.length?m.hidden.map(k=>h('div',{class:'hand'},'· '+HIDDEN[k])):h('p',{class:'mute',style:'margin:0'},'아직 비어 있다.'),
       m&&(m.hints||[]).filter(k=>!m.hidden.includes(k)).map(k=>h('div',{class:'mute',style:'font-size:13px'},'· '+HIDDEN[k].split('.')[0]+'… (뒷말이 기억나지 않는다)')),
       h('p',{class:'dim',style:'margin:0;font-size:12px'},`문서에 없는 수칙 ${Object.keys(HIDDEN).length-(m?m.hidden.length:0)}개가 더 있다고들 한다.`))];
-  if(sub.note==='items'){const own=m?Object.keys(m.items).filter(k=>m.items[k]>0):[];body=[h('div',{class:'card stack'},h('span',{class:'lbl'},'밤물건'),own.length?own.map(k=>h('div',{class:'pl'},h('div',null,h('b',null,ITEMS[k].n),` × ${m.items[k]}`,h('div',{class:'mute',style:'font-size:12.5px'},ITEMS[k].d)))):h('p',{class:'mute',style:'margin:0'},'수칙을 어기면 얻는 물건이에요. 전당포에서 팔 수 있어요.'),
+  if(sub.note==='items'){const own=m?Object.keys(m.items).filter(k=>m.items[k]>0):[];body=[h('div',{class:'card stack'},h('span',{class:'lbl'},'밤물건'),own.length?own.map(k=>h('div',{class:'pl'},h('div',null,itemIcon(k),h('b',null,ITEMS[k].n),` × ${m.items[k]}`,h('div',{class:'mute',style:'font-size:12.5px'},ITEMS[k].d)))):h('p',{class:'mute',style:'margin:0'},'수칙을 어기면 얻는 물건이에요. 전당포에서 팔 수 있어요.'),
     h('div',{class:'row'},h('span',null,'설계도 조각'),h('b',{class:'num'},m?m.clues||0:0)),h('p',{class:'dim',style:'margin:0;font-size:12px'},'증축의 진실에 닿는 단서. 수첩 「설계도」 탭에서 성채 공동 목표를 볼 수 있어요.'))]}
-  if(sub.note==='log'){const K={life:'생활',move:'이동',work:'생업',fac:'세력',haunt:'괴담',rel:'관계'};body=[h('div',{class:'card feed'},G.log.length?G.log.slice(0,60).map(l=>h('div',{class:'it'},h('span',{class:'k'},K[l.k]||'기록',h('small',null,mdhm(l.t))),h('span',null,l.text))):h('div',{class:'empty'},'아직 기록이 없어요.'))]}
+  if(sub.note==='tips')body=tipsBody();if(sub.note==='stamp')body=stampBody();if(sub.note==='log'){const K={life:'생활',move:'이동',work:'생업',fac:'세력',haunt:'괴담',rel:'관계'};body=[h('div',{class:'card feed'},G.log.length?G.log.slice(0,60).map((l,i)=>h('div',{class:'it'+(logAlien(l,i)?' alien':'')},h('span',{class:'k'},K[l.k]||'기록',h('small',null,mdhm(l.t))),h('span',null,l.text))):h('div',{class:'empty'},'아직 기록이 없어요.'))]}
   return[h('h2',{class:'disp',style:'font-size:24px'},'수첩'),nav,...body]}
 function renderPeople(){const P=$('peopleCard'),m=G.me;const k=m?m.cell:null;
   const here=SAMPLE_IDS.filter(id=>SAMPLES[id].cell===k);const ghost=m&&(isBuild()||hasFx('delirium')||(gateWeek()&&chance(.25+.12*gwDay())))&&chance(.5);
@@ -1827,14 +1855,14 @@ function renderPeople(){const P=$('peopleCard'),m=G.me;const k=m?m.cell:null;
     h('div',{class:'stack',style:'gap:2px;margin-top:6px'},m?h('button',{class:'person',onclick:()=>openSheet('me')},avEl(m),h('span',null,h('b',null,m.name),' ',h('span',{class:'mute'},'(나)'),h('div',{class:'mute',style:'font-size:12px'},rankLabel(m))),h('span',{class:'dot on'})):null,
       here.map(id=>{const s=SAMPLES[id];return h('button',{class:'person',onclick:()=>openSheet(id)},avEl(s),h('span',null,h('b',null,(s.name)),h('div',{class:'mute',style:'font-size:12px'},facMark(s.fac,13,'margin-right:5px;vertical-align:-2px'),`${FACS[s.fac]}${s.rank?' · '+s.rank:''}`)),h('span',{class:'dot on'}))}),
       ghost?h('div',{class:'person',style:'cursor:default'},h('div',{class:'av',style:'background:#2a2a2a'}),h('span',null,h('b',{class:'dim'},'아는 사람'),h('div',{class:'dim',style:'font-size:12px'},'명부에 없음')),h('span',{class:'dot on'})):null,
-      !here.length&&m&&!ghost?h('div',{class:'mute',style:'font-size:13px;padding:6px 0'},'이 칸엔 아무도 없다.'):null))}
+      !here.length&&m&&!ghost?h('div',{class:'mute',style:'font-size:13px;padding:6px 0'},quietTxt('이 칸엔 아무도 없다.')):null))}
 const chatIn=h('input',{id:'chatIn',maxlength:200,placeholder:'메시지'});
 const chatForm=h('form',{class:'composer',onsubmit:e=>{e.preventDefault();if(!G.me)return;let v=chatIn.value.trim();if(!v)return;if(hasFx('gum')&&sub.chat!=='ooc')v=gumify(v);post(sub.chat==='all'?'all':sub.chat==='ooc'?'ooc':'cell:'+G.me.cell,'me',v);chatIn.value='';save();renderChat()}},chatIn,h('button',{type:'submit',class:'pri'},'보내기'));
 function renderChat(){const C=$('chatCard'),m=G.me;const ch=sub.chat;
   const list=h('div',{class:'chlist',id:'chlist'});
   if(ch==='radio'){list.append(h('div',{class:'msg radio'},h('time',null,'00:00'),radioText()));radioExtra().forEach(x=>list.append(x))}
   else{const key=ch==='all'?'all':ch==='ooc'?'ooc':'cell:'+(m?m.cell:'');const items=G.chat.filter(x=>x.ch===key||(ch==='all'&&x.who==='hammer')).slice(-80);
-    if(!items.length)list.append(h('div',{class:'mute',style:'font-size:13px'},ch==='cell'?'이 칸은 조용하다.':'아직 조용하다.'));
+    if(!items.length)list.append(h('div',{class:'mute',style:'font-size:13px'},ch==='cell'?quietTxt('이 칸은 조용하다.'):quietTxt('아직 조용하다.')));
     items.forEach(x=>{if(x.who==='hammer'){list.append(h('div',{class:'msg hammer'},h('time',null,hm(x.t)),x.text));return}if(x.who==='sys'){list.append(h('div',{class:'msg sys'},h('time',null,hm(x.t)),x.text));return}
       const p=x.who==='me'?m:SAMPLES[x.who];if(!p)return;if(ch==='ooc'){list.append(h('div',{class:'msg ooc'},h('time',null,hm(x.t)),h('span',{class:'who'},x.who==='me'?'나':`${p.name} 오너`),x.text));return}list.append(h('div',{class:'msg'},h('time',null,hm(x.t)),h('span',{class:'who',style:`color:${p.color==='#0B0B0B'?'#9E9184':p.color}`},x.who==='me'?p.name:(p.name)),x.text))})}
   C.replaceChildren(...[h('div',{class:'row'},h('span',{class:'lbl'},'무전'),h('div',{class:'wrap'},[['cell','현장'],['all','전체'],['ooc','오너'],['radio','자정 라디오']].map(([k,n])=>h('button',{class:'sm'+(ch===k?' pri':''),onclick:()=>{sub.chat=k;if(k==='radio')sfx('static');renderChat()}},n)))),
@@ -1953,8 +1981,8 @@ function relPanel(id,r){const st=stageOf(r);const m=G.me;const p=SAMPLES[id];
     h('button',{class:'pri',disabled:r.req,onclick:()=>befriend(id)},r.req?'신청 보냄. 상대가 받으면 지인이 돼요':'지인 신청'));
   const avail=SCENES.filter(sc=>sceneOK(sc,r));const locked=SCENES.filter(sc=>!sceneOK(sc,r)&&st>=sc.st).length;
   const custom=h('input',{id:'relName',maxlength:12,placeholder:'직접 짓기'});const ft=h('input',{id:'freeScene',maxlength:200,placeholder:'한 줄 장면 직접 쓰기 (효과 없음)'});
-  const logBox=h('div',{class:'feed'},h('div',{class:'mute',style:'font-size:12.5px'},'관계 기록을 불러오는 중…'));
-  relLogs(id).then(ls=>{logBox.replaceChildren(...(ls.length?ls.map(l=>h('div',{class:'it'},h('span',{class:'k'},mdhm(Date.parse(l.created_at))),h('span',null,(l.author===m.id?'':'· ')+l.text+(l.edited_at?' (수정됨)':''),rlogEditBtn(l,id)))):[h('div',{class:'mute',style:'font-size:12.5px'},'아직 기록이 없어요.')]))});
+  const logBox=h('div',{class:'feed'},h('div',{class:'mute',style:'font-size:12.5px'},loadTxt('관계 기록을 불러오는 중…')));
+  relLogs(id).then(ls=>{logBox.replaceChildren(...(ls.length?ls.map(l=>h('div',{class:'it'},h('span',{class:'k',title:mdhm(Date.parse(l.created_at))},castleDate(Date.parse(l.created_at))),h('span',null,(l.author===m.id?'':'· ')+l.text+(l.edited_at?' (수정됨)':''),rlogEditBtn(l,id)))):[h('div',{class:'mute',style:'font-size:12.5px'},'아직 기록이 없어요.')]))});
   const prop=r.proposal;
   return h('div',{class:'stack'},
     h('div',{class:'row'},h('span',{class:'lbl'},'관계'),h('span',{class:'wrap'},h('span',{class:'tag'},STAGES[st]),r.name?h('span',{class:'tag red'},r.name):null,online(p)?h('span',{class:'tag good'},'접속 중'):null)),
@@ -1982,7 +2010,7 @@ function renderChat(){const C=$('chatCard'),m=G.me;const ch=sub.chat;const list=
   else if(ch==='radio'){list.append(h('div',{class:'msg radio'},h('time',null,'00:00'),radioText()));radioExtra().forEach(x=>list.append(x))}
   else{const key=chKey();if(!CHAT[key]){CHAT[key]=[];if(sb&&m)loadChannel(key)}const items=CHAT[key].slice(-80);
     if(isBuild()&&ch==='all')list.append(h('div',{class:'msg hammer'},h('time',null,hm(T())),'쿵 · · · 쿵 · · · 쿵'));
-    if(!items.length)list.append(h('div',{class:'mute',style:'font-size:13px'},ch==='cell'?'이 칸은 조용하다.':'아직 조용하다.'));
+    if(!items.length)list.append(h('div',{class:'mute',style:'font-size:13px'},ch==='cell'?quietTxt('이 칸은 조용하다.'):quietTxt('아직 조용하다.')));
     items.forEach((x,i)=>{const mine=m&&x.character_id===m.id;const p=mine?m:SAMPLES[x.character_id];const name=p?p.name:'누군가';const t=Date.parse(x.created_at);
       if(ch==='ooc'){const pv=items[i-1];const cont=!!(pv&&pv.character_id===x.character_id&&t-Date.parse(pv.created_at)<5*MIN);const col=p&&p.color&&p.color!=='#0B0B0B'?p.color:'#9E9184';list.append(h('div',{class:'msg ooc'+(cont?' cont':''),style:`--oc:${col}`},h('time',null,hm(t)),cont?'':h('span',{class:'who',style:`color:${col}`},p?facMark(p.fugitive&&mine?'free':p.fac,12,'margin-right:4px;vertical-align:-1px'):'',mine?'나':`${name} 오너`),x.text));return}
       list.append(h('div',{class:'msg'},h('time',null,hm(t)),h('span',{class:'who',style:`color:${p&&p.color!=='#0B0B0B'?p.color:'#9E9184'}`},p?facMark(p.fugitive&&mine?'free':p.fac,12,'margin-right:4px;vertical-align:-1px'):'',mine?name:scramble(name)),x.text,mine||isAdminUser()?h('button',{class:'ghost del sm',style:'font-size:11px;padding:0 4px',onclick:async()=>{await sb.from('messages').delete().eq('id',x.id);CHAT[key]=CHAT[key].filter(y=>y.id!==x.id);renderChat()}},'지우기'):null))})}
@@ -2032,7 +2060,7 @@ function renderPeople(){const P=$('peopleCard'),m=G.me;const k=m?m.cell:null;
     h('div',{class:'stack',style:'gap:2px;margin-top:6px'},m?h('button',{class:'person',onclick:()=>openSheet('me')},avEl(m),h('span',null,h('b',null,m.name),' ',h('span',{class:'mute'},'(나)'),h('div',{class:'mute',style:'font-size:12px'},rankLabel(m))),h('span',{class:'dot on'})):null,
       here.map(id=>{const s=SAMPLES[id];return h('button',{class:'person',onclick:()=>openSheet(id)},avEl(s),h('span',null,h('b',null,(s.name)),h('div',{class:'mute',style:'font-size:12px'},s.fac?facMark(s.fac,13,'margin-right:5px;vertical-align:-2px'):'',`${FACS[s.fac]||''}${s.rank?' · '+s.rank:''}`)),h('span',{class:'dot on'}))}),
       ghost?h('div',{class:'person',style:'cursor:default'},h('div',{class:'av',style:'background:#2a2a2a'}),h('span',null,h('b',{class:'dim'},'아는 사람'),h('div',{class:'dim',style:'font-size:12px'},'명부에 없음')),h('span',{class:'dot on'})):null,
-      !here.length&&m&&!ghost?h('div',{class:'mute',style:'font-size:13px;padding:6px 0'},'지금 이 칸엔 아무도 없다.'):null))}
+      !here.length&&m&&!ghost?h('div',{class:'mute',style:'font-size:13px;padding:6px 0'},quietTxt('지금 이 칸엔 아무도 없다.')):null))}
 
 /* ---------- 설정 · 도움말 ---------- */
 function openSettings(){const o=G.opts;
@@ -2045,7 +2073,7 @@ function openSettings(){const o=G.opts;
   body.push(suggestEntry());if(isAdminUser())body.push(adminTools(),suggestAdmin(),dmAdmin());
   openModal(h('div',{class:'stack'},body))}
 function adminTools(){const o=G.opts;const nt=h('textarea',{id:'noticeIn',maxlength:4000,rows:10,placeholder:'방주 공지 내용 (4000자까지)'});const ic=h('input',{id:'inviteIn',placeholder:'새 초대 코드 (예: BAAK-0404)',maxlength:30});const iu=h('input',{id:'inviteUses',type:'number',min:'1',value:'1',style:'width:80px'});
-  const codes=h('div',{class:'stack',style:'gap:4px;font-size:13px'},h('span',{class:'mute'},'불러오는 중…'));
+  const codes=h('div',{class:'stack',style:'gap:4px;font-size:13px'},h('span',{class:'mute'},loadTxt('불러오는 중…')));
   sb.from('invite_codes').select('*').order('created_at',{ascending:false}).then(({data})=>codes.replaceChildren(...((data||[]).map(c=>h('div',{class:'row'},h('span',{class:'num'},c.code),h('span',{class:'mute'},`${c.used} / ${c.max_uses}${c.note?' · '+c.note:''}`))))));
   const hourSel=h('select',{id:'hourSel',onchange:e=>{o.hour=e.target.value===''?null:+e.target.value;save();render()}},[['','실제 시간'],['8','아침 (8시)'],['14','낮 (14시)'],['20','저녁 (20시)'],['1','한밤 (1시)'],['3','증축 시간 (3시)']].map(([v,n])=>h('option',{value:v},n)));hourSel.value=o.hour==null?'':String(o.hour);
   return h('div',{class:'card stack',style:'background:var(--sunk)'},h('span',{class:'lbl'},'운영자 (방주) 메뉴'),
@@ -2086,7 +2114,7 @@ function showNewPassword(){const pw=h('input',{type:'password',placeholder:'새 
   gate(h('div',{class:'card stack'},gateHead('새 비밀번호를 정해 주세요.'),h('form',{class:'stack',onsubmit:async e=>{e.preventDefault();if(pw.value.length<8){err.textContent='8자 이상이에요.';return}const{error}=await sb.auth.updateUser({password:pw.value});if(error){err.textContent='바꾸지 못했어요.';return}toast('비밀번호를 바꿨어요.');afterLogin()}},pw,err,h('button',{type:'submit',class:'pri'},'저장'))))}
 function showInvite(){const ic=h('input',{placeholder:'초대 코드',autocomplete:'off',maxlength:30});const err=h('p',{style:'margin:0;color:var(--bad);font-size:13px'});
   gate(h('div',{class:'card stack'},gateHead('지금은 초대받은 분만 입주할 수 있어요.'),h('form',{class:'stack',onsubmit:async e=>{e.preventDefault();const{data,error}=await sb.rpc('redeem_invite',{p_code:ic.value});if(error||!data){err.textContent='초대 코드가 맞지 않거나 이미 다 쓰였어요.';return}PROFILE.invited=true;showSlots()}},ic,err,h('button',{type:'submit',class:'pri'},'확인')),h('button',{class:'ghost',onclick:async()=>{await sb.auth.signOut();location.reload()}},'로그아웃')))}
-async function showSlots(){gate(h('div',{class:'card empty'},'성채 명부를 펼치는 중…'));
+async function showSlots(){gate(h('div',{class:'card empty'},loadTxt('성채 명부를 펼치는 중…')));
   const[{data:prof},{data:chars}]=await Promise.all([sb.from('profiles').select('*').eq('id',AUTH.id).single(),sb.from('characters').select('*').eq('owner',AUTH.id).order('slot')]);
   PROFILE=prof||PROFILE;MYCHARS=chars||[];if(!PROFILE.invited&&PROFILE.role!=='admin')return showInvite();
   const bySlot=s=>MYCHARS.find(c=>c.slot===s);const main=bySlot(1);
@@ -2144,7 +2172,7 @@ function openSuggest(){let cat='기능';const tx=h('textarea',{id:'sugText',maxl
     h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'익명 건의함'),h('button',{type:'button',class:'ghost',onclick:closeModal},'닫기')),
     h('p',{class:'mute',style:'margin:0;font-size:13px;line-height:1.7'},'운영자만 읽어요. 누가 썼는지, 어느 캐릭터로 썼는지는 저장되지 않고 보낸 날짜만 남아요.'),
     h('span',{class:'lbl'},'종류'),cats,tx,err,h('button',{type:'submit',class:'pri'},'보낸다')))}
-function suggestAdmin(){const box=h('div',{class:'stack',style:'gap:6px'},h('span',{class:'mute',style:'font-size:13px'},'불러오는 중…'));const ST={new:'새 건의',seen:'확인함',done:'반영함'};
+function suggestAdmin(){const box=h('div',{class:'stack',style:'gap:6px'},h('span',{class:'mute',style:'font-size:13px'},loadTxt('불러오는 중…')));const ST={new:'새 건의',seen:'확인함',done:'반영함'};
   const load=async()=>{const{data,error}=await sb.from('suggestions').select('*').order('id',{ascending:false}).limit(60);if(error){box.replaceChildren(h('span',{class:'mute',style:'font-size:13px'},'건의함 테이블이 아직 없어요. 5_suggestions.sql을 실행해 주세요.'));return}
     const rows=data||[];box.replaceChildren(...(rows.length?rows.map(x=>h('div',{class:'stack',style:'gap:4px;padding:8px 0;border-bottom:1px solid var(--line)'},
       h('div',{class:'row'},h('span',{class:'wrap',style:'gap:6px'},h('span',{class:'tag'+(x.status==='new'?' red':x.status==='done'?' good':'')},ST[x.status]),h('span',{class:'tag'},x.category)),h('span',{class:'dim num',style:'font-size:11px'},x.created_on)),
@@ -2180,7 +2208,7 @@ function onDM(x){if(!G.me||(x.to_char!==G.me.id&&x.from_char!==G.me.id)||DMS.som
   if(d.to===G.me.id){if(DM_OPEN===d.from&&$('dmList')){DM_DRAW&&DM_DRAW();dmMarkRead(d.from)}else toast(`${dmName(d.from)}: ${d.text.slice(0,40)}`)}
   else if(DM_OPEN===d.to&&$('dmList')&&DM_DRAW)DM_DRAW();
   if(!SAMPLES[d.from]&&d.from!==G.me.id)loadOthers();renderChat()}
-function dmAdmin(){const box=h('div',{class:'stack',style:'gap:4px'},h('span',{class:'mute',style:'font-size:13px'},'불러오는 중…'));
+function dmAdmin(){const box=h('div',{class:'stack',style:'gap:4px'},h('span',{class:'mute',style:'font-size:13px'},loadTxt('불러오는 중…')));
   sb.from('direct_messages').select('*').order('created_at',{ascending:false}).limit(150).then(({data,error})=>{if(error){box.replaceChildren(h('span',{class:'mute',style:'font-size:13px'},'1:1 대화 테이블이 아직 없어요. 6_dm.sql을 실행해 주세요.'));return}
     const rows=data||[];box.replaceChildren(...(rows.length?rows.map(x=>h('div',{style:'font-size:13px;padding:3px 0;border-bottom:1px solid var(--line)'},h('span',{class:'dim num',style:'font-size:11px'},mdhm(Date.parse(x.created_at))+' '),h('b',null,dmName(x.from_char)),' → ',h('b',null,dmName(x.to_char)),': ',x.text,h('button',{class:'ghost sm',style:'font-size:11px;padding:0 4px;margin-left:6px',onclick:async()=>{await sb.from('direct_messages').delete().eq('id',x.id);closeModal();openSettings()}},'지우기'))):[h('span',{class:'mute',style:'font-size:13px'},'아직 대화가 없어요.')]))});
   return h('details',{class:'card stack',style:'background:var(--sunk)'},h('summary',{style:'cursor:pointer'},h('span',{class:'lbl'},'1:1 대화 열람 (운영자만, 최근 150개)')),box)}
@@ -2395,7 +2423,7 @@ function openMailbox(){const box=h('div',{class:'stack',style:'gap:8px'},h('span
       h('p',{style:'margin:0;white-space:pre-wrap;line-height:1.6;font-size:13px',class:'mute'},x.text),
       x.reply?h('div',{class:'card',style:'background:var(--sunk);padding:10px 12px'},h('div',{class:'lbl',style:'margin-bottom:4px'},`방주의 답장${x.replied_on?' · '+x.replied_on:''}`),h('p',{style:'margin:0;white-space:pre-wrap;line-height:1.7;font-size:13.5px'},x.reply)):null)));
     lsSet(SUGREAD_K,[...new Set([...read,...rows.filter(x=>x.reply).map(x=>x.id)])].slice(-100))})}
-function suggestAdmin(){const box=h('div',{class:'stack',style:'gap:6px'},h('span',{class:'mute',style:'font-size:13px'},'불러오는 중…'));const ST={new:'새 건의',seen:'확인함',done:'반영함'};
+function suggestAdmin(){const box=h('div',{class:'stack',style:'gap:6px'},h('span',{class:'mute',style:'font-size:13px'},loadTxt('불러오는 중…')));const ST={new:'새 건의',seen:'확인함',done:'반영함'};
   const load=async()=>{const{data,error}=await sb.from('suggestions').select('*').order('id',{ascending:false}).limit(60);if(error){box.replaceChildren(h('span',{class:'mute',style:'font-size:13px'},'건의함 테이블이 아직 없어요. 5_suggestions.sql을 실행해 주세요.'));return}
     const rows=data||[];box.replaceChildren(...(rows.length?rows.map(x=>{const can='ticket' in x;const ta=h('textarea',{rows:3,maxlength:1000,placeholder:x.ticket?'답장을 적어 주세요. 보낸 사람의 우편함으로 가요.':'번호표 없이 온 건의라 답장을 받을 사람이 없어요.',disabled:!x.ticket||null},x.reply||'');
       return h('div',{class:'stack',style:'gap:4px;padding:8px 0;border-bottom:1px solid var(--line)'},
@@ -2692,7 +2720,7 @@ const PAWN_MULT=[1,.6,.3];
 pawnV=function(k,n){const dl=daily();n=n==null?((dl.pawn||{})[k]||0):n;if(n>=PAWN_MULT.length)return 0;return Math.max(1,Math.round(ITEMS[k].v*(hasFx('markR')?0.7:1)*PAWN_MULT[n]))};
 const PAWN_LINES=['주인이 물건을 불빛에 비춰 보고 고개를 끄덕인다.','주인이 물건을 받아 들고 한참 들여다본다. 「또 이거야?」','주인이 물건을 뒤집어 보더니 혀를 찬다. 「요즘 이게 너무 많이 들어와.」'];
 openPawn=function(){if(!ready())return;const m=G.me;const dl=daily();dl.pawn=dl.pawn||{};const own=Object.keys(m.items).filter(k=>m.items[k]>0&&k!=='anesth'&&ITEMS[k]);
-  const row=k=>{const n=dl.pawn[k]||0,v=pawnV(k);return h('div',{class:'pl'},h('div',null,h('b',null,ITEMS[k].n),` × ${m.items[k]}`,h('div',{class:'mute',style:'font-size:12.5px'},ITEMS[k].d),
+  const row=k=>{const n=dl.pawn[k]||0,v=pawnV(k);return h('div',{class:'pl'},h('div',null,itemIcon(k),h('b',null,ITEMS[k].n),` × ${m.items[k]}`,h('div',{class:'mute',style:'font-size:12.5px'},ITEMS[k].d),
       n?h('div',{class:'dim',style:'font-size:12px'},v?`오늘 ${n}개 팔았어요. 다음 값은 ${Math.round(PAWN_MULT[n]*100)}%.`:'오늘은 이 물건을 더 받지 않는대요.'):null),
     h('button',{class:'sm',disabled:!v||null,onclick:()=>{const price=pawnV(k);if(!price)return;m.items[k]--;m.money+=price;dl.pawn[k]=(dl.pawn[k]||0)+1;
       if(m.fac==='red'&&(dl.pawnMerit||0)<3){m.merit=(m.merit||0)+2;dl.pawnMerit=(dl.pawnMerit||0)+1}
@@ -2923,7 +2951,7 @@ async function bondPhotoSave(x){try{const d=x.data||{},n=d.names||['',''];const 
   g.fillStyle='#2a2620';g.font='bold 24px serif';g.textAlign='left';g.fillText(`${n[0]} · ${n[1]}`,32,H-56);g.font='18px monospace';g.textAlign='right';g.fillText(`金星影樓 · ${(d.day||'').replaceAll('-','.')} ${d.w||''}`,W-32,H-56);
   const url=c.toDataURL('image/png');const a=document.createElement('a');a.href=url;a.download=`금성사진관_${n[0]}_${n[1]}.png`;document.body.appendChild(a);a.click();a.remove()}catch(e){toast('저장하지 못했어요. 화면을 캡처해 주세요.')}}
 /* 관계 연표 */
-async function bondTimeline(pid){const[a,b]=pairOf(pid);const box=h('div',{class:'stack',style:'gap:0'},h('span',{class:'mute',style:'font-size:13px'},'연표를 펼치는 중…'));let only=false;
+async function bondTimeline(pid){const[a,b]=pairOf(pid);const box=h('div',{class:'stack',style:'gap:0'},h('span',{class:'mute',style:'font-size:13px'},loadTxt('연표를 펼치는 중…')));let only=false;
   const{data}=await sb.from('relation_logs').select('*').eq('a',a).eq('b',b).order('created_at',{ascending:true}).limit(300);const logs=data||[];
   const memos=()=>BONDS.filter(x=>x.kind==='memo'&&bOther(x)===pid);
   const draw=()=>{const ms=memos();const rows=logs.filter(l=>!only||ms.some(x=>x.data.log===l.id&&x.data.draw));let lastDay='';
@@ -3099,7 +3127,7 @@ function leaveSam(){const m=G.me;if(!m||m.fac!=='sam')return;if(m.work)return to
 setInterval(()=>{const m=G.me;if(!m||!m.samLeft||m.samLeft.knocked||document.hidden)return;if(dayIdx(T())-m.samLeft.day>2){m.samLeft.knocked=true;return}
   const x=hour();if(!(x>=23||x<3))return;m.samLeft.knocked=true;
   const t=pick(['문을 세 번 두드리는 소리. 삼경이 돌던 시간이다. 문을 열어 보면 복도에는 젖은 발자국만 있다.','팔에 완장이 감겨 있던 자리가 붉게 부어 있다. 그 위로 누가 손가락으로 매듭을 짓는 것처럼 차갑다.','문 너머에서 누가 순찰 일지를 읽는다. 「이상 없음.」 내 이름 다음 줄에서 목소리가 멈춘다.']);
-  log(t,'haunt');toast(t);save()},60e3);
+  log(t,'haunt');toast(t);try{sfx('knock')}catch(e){}save()},60e3);
 
 /* 소속 정정: 만든 지 3일 안, 한 번만 */
 function canFixFac(m){return m&&!m.facFix&&!m.fugitive&&m.rank!=='boss'&&!m.isNpc&&T()-(m.created||0)<FIX_WINDOW}
@@ -3663,6 +3691,170 @@ function deepArt(){const d=G.me&&G.me.deep;if(!d)return null;const v=d.view||{k:
 {const l0=deepLanding;deepLanding=function(){const d=G.me&&G.me.deep;if(d)d.view={k:'land'};return l0.apply(this,arguments)}}
 {const f0=deepFinal;deepFinal=function(){const d=G.me&&G.me.deep;if(d)d.view={k:'final'};return f0.apply(this,arguments)}}
 {const s0=sceneEl;sceneEl=function(){const el=s0.apply(this,arguments);try{if(scene&&scene.id==='deep'&&G.me&&G.me.deep){const a=deepArt();if(a&&el.children[0])el.children[0].after(a)}}catch(e){}return el}}
+
+/* ---------- 자잘한 디테일: 괴담 장소 그림 · 단면도 아이콘 · 밤물건 아이콘 · 주민증 · 비 · 안개 · 증축 흔들림 · 여객기 · 효과음 · 문구 ---------- */
+/* 밤물건 아이콘: 내 방 그림의 도트를 작은 svg로 */
+function itemIcon(k,px){const S=(typeof RA_SPR!=='undefined'&&(RA_SPR[k]||RA_SPR.box));if(!S)return'';let r='';S.p.forEach((row,y)=>{for(let x=0;x<Math.min(10,row.length);x++){const c=S.c[row[x]];if(row[x]!=='.'&&c)r+=`<rect x="${x}" y="${y+10-S.p.length}" width="1" height="1" fill="${c}"/>`}});
+  const s=h('span',{class:'itemicon','aria-hidden':'true'});s.innerHTML=`<svg viewBox="0 0 10 10" width="${px||18}" height="${px||18}" shape-rendering="crispEdges">${r}</svg>`;return s}
+/* 단면도 칸 아이콘 (8칸 도트) */
+const MAPI={
+ bowl:{c:{k:'#E8C870',w:'#F2EEE4'},p:['.k....k.','..k..k..','wwwwwwww','wkkkkkkw','.wwwwww.','..wwww..']},
+ ring:{c:{g:'#D9A441',b:'#7AB0C8'},p:['..gbbg..','.g....g.','.g....g.','.g....g.','..gggg..']},
+ cross:{c:{r:'#E05A4A'},p:['...rr...','...rr...','.rrrrrr.','.rrrrrr.','...rr...','...rr...']},
+ tooth:{c:{w:'#F2EEDC'},p:['.wwwwww.','wwwwwwww','wwwwwwww','.wwwwww.','.ww..ww.','.w....w.']},
+ phone:{c:{g:'#3FA06A',k:'#16301F'},p:['gggggggg','gkkkkkkg','g.kk...g','g.kk...g','g.kk...g','gggggggg']},
+ well:{c:{s:'#9A9A90',b:'#6A4A2A'},p:['bbbbbbbb','.b....b.','.b.ss.b.','ssssssss','s......s','ssssssss']},
+ camera:{c:{k:'#C8C8C0',l:'#7DF2CF'},p:['..kk....','kkkkkkkk','kk.ll.kk','kkllllkk','kk.ll.kk','kkkkkkkk']},
+ steam:{c:{s:'#C8D8E0',b:'#5A8AA8'},p:['.s..s..s','s..s..s.','.s..s..s','bbbbbbbb','bbbbbbbb']},
+ tile:{c:{w:'#EDE6D0',r:'#C8372D',g:'#3A8A5A'},p:['wwwww...','wrrrw...','wwwww...','wgggw...','wwwww...']},
+ cup:{c:{w:'#EDE6D0',t:'#B87333'},p:['.s.s....'.replace(/s/g,'.'),'wwwwww..','wttttwww','wttttw.w','wwwwwwww','.wwwwww.']},
+ eye:{c:{w:'#EDE6D0',k:'#7449A6'},p:['..wwww..','.wwkkww.','wwkkkkww','.wwkkww.','..wwww..']},
+ n13:{c:{r:'#FF3D33'},p:['.r.rrr..','rr...r..','.r..rr..','.r...r..','rrr.rrr.']},
+ safe:{c:{k:'#8A8C88',r:'#C8372D'},p:['kkkkkkkk','k......k','k..rr..k','k..rr..k','k......k','kkkkkkkk']},
+ shirt:{c:{w:'#D8D0B8',l:'#8A8A80'},p:['llllllll','ww.ww.ww','ww.ww.ww','ww.ww.ww','...ww...']},
+ antenna:{c:{s:'#9A9C98'},p:['s.s.s.s.','.sss.s..','..s.sss.','..s..s..','..s..s..','..s..s..']},
+ needle:{c:{s:'#C8C8C0',r:'#C8372D'},p:['......sr','.....s.r','....s..r','...s...r','..s.....','.s......']},
+ meat:{c:{r:'#B03A3A',w:'#EDE6D0'},p:['.rrrr...','rrrrrr..','rrrrrrw.','.rrrr.ww','......ww']},
+ wave:{c:{b:'#4A8AA8'},p:['.bb..bb.','b..bb..b','........','.bb..bb.','b..bb..b']},
+ lantern:{c:{r:'#D2352A',y:'#FFD27A'},p:['...yy...','..rrrr..','.rryyrr.','.rrrrrr.','..rrrr..','...yy...']},
+ bell:{c:{g:'#7DF2CF'},p:['...gg...','..gggg..','..gggg..','.gggggg.','gggggggg','...gg...']},
+ stairs:{c:{s:'#9BA69E'},p:['......ss','....ssss','..ssssss','ssssssss']},
+ bed:{c:{w:'#D8D0B8',b:'#5A6A7A'},p:['w.......','w.......','wbbbbbbb','wwwwwwww','w......w']},
+ press:{c:{k:'#9BA69E',i:'#3E4FA0'},p:['kkkkkkkk','k.iiii.k','k.iiii.k','kkkkkkkk','.k....k.']},
+ drop:{c:{b:'#5A8AA8'},p:['...b....','..bbb...','.bbbbb..','.bbbbb..','..bbb...']}};
+const MAP_PRI=['dentist','noodle','phone','well','photo','bath','floor13','gamble','pawn','clinic','tea','office','antenna','workshop','butcher','fortune','drain','laundry'];
+const MAP_PLACE_ICON={dentist:'tooth',noodle:'bowl',phone:'phone',well:'well',photo:'camera',bath:'steam',floor13:'n13',gamble:'tile',pawn:'ring',clinic:'cross',tea:'cup',office:'safe',antenna:'antenna',workshop:'needle',butcher:'meat',fortune:'eye',drain:'drop',laundry:'shirt'};
+function mapIconKey(k){const C=CELLS[k];const[d,t]=cellDT(k);if(k==='2-0')return'bell';if(k==='3-0')return'antenna';if(k==='2-2')return'press';if(k==='3-2')return'needle';if(k==='0-2')return'steam';
+  const ps=C.p||[];for(const p of MAP_PRI)if(ps.includes(p)&&MAP_PLACE_ICON[p]&&!(p==='laundry'&&t!==0))return MAP_PLACE_ICON[p];if(C.home)return C.home==='red'?'lantern':C.home==='sam'?'bed':'bed';if(t===4)return'wave';return t===0?'shirt':'stairs'}
+function mapIcon(key){const I=MAPI[key];if(!I)return'';let r='';I.p.forEach((row,y)=>{for(let x=0;x<8;x++){const c=I.c[row[x]];if(row[x]&&row[x]!=='.'&&c)r+=`<rect x="${x}" y="${y+8-I.p.length}" width="1" height="1" fill="${c}"/>`}});
+  const s=h('span',{class:'mapicon','aria-hidden':'true'});s.innerHTML=`<svg viewBox="0 0 8 8" width="14" height="14" shape-rendering="crispEdges">${r}</svg>`;return s}
+{const vm0=viewMap;viewMap=function(){const out=vm0.apply(this,arguments);try{const arr=[].concat(out);const card=arr.find(x=>x&&x.querySelector&&x.querySelector('.section-map'));if(card){const grid=card.querySelector('.section-map');const byName={};for(const k in CELLS)byName[CELLS[k].n]=k;
+  const fog=weather()[0]==='안개';if(fog)grid.classList.add('foggy');
+  grid.querySelectorAll('.cell').forEach((c,i)=>{const k=byName[c.getAttribute('aria-label')];if(!k)return;const b=c.querySelector('b');if(b)b.prepend(mapIcon(mapIconKey(k)));const t=cellDT(k)[1];c.dataset.tier=t;if(fog&&t>=2)c.classList.add('fog'+Math.min(3,t-1))})}}catch(e){}return out}}
+/* 주민증: 사진이 없으면 진영 마크 */
+{const id2=idCard;idCard=function(p,isMe){const el=id2.apply(this,arguments);try{if(!p.img){const ph=el.querySelector('.photo');if(ph&&typeof facMark==='function'){ph.textContent='';ph.style.backgroundColor='#2A2620';ph.append(facMark(isMe&&p.fugitive?'free':p.fac,46))}}}catch(e){}return el}}
+/* 괴담 장소 그림: 흔적이 쌓일수록 조금씩 변한다 */
+const PA_W=112,PA_H=48;let PLACE_CUR=null;
+function paDraw(g,id,n,night){const R=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h)};const fig=(x,y,s,c)=>{R(x+s,y,2*s,2*s,c);R(x,y+2*s,4*s,6*s,c);R(x,y+8*s,s,4*s,c);R(x+3*s,y+8*s,s,4*s,c)};
+  if(id==='noodle'){R(0,0,112,48,'#3A1E16');R(0,32,112,16,'#2A1610');R(0,8,112,2,'#7A2A1E');for(let x=8;x<112;x+=24){R(x,0,1,8,'#1A0A08');R(x-3,8,7,6,'#D2352A');R(x-1,10,3,2,'#FFD27A')}
+   [[8,1],[34,2],[60,3],[86,4]].forEach(([x,num])=>{R(x,34,20,3,'#6B4A2A');R(x+2,37,2,8,'#4A321A');R(x+16,37,2,8,'#4A321A');R(x+8,26,4,3,'#EDE6D0');g.fillStyle=num===4?'#FF3D33':'#C8B898';g.font='6px monospace';g.fillText(String(num),x+9,44)});
+   const sets=Math.min(4,1+n);for(let i=0;i<sets;i++){R(88+i*4,31,1,3,'#C8C8C0');R(90+i*4,32,2,2,'#F2EEE4')}R(92,28,8,3,'#F2EEE4');if(n>=1){R(94,23,1,4,'rgba(220,220,220,.5)');R(97,22,1,5,'rgba(220,220,220,.4)')}if(n>=3)fig(92,14,1.6,'rgba(0,0,0,.85)')}
+  else if(id==='dentist'){R(0,0,112,48,'#2E3634');R(0,36,112,12,'#3A4240');for(let x=0;x<112;x+=8)R(x,36,1,12,'#2A302E');R(40,30,34,4,'#5A7A8A');R(44,18,10,12,'#5A7A8A');R(70,26,3,10,'#8A8C88');R(52,6,1,10,'#8A8C88');R(48,4,12,3,'#D8D0B8');
+   R(80,24,16,2,'#9A9C98');R(82,22,2,2,'#C8C8C0');R(86,22,1,2,'#C8C8C0');R(90,22,3,1,'#C8C8C0');R(14,12,14,18,'#C8D8D8');R(16,14,10,14,'#9AB0B0');
+   if(n>=1){R(20,30,2,6,'rgba(160,190,200,.7)');R(19,36,4,1,'rgba(160,190,200,.7)')}if(n>=2)R(44,24,30,8,'rgba(200,60,50,.18)');if(n>=3){fig(62,6,2,'rgba(10,10,10,.85)');R(64,10,4,2,'#C8D8D8')}}
+  else if(id==='phone'){R(0,0,112,48,'#1E2422');R(0,40,112,8,'#2A302C');R(70,0,42,40,'#2E3A36');R(74,4,14,8,'#FF5FA8');R(76,6,10,4,'#3A1E2A');R(30,6,22,36,'#2F7A4A');R(32,8,18,30,'#1A2A22');R(36,14,10,14,'#3A3A3A');R(38,16,6,4,'#8A8C88');R(37,22,8,4,'#5A5A5A');
+   if(n<1){R(44,14,2,10,'#1A1A1A')}else{R(44,26,1,8,'#1A1A1A');R(42,34,4,3,'#1A1A1A')}if(n>=2){R(33,30,8,1,'#C8372D');R(33,32,6,1,'#C8372D')}if(n>=3){R(41,37,6,3,'#D8C8B0');R(42,40,1,3,'#D8C8B0');R(44,40,1,4,'#D8C8B0')}}
+  else if(id==='floor13'){R(0,0,112,48,'#3A3A34');for(let i=0;i<8;i++)R(50+i*8,40-i*5,62-i*8,5,i%2?'#4A4A42':'#5A5A50');R(0,40,112,8,'#2E2E28');R(14,10,18,9,'#E8E2D0');g.fillStyle='#2A2A26';g.font='bold 7px monospace';g.fillText(n>=2?'13':'12',17,17);
+   R(0,0,112,3,'#D8F0E8');if(n>=1)R(100,0,1,20,'rgba(0,0,0,.6)');if(n>=3)fig(96,2,1.5,'rgba(0,0,0,.85)')}
+  else if(id==='well'){R(0,0,112,48,'#1A2220');R(0,38,112,10,'#24302C');R(40,22,32,16,'#6A6A60');R(42,24,28,4,'#0A1210');R(40,22,32,2,'#8A8A80');R(42,4,2,18,'#5A3A20');R(68,4,2,18,'#5A3A20');R(42,4,28,2,'#5A3A20');R(55,6,1,12,'#9A8A6A');R(52,18,6,5,'#6A4A2A');
+   if(n>=1)for(let i=0;i<4;i++)R(20+i*5,42-(i%2),2,1,'rgba(120,160,170,.7)');if(n>=2){R(78,38,4,2,'#C8372D');R(80,36,2,2,'#C8372D')}if(n>=3)fig(84,20,1.4,'rgba(60,80,90,.9)')}
+  else if(id==='photo'){R(0,0,112,48,'#2A2420');R(0,40,112,8,'#3A2E26');R(60,4,46,36,'#5A6A7A');R(62,38,42,2,'#4A5A6A');R(20,26,10,8,'#2A2A2A');R(22,28,6,4,'#7DF2CF');R(24,34,1,8,'#8A8C88');R(18,40,14,1,'#8A8C88');R(30,28,3,2,'#3A3A3A');
+   const ph=Math.min(5,1+n*2);for(let i=0;i<ph;i++){R(4+i*8,6,6,8,'#E8E0C8');R(5+i*8,7,4,4,'#8A8070');if(n>=2&&i%2)R(4+i*8,9,6,1,'#C8372D')}if(n>=3){R(98,10,6,24,'rgba(0,0,0,.8)');R(99,8,4,3,'rgba(0,0,0,.8)')}}
+  else if(id==='bath'){R(0,0,112,48,'#C8D4D0');for(let y=0;y<48;y+=6)R(0,y,112,1,'#A8B8B4');for(let x=0;x<112;x+=6)R(x,0,1,30,'#A8B8B4');R(10,28,92,14,'#5A8AA8');R(10,28,92,2,'#8AB0C8');R(8,26,96,2,'#E8F0F0');R(0,42,112,6,'#8A9A98');
+   for(let i=0;i<3;i++)R(20+i*28,18-i,1,8,'rgba(255,255,255,.6)');if(n>=1)for(let i=0;i<5;i++)R(40+i*6,30+(i%2),4,1,'#1A1A1A');if(n>=2)R(10,28,92,14,'rgba(120,40,40,.18)');if(n>=3){R(54,24,8,6,'#1A1A1A');R(55,27,1,1,'#E8E2D6');R(59,27,1,1,'#E8E2D6')}}
+  else if(id==='antenna'){R(0,0,112,48,night?'#0E1418':'#5A6A7A');R(0,40,112,8,'#3A3A34');for(let x=6;x<112;x+=10){R(x,8+(x%7),1,32,'#8A8C88');R(x-3,10+(x%5),7,1,'#8A8C88');R(x-2,16+(x%3),5,1,'#8A8C88')}if(n>=1){R(56,8,1,10,'#1A1A1A');R(57,18,6,1,'#9A9C98')}if(n>=3){R(55,6,3,3,'#E8E2D6');R(56,7,1,1,'#1A1A1A')}}
+  else if(id==='workshop'){R(0,0,112,48,'#2E2A26');R(0,38,112,10,'#3A342E');for(let i=0;i<5;i++){const x=8+i*21;R(x,16,14,22,'#C8C0B0');R(x+2,12,10,6,'#C8C0B0');R(x,36,14,2,'#A8A090')}if(n>=1)R(50,12,10,6,'#8A8070');if(n>=2){R(52,14,2,1,'#1A1A1A');R(56,14,2,1,'#1A1A1A')}if(n>=3){R(52,14,6,3,'#D8C8B0');R(53,15,1,1,'#FF3D33');R(56,15,1,1,'#FF3D33')}}
+  else return false;
+  if(night){g.fillStyle='rgba(4,6,10,.45)';g.fillRect(0,0,PA_W,PA_H)}return true}
+function placeArt(id){const n=(G.me&&G.me.traces&&G.me.traces[id])||0;const cv=document.createElement('canvas');cv.width=PA_W;cv.height=PA_H;cv.className='placeart';cv.setAttribute('aria-hidden','true');const x=hour();
+  try{if(!paDraw(cv.getContext('2d'),id,n,x>=19||x<6))return null}catch(e){return null}return cv}
+{const v0=visit;visit=function(id){PLACE_CUR={id,at:Date.now()};return v0.apply(this,arguments)}}
+{const mv1=move;move=function(){PLACE_CUR=null;return mv1.apply(this,arguments)}}
+function paFor(title){if(!PLACE_CUR||Date.now()-PLACE_CUR.at>15*60e3)return null;return placeArt(PLACE_CUR.id)}
+{const s1=sceneEl;sceneEl=function(){const el=s1.apply(this,arguments);try{if(!(scene&&scene.id==='deep')){const a=paFor();if(a&&el.children[0])el.children[0].after(a)}}catch(e){}return el}}
+{const r1=resultEl;resultEl=function(){const el=r1.apply(this,arguments);try{if(!scene){const a=paFor();if(a&&el.children[0])el.children[0].after(a)}}catch(e){}return el}}
+/* 비 · 증축 흔들림 · 여객기 */
+function fxLayer(){let r=document.getElementById('rainfx');if(!r){r=h('div',{id:'rainfx','aria-hidden':'true'});document.body.append(r)}return r}
+{const rd=render;render=function(){const out=rd.apply(this,arguments);try{const rain=weather()[0]==='비'&&!(G.opts&&G.opts.soft);fxLayer().hidden=!rain;if(!scene&&!result&&PLACE_CUR&&Date.now()-PLACE_CUR.at>60e3)PLACE_CUR=null}catch(e){}return out}}
+let PLANE_LAST='';
+function flyPlane(){let p=document.getElementById('planefx');if(p)p.remove();p=h('div',{id:'planefx','aria-hidden':'true'});p.innerHTML='<svg viewBox="0 0 26 8" width="52" height="16" shape-rendering="crispEdges"><rect x="2" y="3" width="20" height="2" fill="#1A1E1C"/><rect x="22" y="3" width="3" height="1" fill="#1A1E1C"/><rect x="9" y="0" width="4" height="3" fill="#1A1E1C"/><rect x="9" y="5" width="4" height="3" fill="#1A1E1C"/><rect x="2" y="1" width="2" height="2" fill="#1A1E1C"/><rect x="24" y="4" width="1" height="1" fill="#FF3D33" class="blink"/><rect x="5" y="3" width="1" height="1" fill="#F2D88A"/><rect x="8" y="3" width="1" height="1" fill="#F2D88A"/><rect x="11" y="3" width="1" height="1" fill="#F2D88A"/><rect x="14" y="3" width="1" height="1" fill="#F2D88A"/><rect x="17" y="3" width="1" height="1" fill="#F2D88A"/></svg>';
+  document.body.append(p);try{sfx('plane')}catch(e){}setTimeout(()=>{try{p.remove()}catch(e){}},15000)}
+setInterval(()=>{try{if(!G.me||document.hidden)return;const d=kd(T()),mi=d.getUTCMinutes(),hr=d.getUTCHours();if(mi!==17&&mi!==47)return;const key=dayIdx(T())+':'+hr+':'+mi;if(PLANE_LAST===key)return;PLANE_LAST=key;flyPlane()}catch(e){}},15000);
+/* 효과음 더하기 */
+try{SFX.snuff=t=>{noise(t,.35,.35,'highpass',2500);tone('sine',160,t+.05,.004,.18,.6,60)};
+ SFX.page=t=>{noise(t,.08,.3,'bandpass',3200,2);noise(t+.14,.08,.25,'bandpass',2800,2)};
+ SFX.plane=t=>{noise(t,6,.12,'lowpass',260);noise(t+1,4,.07,'bandpass',600,.6);tone('sawtooth',70,t,.8,.03,6,55)}}catch(e){}
+{const de0=deepEnd;deepEnd=function(kind){if(kind==='dark'){try{sfx('snuff')}catch(e){}}return de0.apply(this,arguments)}}
+{const el0=earlyLeave;earlyLeave=function(e){const had=!!(G.me&&G.me.work);const r=el0.apply(this,arguments);if(had&&G.me&&!G.me.work){try{sfx('page')}catch(x){}}return r}}
+/* 밤에 내 방을 열면 소리를 내는 밤물건이 작게 운다 */
+{const or0=openRoom;openRoom=function(){const r=or0.apply(this,arguments);try{const m=G.me,x=hour();if(m&&(x>=19||x<6)){const sp=(m.room||[]).filter(k=>typeof ROOMFX!=='undefined'&&ROOMFX[k]);if(sp.length){const k=pick(sp);const S={tape:'hammerFar',number:'static',wire:'static',lantern:'flickerFar',bowl:'flickerFar',mirror:'flickerFar'};setTimeout(()=>{try{sfx(S[k]||'flickerFar')}catch(e){}},700)}}}catch(e){}return r}}
+/* 문구: 불러오는 중 · 빈 화면 */
+function loadTxt(base){if(Math.random()<.55)return base;return pick(['무전 주파수 맞추는 중…','계단 세는 중… 아흔아홉, 백, 백하나…','장부 넘기는 중…','형광등 갈아 끼우는 중…','문틈으로 들여다보는 중…','젖은 종이 펴는 중…'])}
+function quietTxt(base){const x=hour();const night=x>=19||x<6;if(isBuild())return base+' 벽 안에서만 소리가 난다.';if(night&&Math.random()<.5)return pick([base+' 너무 조용하다.',base+' 누가 숨을 참고 있는 것 같다.',base+' 형광등 소리만 난다.']);return base}
+/* 관계 기록 날짜: 성채식 */
+const KNUM=['','한','두','세','네','다섯','여섯','일곱','여덟','아홉','열'];
+function castleDate(t){const d=dayIdx(T())-dayIdx(t);const x=kd(t).getUTCHours();const tod=x<3?'한밤':x<4?'증축 시간':x<6?'새벽':x<12?'아침':x<18?'낮':'밤';if(d<=0)return `오늘 ${tod}`;if(d===1)return tod==='밤'?'어젯밤':`어제 ${tod}`;return `증축 ${d<=10?KNUM[d]+' ':d}번 전 · ${tod}`}
+/* 일지: 정신이 낮으면 내 글씨가 아닌 줄이 섞인다 */
+function logAlien(l,i){const m=G.me;if(!m)return false;if(!(m.mind<30||(typeof hasFx==='function'&&hasFx('delirium'))))return false;return nameHash(String(l.t)+i)%6===0}
+
+/* ---------- 출석 도장 · 계단참 게시판 · 오늘의 소문 · 생일과 입주 기념일 · 도감 칭호 표시 ---------- */
+ITEMS.stamp100={n:'백 번째 계단 도장',d:'30일을 하루도 빠짐없이 계단참 출석부에 도장을 찍은 사람에게 나온다. 받고 보니 도장 칸이 하나 더 찍혀 있다.',v:250};
+if(typeof RA_SPR!=='undefined')RA_SPR.stamp100={c:{k:'#5A1010',r:'#C8372D',w:'#F2EEDC'},p:['..kkkkkk..','.krrrrrrk.','krrwrrwrrk','krrrwwrrrk','krrwrrwrrk','.krrrrrrk.','..kkkkkk..']};
+/* 출석 */
+const ATT_REWARD={3:{money:30},7:'item',14:{clue:1},30:{item:'stamp100'}};
+const ATT_ITEMS=['candle','chalk','film','number','nail'];
+{const db0=dailyBonus;dailyBonus=function(){const r=db0.apply(this,arguments);try{const m=G.me;if(!m)return r;const d=dayIdx(T());m.att=m.att||{last:null,streak:0,total:0,best:0,ghost:[]};const a=m.att;if(a.last===d)return r;
+  a.streak=a.last===d-1?a.streak+1:1;a.last=d;a.total++;a.best=Math.max(a.best||0,a.streak);const pos=((a.streak-1)%30)+1;let out=[];const rw=ATT_REWARD[pos];
+  if(rw==='item')out=give({item:pick(ATT_ITEMS)});else if(rw)out=give(rw);if(chance(.06))a.ghost=[...(a.ghost||[]),d].slice(-5);
+  log(`계단참 출석부에 도장을 찍었다. 연속 ${a.streak}일째.${out.length?' '+out.join(', '):''}`,'life');setTimeout(()=>toast(`출석 ${a.streak}일째${out.length?' · '+out.join(', '):''}`),1600);save()}catch(e){}return r}}
+function stampBody(){const m=G.me;if(!m)return[h('p',{class:'mute'},'캐릭터를 고르면 출석부가 보여요.')];const a=m.att||{streak:0,total:0,best:0,ghost:[]};const pos=a.streak?((a.streak-1)%30)+1:0;
+  const ghostCell=(a.ghost||[]).length&&a.last===dayIdx(T())?Math.min(30,pos+2):0;
+  const cells=Array.from({length:30},(_,i)=>{const n=i+1,done=n<=pos,rw=ATT_REWARD[n];const gh=n===ghostCell&&!done;
+    return h('div',{class:'stampcell'+(done?' on':'')+(gh?' ghost':'')+(rw?' rw':''),title:gh?'찍은 적 없는 도장':rw?`${n}일째 보상`:`${n}일째`},h('span',{class:'num'},n),done||gh?h('i',{'aria-hidden':'true'},'印'):null,rw&&!done?h('small',null,n===3?'$30':n===7?'밤물건':n===14?'조각':'도장'):null)});
+  return[h('div',{class:'card stack'},h('div',{class:'row'},h('span',{class:'lbl'},'계단참 출석부'),h('span',{class:'mute num',style:'font-size:12px'},`연속 ${a.streak}일 · 누적 ${a.total}일 · 최고 ${a.best||0}일`)),
+    h('p',{class:'mute',style:'margin:0;font-size:13px;line-height:1.7'},'하루 첫 접속 때 아침 배급과 함께 도장이 하나 찍혀요. 3일째 $30, 7일째 밤물건, 14일째 설계도 조각, 30일째 「백 번째 계단 도장」. 하루라도 빠지면 연속은 처음부터지만 누적은 남아요.'),
+    h('div',{class:'stampgrid'},cells),ghostCell?h('p',{class:'hand',style:'margin:0;color:#C9A6A0'},`${ghostCell}일째 칸에 이미 도장이 찍혀 있다. 아직 오지 않은 날이다.`):null)]}
+/* 계단참 게시판 */
+const TIP_CAT={place:'장소',rule:'수칙',deep:'탐사',etc:'기타'};let TIPS=null,TIP_VOTES=[],TIP_SORT='new',TIP_CAT_F='all',TIP_ERR='';
+async function loadTips(){if(!sb)return;try{const{data,error}=await sb.from('tip_posts').select('*').order('created_at',{ascending:false}).limit(120);if(error){TIP_ERR='게시판을 불러오지 못했어요. 운영자에게 12_board.sql 실행을 부탁해 주세요.';TIPS=[];return}
+  TIPS=data||[];TIP_ERR='';const ids=TIPS.map(x=>x.id);if(ids.length){const v=await sb.from('tip_votes').select('post_id,voter').in('post_id',ids);TIP_VOTES=v.data||[]}else TIP_VOTES=[]}catch(e){TIPS=[]}}
+const tipVotes=id=>TIP_VOTES.filter(v=>v.post_id===id).length;
+const tipMine=id=>G.me&&TIP_VOTES.some(v=>v.post_id===id&&v.voter===G.me.id);
+function tipName(id){const p=G.me&&G.me.id===id?G.me:SAMPLES[id];return p?p.name:'누군가'}
+function tipFac(id){const p=G.me&&G.me.id===id?G.me:SAMPLES[id];return p?(p.fugitive?'free':p.fac):'free'}
+async function tipPost(cat,body,spoiler){const m=G.me;body=String(body||'').trim();if(!m||!body)return toast('내용을 적어 주세요.');const{error}=await sb.from('tip_posts').insert({author:m.id,cat,body:body.slice(0,600),spoiler:!!spoiler});
+  if(error)return toast('올리지 못했어요. 운영자에게 12_board.sql 실행을 부탁해 주세요.');const dl=daily();let extra='';if(!dl.tip){dl.tip=1;give({rep:1});extra=' 평판 +1';save()}toast('게시판에 붙였어요.'+extra);await loadTips();renderView()}
+async function tipVote(x){const m=G.me;if(!m)return;if(x.author===m.id||(SAMPLES[x.author]&&sameOwner(x.author)))return toast('내 글에는 누를 수 없어요.');
+  if(tipMine(x.id)){await sb.from('tip_votes').delete().eq('post_id',x.id).eq('voter',m.id)}else{const{error}=await sb.from('tip_votes').insert({post_id:x.id,voter:m.id});if(error)return toast('누르지 못했어요.')}await loadTips();renderView()}
+function tipEdit(x){const ta=h('textarea',{maxlength:600,rows:6});ta.value=x.body;const cat=h('select',null,Object.entries(TIP_CAT).map(([k,n])=>h('option',{value:k},n)));cat.value=x.cat;const sp=h('input',{type:'checkbox',style:'width:auto',checked:x.spoiler?true:null});
+  openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'글 고치기'),h('button',{class:'ghost',onclick:closeModal},'닫기')),cat,ta,h('label',{class:'row',style:'justify-content:flex-start;gap:8px'},sp,h('span',null,'스포일러 (접어 두기)')),
+    h('div',{class:'wrap'},h('button',{class:'sm pri',onclick:async()=>{const v=ta.value.trim();if(!v)return;const{error}=await updWithEdited('tip_posts',x.id,{body:v.slice(0,600),cat:cat.value,spoiler:sp.checked});if(error)return toast('고치지 못했어요.');closeModal();await loadTips();renderView();toast('고쳤어요.')}},'고친 대로 붙이기'),
+      h('button',{class:'sm',style:'border-color:var(--bad);color:var(--bad)',onclick:async e=>{const bt=e.currentTarget;if(!bt.dataset.arm){bt.dataset.arm='1';bt.textContent='한 번 더 누르면 떼요';return}const{error}=await sb.from('tip_posts').delete().eq('id',x.id);if(error)return toast('떼지 못했어요.');closeModal();await loadTips();renderView();toast('글을 뗐어요.')}},'떼기'))))}
+function tipsBody(){if(typeof sb==='undefined'||!sb)return[h('p',{class:'mute'},'게시판은 서버에 연결된 게임에서 열려요.')];if(TIPS===null){loadTips().then(()=>{if(tab==='note'&&sub.note==='tips')renderView()});return[h('div',{class:'card'},h('span',{class:'mute'},loadTxt('게시판을 훑는 중…')))]}
+  const m=G.me;const cat=h('select',{id:'tipCat'},Object.entries(TIP_CAT).map(([k,n])=>h('option',{value:k},n)));const ta=h('textarea',{id:'tipBody',maxlength:600,rows:3,placeholder:'괴담 정보나 팁을 남겨 주세요. 예: 4번 테이블은 세 번째부터 무언가 앉아 있다.'});const sp=h('input',{type:'checkbox',id:'tipSp',style:'width:auto'});
+  let list=TIPS.filter(x=>TIP_CAT_F==='all'||x.cat===TIP_CAT_F);if(TIP_SORT==='top')list=list.slice().sort((a,b)=>tipVotes(b.id)-tipVotes(a.id)||b.id-a.id);
+  const post=x=>{const mine=m&&x.author===m.id,n=tipVotes(x.id),voted=tipMine(x.id);const body=h('div',{style:'white-space:pre-wrap;line-height:1.7;font-size:14px'},x.body);
+    return h('div',{class:'tip'},h('div',{class:'row',style:'gap:6px;justify-content:flex-start;flex-wrap:wrap'},h('span',{class:'tag'},TIP_CAT[x.cat]||'기타'),typeof facMark==='function'?facMark(tipFac(x.author),12):'',h('b',{style:'font-size:13px'},tipName(x.author)),h('span',{class:'dim',style:'font-size:11.5px',title:mdhm(Date.parse(x.created_at))},castleDate(Date.parse(x.created_at))+(x.edited_at?' · 수정됨':''))),
+      x.spoiler?h('details',null,h('summary',{style:'cursor:pointer;font-size:13px;color:var(--mute)'},'스포일러 · 눌러서 보기'),body):body,
+      h('div',{class:'wrap',style:'gap:6px'},h('button',{class:'sm'+(voted?' pri':''),onclick:()=>tipVote(x)},`도움 됐어요 ${n}`),mine?h('button',{class:'sm ghost',onclick:()=>tipEdit(x)},'고치기'):null,!mine&&isAdminUser()?h('button',{class:'sm ghost',style:'color:var(--bad)',onclick:async()=>{await sb.from('tip_posts').delete().eq('id',x.id);await loadTips();renderView()}},'운영자 삭제'):null))};
+  return[h('div',{class:'card stack'},h('span',{class:'lbl'},'계단참 게시판 · 괴담 정보와 팁'),h('p',{class:'mute',style:'margin:0;font-size:12.5px'},'겪은 괴담, 수칙, 탐사 요령을 나눠요. 하루 첫 글에 평판 +1. 내용이 직접적이면 스포일러로 접어 주세요.'),
+      m?h('form',{class:'stack',style:'gap:6px',onsubmit:e=>{e.preventDefault();tipPost(cat.value,ta.value,sp.checked)}},h('div',{class:'row',style:'gap:8px'},cat,h('label',{class:'row',style:'gap:6px;justify-content:flex-start;font-size:13px;white-space:nowrap;flex:none'},sp,'스포일러')),ta,h('button',{type:'submit',class:'sm pri',style:'align-self:flex-start'},'붙이기')):null,
+      TIP_ERR?h('p',{style:'margin:0;color:var(--bad);font-size:13px'},TIP_ERR):null),
+    h('div',{class:'wrap',style:'gap:6px'},[['new','새 글'],['top','도움 많은 글']].map(([k,n])=>h('button',{class:'sm'+(TIP_SORT===k?' pri':''),onclick:()=>{TIP_SORT=k;renderView()}},n)),h('span',{class:'dim'},'·'),[['all','전체'],...Object.entries(TIP_CAT)].map(([k,n])=>h('button',{class:'sm'+(TIP_CAT_F===k?' pri':''),onclick:()=>{TIP_CAT_F=k;renderView()}},n)),h('button',{class:'sm ghost',onclick:async()=>{TIPS=null;renderView()}},'새로고침')),
+    list.length?h('div',{class:'stack',style:'gap:10px'},list.map(post)):h('div',{class:'card'},h('span',{class:'mute'},quietTxt('아직 붙은 글이 없다.')))]}
+/* 오늘의 소문 */
+const RUMORS=['국숫집 4번 테이블은 세 번째부터 무언가 같이 앉는다는 소문.','공중전화는 세 번째 벨이 끝난 뒤에 받으라던데, 네 번째까지 기다린 사람도 멀쩡했다고 한다.','집중 탐사에서 양초는 아껴 두는 게 좋다더라. 끝에 가서 등불이 모자란다고.','매시 17분과 47분에 지나가는 비행기는 늘 같은 비행기라는 소문.','정문 경비 노인의 출입 명부에는 나간 사람이 한 명도 없다고 한다.','삼경 의원 반값은 완장 찬 사람만이다. 완장을 반납하면 그날로 끝.','적등방 장부 뒤쪽 칸은 이자가 없다던데. 믿지 마라.','13층 복도에서 뒤돌아봐도 괜찮은 날이 있다고 한다. 그날이 언제인지는 아무도 모른다.','옛 우물 아이에게 맞는 신발을 찾아 주면 운이 좋아진다더라.','전당포 주인은 같은 물건을 하루에 세 번 넘게 받지 않는다.','수로 물은 끓여도 짠맛이 남는다. 바닷물이 아니라 눈물 맛이라고.','인쇄소에서 찍은 적 없는 수칙 판본이 돌고 있다. 한 줄이 다르다고.','새벽 3시에 종루 줄을 당긴 사람이 있다던데, 종은 울리지 않았다고.','안개 낀 날엔 옥상에서 바다가 안 보인다. 크레인 불빛만 보인다.','레이란 라디오 날씨 예보가 어제와 한 글자도 안 틀렸다는 사람이 있다.','빗물탕 탕 속에 오래 있으면 누가 등을 밀어 준다고 한다. 손이 차갑다고.','금성 사진관에서 찍은 단체 사진은 사람 수가 맞지 않는다더라.','밤의 구역 네 방을 다 돌면 계단 입구가 막힌다. 안에 남은 사람이 있어도.'];
+function todayRumor(){const d=dayIdx(T());return RUMORS[((d*7)%RUMORS.length+RUMORS.length)%RUMORS.length]}
+/* 생일 · 입주 기념일 */
+if(typeof SHEETK!=='undefined'&&!SHEETK.includes('bday'))SHEETK.push('bday');
+{const pf1=personFromRow;personFromRow=function(r){const p=pf1.apply(this,arguments);try{p.bday=(r.sheet||{}).bday||''}catch(e){}return p}}
+function todayMD(){const d=kd(T());return `${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`}
+const ANNIV=[30,100,200,365];
+function annivOf(p){if(!p||!p.created)return 0;const n=dayIdx(T())-dayIdx(p.created);return ANNIV.includes(n)?n:0}
+function castleNews(){const out=[];const ppl=[...SAMPLE_IDS.map(k=>SAMPLES[k]),G.me].filter(p=>p&&!p.isNpc);const md=todayMD();
+  for(const p of ppl){if(p.bday&&p.bday===md)out.push(`오늘은 ${p.name}의 생일이다. 누가 계단참에 국수 한 그릇을 두고 갔다. 아직 따뜻하다.`);const a=annivOf(p);if(a)out.push(`${p.name}이(가) 성채에 들어온 지 ${a}일째. 아직 여기 있다.`)}return out}
+{const rc1=renderChat;renderChat=function(){const r=rc1.apply(this,arguments);try{if(sub.chat==='all'){const list=document.getElementById('chlist');if(list&&!list.querySelector('.rumor')){const t=hm(T());const items=[h('div',{class:'msg sys rumor'},h('time',null,'소문'),todayRumor()),...castleNews().map(x=>h('div',{class:'msg sys rumor'},h('time',null,'오늘'),x))];list.prepend(...items)}}}catch(e){}return r}}
+{const db1=dailyBonus;dailyBonus=function(){const r=db1.apply(this,arguments);try{const m=G.me;if(!m)return r;const d=dayIdx(T());m.annDone=m.annDone||{};
+  if(m.bday&&m.bday===todayMD()&&m.annDone.b!==d){m.annDone.b=d;const out=give({money:20,mind:10});log(`생일이다. 방문 앞에 누가 국수 한 그릇과 양초 하나를 두고 갔다. ${out.join(', ')}`,'life');m.items.candle=(m.items.candle||0)+1;setTimeout(()=>toast('생일 축하해요. 방문 앞에 무언가 놓여 있다.'),2400)}
+  const a=annivOf(m);if(a&&m.annDone['a'+a]!==1){m.annDone['a'+a]=1;const out=give({money:a>=100?60:30});log(`성채에 들어온 지 ${a}일째. 출석부에 기념 도장이 하나 더 찍혔다. ${out.join(', ')}`,'life');setTimeout(()=>toast(`입주 ${a}일째 · ${out.join(', ')}`),3000)}save()}catch(e){}return r}}
+{const o1=openForm;openForm=function(edit){const r=o1.apply(this,arguments);try{const form=document.querySelector('#modalRoot form');const memo=document.getElementById('f-memo');if(!form||!memo)return r;
+  const cur=(edit&&G.me&&G.me.bday)||'';const[cm,cd]=cur?cur.split('-'):['',''];const ms=h('select',{id:'f-bm'},[h('option',{value:''},'월'),...Array.from({length:12},(_,i)=>h('option',{value:String(i+1).padStart(2,'0')},`${i+1}월`))]);const ds=h('select',{id:'f-bd'},[h('option',{value:''},'일'),...Array.from({length:31},(_,i)=>h('option',{value:String(i+1).padStart(2,'0')},`${i+1}일`))]);ms.value=cm||'';ds.value=cd||'';
+  const fld=h('label',{class:'field full'},h('span',null,'생일 (선택)'),h('div',{class:'row',style:'gap:8px'},ms,ds),h('small',{class:'dim',style:'font-size:11.5px'},'그날 무전 「전체」에 축하 줄이 뜨고, 방문 앞에 무언가 놓여 있어요.'));
+  const anchor=memo.closest('.field')||memo;anchor.parentNode.insertBefore(fld,anchor);
+  form.addEventListener('submit',()=>{setTimeout(()=>{if(!form.isConnected&&G.me){G.me.bday=ms.value&&ds.value?`${ms.value}-${ds.value}`:'';save()}},0)})}catch(e){}return r}}
+/* 도감 칭호: 주민증과 시트에 */
+{const id3=idCard;idCard=function(p,isMe){const el=id3.apply(this,arguments);try{const t=typeof dexTitle==='function'?dexTitle(p):'';const dl=el.querySelector('dl');if(t&&dl)dl.append(h('dt',null,'칭호'),h('dd',{style:'color:#2F6B6B'},t))}catch(e){}return el}}
+{const os2=openSheet;openSheet=function(id){const r=os2.apply(this,arguments);try{const p=id==='me'?G.me:SAMPLES[id];const t=typeof dexTitle==='function'?dexTitle(p):'';const h2=document.querySelector('#modalRoot .sheet h2.disp');if(t&&h2)h2.insertAdjacentElement('afterend',h('div',{style:'margin-top:2px'},h('span',{class:'tag good',style:'font-size:11.5px'},'도감 칭호 · '+t)))}catch(e){}return r}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
