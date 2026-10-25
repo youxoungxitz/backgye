@@ -1940,7 +1940,7 @@ function relPanel(id,r){const st=stageOf(r);const m=G.me;const p=SAMPLES[id];
   const avail=SCENES.filter(sc=>sceneOK(sc,r));const locked=SCENES.filter(sc=>!sceneOK(sc,r)&&st>=sc.st).length;
   const custom=h('input',{id:'relName',maxlength:12,placeholder:'직접 짓기'});const ft=h('input',{id:'freeScene',maxlength:200,placeholder:'한 줄 장면 직접 쓰기 (효과 없음)'});
   const logBox=h('div',{class:'feed'},h('div',{class:'mute',style:'font-size:12.5px'},'관계 기록을 불러오는 중…'));
-  relLogs(id).then(ls=>{logBox.replaceChildren(...(ls.length?ls.map(l=>h('div',{class:'it'},h('span',{class:'k'},mdhm(Date.parse(l.created_at))),h('span',null,(l.author===m.id?'':'· ')+l.text))):[h('div',{class:'mute',style:'font-size:12.5px'},'아직 기록이 없어요.')]))});
+  relLogs(id).then(ls=>{logBox.replaceChildren(...(ls.length?ls.map(l=>h('div',{class:'it'},h('span',{class:'k'},mdhm(Date.parse(l.created_at))),h('span',null,(l.author===m.id?'':'· ')+l.text+(l.edited_at?' (수정됨)':''),rlogEditBtn(l,id)))):[h('div',{class:'mute',style:'font-size:12.5px'},'아직 기록이 없어요.')]))});
   const prop=r.proposal;
   return h('div',{class:'stack'},
     h('div',{class:'row'},h('span',{class:'lbl'},'관계'),h('span',{class:'wrap'},h('span',{class:'tag'},STAGES[st]),r.name?h('span',{class:'tag red'},r.name):null,online(p)?h('span',{class:'tag good'},'접속 중'):null)),
@@ -1988,7 +1988,7 @@ function wallEl(k){if(!WALLS[k]){WALLS[k]=[];if(sb)loadWall(k)}const list=walls(
       G.me?h('form',{class:'composer',onsubmit:async e=>{e.preventDefault();const v=inp.value.trim();if(!v)return;const{error}=await sb.from('wall_posts').insert({cell:k,character_id:G.me.id,text:hasFx('gum')?gumify(v):v});if(error)return toast('적지 못했어요.');inp.value='';loadWall(k)}},inp,h('button',{type:'submit'},'적는다')):null))}
 async function loadNotices(){const{data}=await sb.from('notices').select('*').order('created_at',{ascending:false}).limit(20);NOTICES=data||[];if(tab==='map')renderView()}
 function noticeAuthor(n){return n.author&&(SAMPLES[n.author]||(G.me&&G.me.id===n.author?G.me:null))}
-function noticeCard(n,full){const p=noticeAuthor(n);return h('div',{class:'card stack',style:'border-color:var(--lantern)'},h('div',{class:'row'},h('span',{class:'lbl'},'방주 공지'),h('span',{class:'wrap',style:'gap:6px'},h('span',{class:'dim num',style:'font-size:11px'},mdhm(Date.parse(n.created_at))),isAdminUser()?h('button',{class:'ghost sm',style:'color:var(--bad)',title:'공지 삭제',onclick:async e=>{const bt=e.currentTarget;if(!bt.dataset.arm){bt.dataset.arm='1';bt.textContent='한 번 더 누르면 삭제';setTimeout(()=>{if(bt.isConnected){delete bt.dataset.arm;bt.textContent='삭제'}},4000);return}bt.disabled=true;const{error}=await sb.from('notices').delete().eq('id',n.id);if(error){toast('삭제하지 못했어요.');bt.disabled=false;return}NOTICES=NOTICES.filter(x=>x.id!==n.id);toast('공지를 삭제했어요.');render()}},'삭제'):null,full?null:h('button',{class:'ghost sm',title:'닫기',onclick:()=>{G.opts.noticeSeen=n.id;save();renderView();toast('공지는 수첩 「공지」 탭에서 다시 볼 수 있어요.')}},'닫기 ✕'))),h('p',{style:'margin:0;white-space:pre-wrap;line-height:1.7'},!full&&n.text.length>320?(t=>{const k=t.search(/\s\S*$/);return(k>200?t.slice(0,k):t)+' …'})(n.text.slice(0,300)):n.text),!full&&n.text.length>320?h('button',{class:'sm',style:'align-self:flex-start',onclick:()=>{tab='note';sub.note='notice';render()}},'공지 전체 보기'):null,p?h('span',{class:'mute',style:'font-size:12px'},'— '+p.name):null)}
+function noticeCard(n,full){const p=noticeAuthor(n);return h('div',{class:'card stack',style:'border-color:var(--lantern)'},h('div',{class:'row'},h('span',{class:'lbl'},'방주 공지'),h('span',{class:'wrap',style:'gap:6px'},h('span',{class:'dim num',style:'font-size:11px'},mdhm(Date.parse(n.created_at))+(n.edited_at?' · 수정됨':'')),isAdminUser()?h('button',{class:'ghost sm',title:'공지 고치기',onclick:()=>noticeEdit(n)},'수정'):null,isAdminUser()?h('button',{class:'ghost sm',style:'color:var(--bad)',title:'공지 삭제',onclick:async e=>{const bt=e.currentTarget;if(!bt.dataset.arm){bt.dataset.arm='1';bt.textContent='한 번 더 누르면 삭제';setTimeout(()=>{if(bt.isConnected){delete bt.dataset.arm;bt.textContent='삭제'}},4000);return}bt.disabled=true;const{error}=await sb.from('notices').delete().eq('id',n.id);if(error){toast('삭제하지 못했어요.');bt.disabled=false;return}NOTICES=NOTICES.filter(x=>x.id!==n.id);toast('공지를 삭제했어요.');render()}},'삭제'):null,full?null:h('button',{class:'ghost sm',title:'닫기',onclick:()=>{G.opts.noticeSeen=n.id;save();renderView();toast('공지는 수첩 「공지」 탭에서 다시 볼 수 있어요.')}},'닫기 ✕'))),h('p',{style:'margin:0;white-space:pre-wrap;line-height:1.7'},!full&&n.text.length>320?(t=>{const k=t.search(/\s\S*$/);return(k>200?t.slice(0,k):t)+' …'})(n.text.slice(0,300)):n.text),!full&&n.text.length>320?h('button',{class:'sm',style:'align-self:flex-start',onclick:()=>{tab='note';sub.note='notice';render()}},'공지 전체 보기'):null,p?h('span',{class:'mute',style:'font-size:12px'},'— '+p.name):null)}
 function noticeEl(){const n=NOTICES[0];if(!n||G.opts.noticeSeen===n.id)return null;return noticeCard(n,false)}
 function noticeBody(){return NOTICES.length?NOTICES.map(n=>noticeCard(n,true)):[h('div',{class:'card empty'},'아직 공지가 없어요.')]}
 
@@ -2346,7 +2346,7 @@ function rlBarDraw(){const el=rlBarEl();el.replaceChildren(...RL_BAR.map((x,i)=>
   h('div',{class:'wrap',style:'gap:4px;flex-wrap:nowrap'},h('button',{class:'sm',onclick:()=>{RL_BAR.splice(i,1);rlBarDraw();openSheet(x.who)}},'보기'),h('button',{class:'sm ghost',onclick:()=>{RL_BAR.splice(i,1);rlBarDraw()}},'닫기')))))}
 function onRelLog(x){const m=G.me;if(!m||!x||x.author===m.id)return;if(x.a!==m.id&&x.b!==m.id)return;const who=x.a===m.id?x.b:x.a;const s=SAMPLES[who];
   const text=String(x.text||'').replace(/^\[직접 쓴 장면\]\s*/,'').slice(0,80);RL_BAR=[{who,name:s?s.name:'지인',text},...RL_BAR.filter(y=>y.who!==who)].slice(0,3);sfx('pager');rlBarDraw()}
-{const s0=subscribe;subscribe=function(){const r=s0.apply(this,arguments);try{sb.channel('baekgye-rl').on('postgres_changes',{event:'INSERT',schema:'public',table:'relation_logs'},pl=>onRelLog(pl.new)).on('postgres_changes',{event:'DELETE',schema:'public',table:'notices'},()=>{loadNotices().then(()=>{if(G.me)render()})}).subscribe()}catch(e){}return r}}
+{const s0=subscribe;subscribe=function(){const r=s0.apply(this,arguments);try{sb.channel('baekgye-rl').on('postgres_changes',{event:'INSERT',schema:'public',table:'relation_logs'},pl=>onRelLog(pl.new)).on('postgres_changes',{event:'DELETE',schema:'public',table:'notices'},()=>{loadNotices().then(()=>{if(G.me)render()})}).on('postgres_changes',{event:'UPDATE',schema:'public',table:'notices'},()=>{loadNotices().then(()=>{if(G.me)render()})}).subscribe()}catch(e){}return r}}
 /* 건의 우편함: 보낸 사람만 아는 번호표로 답장을 받는다. 운영자는 누가 보냈는지 모른다. */
 const SUGBOX_K='baekgye-sugbox',SUGREAD_K='baekgye-sugread';
 const lsGet=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||'null')||d}catch(e){return d}};
@@ -3079,6 +3079,28 @@ function fixFac(nf){const m=G.me;const old=m.fac;if(!nf||nf===old||!canFixFac(m)
     h('p',{class:'mute',style:'margin:0;font-size:12.5px'},`만든 지 3일이 안 된 캐릭터는 소속을 한 번 바꿀 수 있어요. ${left}시간 남았어요. 적등방에서 나가면 빚이 사라지고, 적등방으로 가면 빚 $1000이 생겨요. 주소와 생업도 새 소속에 맞게 바뀌어요.`));
   const anchor=job?job.closest('.field')||job:null;if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(box,anchor);else form.append(box);
   form.addEventListener('submit',()=>{setTimeout(()=>{if(!form.isConnected&&s.value!==G.me.fac)fixFac(s.value)},0)})}catch(e){}return r}}
+
+/* ---------- 고치기: 직접 쓴 관계 기록 · 방주 공지 ---------- */
+const FREE_TAG='[직접 쓴 장면] ';
+function rlogEditBtn(l,pid){if(!G.me||l.author!==G.me.id||!String(l.text).startsWith(FREE_TAG.trim()))return'';
+  return h('button',{type:'button',class:'ghost sm',style:'margin-left:6px;padding:0 6px;font-size:11.5px;min-height:0',title:'내가 쓴 장면 고치기',onclick:()=>rlogEdit(l,pid)},'고치기')}
+async function updWithEdited(table,id,patch){const at=new Date().toISOString();let r=await sb.from(table).update({...patch,edited_at:at}).eq('id',id).select();
+  if(r.error&&/edited_at/.test(String(r.error.message||'')))r=await sb.from(table).update(patch).eq('id',id).select();return r}
+function rlogEdit(l,pid){const body=String(l.text).replace(/^\[직접 쓴 장면\]\s*/,'');const ta=h('textarea',{maxlength:200,rows:4});ta.value=body;const err=h('p',{style:'margin:0;color:var(--bad);font-size:13px'});
+  openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'장면 고치기'),h('button',{class:'ghost',onclick:()=>openSheet(pid)},'닫기')),
+    h('p',{class:'dim',style:'margin:0;font-size:12.5px'},`${mdhm(Date.parse(l.created_at))}에 남긴 장면이에요. 고치면 「(수정됨)」 표시가 붙어요. 내가 직접 쓴 장면만 고칠 수 있어요.`),ta,err,
+    h('div',{class:'wrap'},h('button',{class:'sm pri',onclick:async e=>{const v=ta.value.trim();if(!v){err.textContent='내용을 적어 주세요.';return}e.currentTarget.disabled=true;
+        const{data,error}=await updWithEdited('relation_logs',l.id,{text:FREE_TAG+v});
+        if(error||!data||!data.length){err.textContent='고치지 못했어요. 운영자에게 11_edit.sql 실행을 부탁해 주세요.';e.currentTarget.disabled=false;return}
+        toast('장면을 고쳤어요.');openSheet(pid)}},'고친 대로 남기기'),
+      h('button',{class:'sm',style:'border-color:var(--bad);color:var(--bad)',onclick:async e=>{const bt=e.currentTarget;if(!bt.dataset.arm){bt.dataset.arm='1';bt.textContent='한 번 더 누르면 지워요';return}bt.disabled=true;
+        const{error}=await sb.from('relation_logs').delete().eq('id',l.id);if(error){toast('지우지 못했어요.');bt.disabled=false;return}toast('장면을 지웠어요.');openSheet(pid)}},'지우기'))))}
+function noticeEdit(n){const ta=h('textarea',{maxlength:4000,rows:10});ta.value=n.text||'';const cnt=h('span',{class:'dim num',style:'font-size:12px'});const upd=()=>cnt.textContent=`${ta.value.length} / 4000`;ta.addEventListener('input',upd);upd();
+  openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'공지 고치기'),h('button',{class:'ghost',onclick:closeModal},'닫기')),
+    h('p',{class:'dim',style:'margin:0;font-size:12.5px'},'고친 공지에는 날짜 옆에 「수정됨」이 붙어요. 올린 순서는 그대로예요.'),ta,cnt,
+    h('button',{class:'pri',onclick:async e=>{const v=ta.value.trim();if(!v)return toast('내용을 적어 주세요.');e.currentTarget.disabled=true;
+      const{data,error}=await updWithEdited('notices',n.id,{text:v});if(error||!data||!data.length){toast('고치지 못했어요.');e.currentTarget.disabled=false;return}
+      const i=NOTICES.findIndex(x=>x.id===n.id);if(i>=0)NOTICES[i]=data[0];closeModal();toast('공지를 고쳤어요.');render()}},'고친 공지 올리기')))}
 
 /* ---------- 시작 ---------- */
 async function boot(){
