@@ -232,6 +232,9 @@ body.build{background:#0E1110}
 }
 .facmark{display:inline-block;line-height:0;vertical-align:middle;flex:none}
 .facmark svg{display:block}
+.dlr{color:var(--bad)!important;text-shadow:1px 0 rgba(255,61,51,.55),-1px 0 rgba(120,220,200,.45);animation:dlrj .12s steps(2) infinite}
+@keyframes dlrj{0%{transform:translateX(0)}50%{transform:translateX(1px)}100%{transform:translateX(-1px)}}
+@media (prefers-reduced-motion:reduce){.dlr{animation:none}}
 </style>
 </head>
 <body>
@@ -1225,7 +1228,7 @@ function soundSettings(){const o=G.opts;const vol=h('input',{type:'range',min:'0
 {const f0=pagerRing;pagerRing=function(p){sfx('pager');return f0(p)}}
 /* 상태 효과 설명: 태그를 누르면 무슨 효과인지 보여 준다 */
 const FX_INFO={
- delirium:['채팅과 벽 낙서에서 다른 사람 이름이 엉뚱하게 보이고, 단면도의 층 이름이 한 칸씩 어긋나 보여요. 일지에 내가 하지 않은 행동이 섞이고, 칸에 없는 사람이 보이기도 해요.','삼경 의원에서 풀 수 있어요. 깊은 사이 지인과 「이름 세 번」 장면을 해도 풀려요.'],
+ delirium:['보고 있는 사이 화면 속 이름이 다른 이름으로 바뀌었다가 돌아와요. 채팅과 벽 낙서에서는 다른 사람 이름이 한동안 엉뚱하게 보이고, 단면도의 층 이름이 한 칸씩 어긋나 보여요. 일지에 내가 하지 않은 행동이 섞이고, 칸에 없는 사람이 보이기도 해요.','삼경 의원에서 풀 수 있어요. 깊은 사이 지인과 「이름 세 번」 장면을 해도 풀려요.'],
  followed:['칸을 옮길 때마다 뒤에서 발소리가 따라붙어요. 수치가 깎이지는 않아요.','의원에서는 풀리지 않아요. 시간이 지나야 사라져요.'],
  gum:['채팅, 벽 낙서, 1:1 대화에 쓰는 글자의 발음이 새요.','삼경 의원에서 풀 수 있어요.'],
  cozy:['정신이 깎일 때 절반만 깎여요.',''],
@@ -1608,7 +1611,7 @@ function openForm(edit){const c=edit?G.me:null;const st=c?{...c.stats}:{str:10,a
   const sw=h('div',{class:'swatches'});const drawSw=()=>{sw.replaceChildren(...COLORS.map(([col,n])=>h('button',{type:'button',title:n,'aria-label':'대표 색 '+n,'aria-pressed':String(col===color),style:`background:${col}`,onclick:()=>{color=col;if(!img)prev.style.background=col;drawSw()}})))};drawSw();
   const err=h('p',{style:'margin:0;color:var(--bad);font-size:13px'});
   const form=h('form',{class:'stack',onsubmit:e=>{e.preventDefault();const v=id=>{const el=document.getElementById(id);return el?el.value.trim():''};
-    const name=v('f-name');if(!name){err.textContent='이름을 적어 주세요.';return}if(!c&&pool>0){err.textContent=`능력치 포인트가 ${pool} 남았어요.`;return}if(!c&&v('f-fac')==='sam'&&typeof samClosed==='function'&&samClosed()){err.textContent='지금은 삼경이 새 대원을 받지 않아요. 다른 소속을 골라 주세요.';return}
+    const name=v('f-name');if(!name){err.textContent='이름을 적어 주세요.';return}if(!c&&pool>0){err.textContent=`능력치 포인트가 ${pool} 남았어요.`;return}if(!c&&typeof facShut==='function'&&facShut(v('f-fac'))){err.textContent=`지금은 ${FACS[v('f-fac')]}이 새 사람을 받지 않아요. 다른 소속을 골라 주세요.`;return}
     const prof={name,age:v('f-age'),gender:v('f-gender'),look:v('f-look'),pers:v('f-pers'),habit:v('f-habit'),likes:v('f-likes'),dislikes:v('f-dislikes'),fear:v('f-fear'),fearNote:v('f-fearnote'),keep:v('f-keep'),quote:v('f-quote'),memo:v('f-memo'),secret:v('f-secret'),color,img,portrait};
     if(c){Object.assign(G.me,prof);const nj=v('f-job');if(nj!==(G.me.job||'')){if(G.me.work)toast('일하는 중이라 생업은 퇴근한 뒤에 바꿀 수 있어요.');else{G.me.job=nj||null;log(nj?`생업을 바꿨다: ${nj}`:'생업을 그만뒀다.','work')}}log('프로필을 고쳤다.','life')}
     else{const reason=v('f-reason'),fac=v('f-fac'),job=v('f-job')||null;const debt0=fac==='red'?1000:0;
@@ -2946,16 +2949,16 @@ Object.assign(INBOX_C,{'대답할 것':'var(--lantern)','대답 옴':'var(--tube
 let FLAGS={},FLAGS_AT=0;
 async function loadFlags(){FLAGS_AT=Date.now();if(typeof sb==='undefined'||!sb)return;try{const{data,error}=await sb.from('castle_state').select('*');if(!error){FLAGS={};for(const r of data||[])FLAGS[r.key]=r.value}}catch(e){}}
 const samClosed=()=>{if(Date.now()-FLAGS_AT>300e3)loadFlags();return!!(FLAGS.sam_closed&&FLAGS.sam_closed.on)};
-function facOpen(list){const l=list.filter(f=>!(f==='sam'&&samClosed()));return l.length?l:['free']}
-function facNote(list){return list.includes('sam')&&samClosed()?h('p',{class:'mute',style:'margin:0;font-size:12.5px;color:var(--bad)'},'지금은 삼경이 새 대원을 받지 않아요. 세력 균형을 맞추는 중이에요.'):''}
+function facOpen(list){const l=list.filter(f=>!facShut(f));return l.length?l:['free']}
+function facNote(list){const shut=list.filter(f=>f!=='free'&&facShut(f));return shut.length?h('p',{class:'mute',style:'margin:0;font-size:12.5px;color:var(--bad)'},`지금은 ${shut.map(f=>FACS[f]).join('과 ')}이 새 사람을 받지 않아요. 세력 균형을 맞추는 중이에요.`):''}
 {const j0=joinSam;joinSam=function(){if(samClosed())return toast('삼경이 지금은 새 대원을 받지 않아요. 세력 균형을 맞추는 중이에요.');return j0.apply(this,arguments)}}
 {const d0=loadDMs;loadDMs=async function(){const r=await d0.apply(this,arguments);loadFlags();return r}}
 async function setFlag(key,value){const{error}=await sb.from('castle_state').upsert({key,value,updated_at:new Date().toISOString()},{onConflict:'key'});if(error){toast('바꾸지 못했어요. 10_castle.sql을 실행했는지 확인해 주세요.');return false}FLAGS[key]=value;return true}
 function facCounts(){const c={red:0,sam:0,free:0};const all=[...SAMPLE_IDS.map(k=>SAMPLES[k]),G.me].filter(Boolean);for(const p of all){if(p.isNpc)continue;const f=p.fugitive?'free':p.fac;if(c[f]!=null)c[f]++}return c}
-{const a0=adminTools;adminTools=function(){const el=a0.apply(this,arguments);try{const c=facCounts();const chk=h('input',{type:'checkbox',style:'width:auto',checked:samClosed()?true:null,onchange:async e=>{const on=e.target.checked;if(await setFlag('sam_closed',{on,at:new Date().toISOString()}))toast(on?'삼경 입단을 막았어요.':'삼경 입단을 다시 열었어요.');else e.target.checked=!on}});
+{const a0=adminTools;adminTools=function(){const el=a0.apply(this,arguments);try{const c=facCounts();const chkR=h('input',{type:'checkbox',style:'width:auto',checked:redClosed()?true:null,onchange:async e=>{const on=e.target.checked;if(await setFlag('red_closed',{on,at:new Date().toISOString()}))toast(on?'적등방 입단을 막았어요.':'적등방 입단을 다시 열었어요.');else e.target.checked=!on}});const chk=h('input',{type:'checkbox',style:'width:auto',checked:samClosed()?true:null,onchange:async e=>{const on=e.target.checked;if(await setFlag('sam_closed',{on,at:new Date().toISOString()}))toast(on?'삼경 입단을 막았어요.':'삼경 입단을 다시 열었어요.');else e.target.checked=!on}});
   el.prepend(h('div',{class:'stack',style:'gap:6px;border-bottom:1px solid var(--line);padding-bottom:10px'},h('span',{class:'lbl'},'세력 균형'),
     h('p',{class:'mute',style:'margin:0;font-size:13px'},`지금 명부: 적등방 ${c.red} · 삼경 ${c.sam} · 무소속 ${c.free} (도망자는 무소속으로 셈)`),
-    h('label',{class:'row'},h('span',null,'삼경 입단 막기',h('div',{class:'mute',style:'font-size:12px'},'새 캐릭터가 삼경을 고를 수 없고, 평판으로 입단하는 것도 막혀요. 이미 삼경인 캐릭터는 그대로예요.')),chk)))}catch(e){}return el}}
+    h('label',{class:'row'},h('span',null,'삼경 입단 막기',h('div',{class:'mute',style:'font-size:12px'},'새 캐릭터가 삼경을 고를 수 없고, 평판으로 입단하는 것도 막혀요. 이미 삼경인 캐릭터는 그대로예요.')),chk),h('label',{class:'row'},h('span',null,'적등방 입단 막기',h('div',{class:'mute',style:'font-size:12px'},'새 캐릭터가 적등방을 고를 수 없고, 홍등루에서 빚을 지거나 숙소층 장부에 서명해 객이 되는 것도 막혀요. 이미 적등방인 캐릭터와 붙잡혀 온 도망자는 그대로예요.')),chkR)))}catch(e){}return el}}
 
 /* ---------- 입주 신고: 고른 진영이 어떤 곳인지 보여 준다 ---------- */
 const FAC_DESC={
@@ -3062,7 +3065,7 @@ setInterval(()=>{const m=G.me;if(!m||!m.samLeft||m.samLeft.knocked||document.hid
 /* 소속 정정: 만든 지 3일 안, 한 번만 */
 function canFixFac(m){return m&&!m.facFix&&!m.fugitive&&m.rank!=='boss'&&!m.isNpc&&T()-(m.created||0)<FIX_WINDOW}
 function fixFac(nf){const m=G.me;const old=m.fac;if(!nf||nf===old||!canFixFac(m))return;
-  if(nf==='sam'&&typeof samClosed==='function'&&samClosed())return toast('지금은 삼경이 새 대원을 받지 않아 삼경으로는 바꿀 수 없어요.');
+  if(typeof facShut==='function'&&facShut(nf))return toast(`지금은 ${FACS[nf]}이 새 사람을 받지 않아 ${FACS[nf]}(으)로는 바꿀 수 없어요.`);
   if(nf==='sam'&&m.samLeft&&T()-m.samLeft.at<SAM_REJOIN)return toast('완장을 반납한 지 7일이 안 돼 삼경으로는 바꿀 수 없어요.');if(m.work)return toast('일하는 중에는 소속을 바꿀 수 없어요. 퇴근한 뒤에 해 주세요.');
   if(old==='red'){m.debt=0;m.debt0=0;m.merit=0;m.credit=0}
   if(nf==='red'){m.debt=1000;m.debt0=1000}
@@ -3072,7 +3075,7 @@ function fixFac(nf){const m=G.me;const old=m.fac;if(!nf||nf===old||!canFixFac(m)
   toast(`소속을 ${FACS[nf]}(으)로 바꿨어요.${nf==='red'?' 빚 $1000이 생겼어요.':old==='red'?' 적등방 빚은 사라졌어요.':''}`);save();render()}
 {const o0=openForm;openForm=function(edit){const r=o0.apply(this,arguments);if(!edit||!canFixFac(G.me))return r;try{
   const m=G.me;const form=document.querySelector('#modalRoot form');const job=document.getElementById('f-job');if(!form)return r;
-  const opts=['red','sam','free'].filter(f=>f===m.fac||!(f==='sam'&&((typeof samClosed==='function'&&samClosed())||(m.samLeft&&T()-m.samLeft.at<SAM_REJOIN))));
+  const opts=['red','sam','free'].filter(f=>f===m.fac||!((typeof facShut==='function'&&facShut(f))||(f==='sam'&&m.samLeft&&T()-m.samLeft.at<SAM_REJOIN)));
   const s=h('select',{id:'f-fixfac'},opts.map(f=>h('option',{value:f},FACS[f]+(f===m.fac?' (지금)':''))));s.value=m.fac;
   const left=Math.max(1,Math.ceil((FIX_WINDOW-(T()-(m.created||0)))/36e5));
   const box=h('div',{class:'stack',style:'gap:6px;grid-column:1/-1'},h('label',{class:'field full'},h('span',null,'소속 정정'),s),
@@ -3116,6 +3119,33 @@ function earlyLeave(e){const m=G.me,w=m&&m.work;if(!w)return;if(scene)return toa
   m.money+=pay;lines.unshift(`$+${pay} (일당 $${full} 중 ${Math.round(ratio*100)}%)`);if(sg)lines.push(sg);
   if(pay<full&&(f==='red'||(f==='sam'&&w.job==='야간 순찰')))lines.push(f==='red'?'공적 없음':'순찰 횟수 없음');
   done('조기 퇴근',text,lines)}
+
+/* ---------- 섬망: 보고 있는 사이 이름이 바뀌었다가 돌아온다 (화면에서만, 잠깐) ---------- */
+const DLR_ODD=['나','너','그 사람','□□□','이름 없음','누구였지','13층'];
+function dlrNames(){return [...new Set(SAMPLE_IDS.map(k=>SAMPLES[k]&&SAMPLES[k].name).concat([G.me&&G.me.name]).filter(n=>n&&n.length>=1&&n.length<=20))]}
+function dlrWrong(name,names){const soft=!!G.opts.soft;const others=names.filter(n=>n!==name);const r=Math.random();
+  if(!soft&&r<.18)return pick(DLR_ODD);
+  if(!soft&&r<.3&&name.length>1){const a=[...name];a[ri(0,a.length-1)]='□';return a.join('')}
+  if(r<.45&&G.me&&G.me.name&&name!==G.me.name)return G.me.name;
+  return others.length?pick(others):[...name].reverse().join('')}
+function dlrNodes(names){const set=new Set(names),out=[];const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:n=>{const p=n.parentElement;if(!p||p.closest('input,textarea,select,option,script,style,.toast,[data-dlr]'))return NodeFilter.FILTER_REJECT;return set.has(n.nodeValue.trim())?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_SKIP}});
+  let n;const all=[];while((n=w.nextNode())&&all.length<300){all.push(n);const r=n.parentElement.getBoundingClientRect();if(r.bottom>0&&r.top<innerHeight&&r.width>0)out.push(n)}return out.length?out:all}
+function dlrFlick(node,names){const orig=node.nodeValue,name=orig.trim(),p=node.parentElement;if(!p)return;p.setAttribute('data-dlr','1');p.classList.add('dlr');
+  const steps=G.opts.soft?1:ri(2,6);let i=0,cur=orig;
+  const step=()=>{if(!node.isConnected||node.nodeValue!==cur)return end();
+    if(i<steps){cur=orig.replace(name,dlrWrong(name,names));node.nodeValue=cur;i++;setTimeout(step,i<steps?ri(70,130):ri(600,1400));return}
+    end()};
+  const end=()=>{if(node.isConnected&&node.nodeValue===cur)node.nodeValue=orig;p.classList.remove('dlr');p.removeAttribute('data-dlr')};
+  step()}
+setInterval(()=>{try{if(!G.me||document.hidden||!hasFx('delirium'))return;if(!chance(G.opts.soft?.25:.6))return;
+  const names=dlrNames();if(names.length<1)return;const nodes=dlrNodes(names);if(!nodes.length)return;
+  const k=G.opts.soft?1:(chance(.25)?Math.min(nodes.length,ri(2,4)):1);for(let j=0;j<k;j++)dlrFlick(pick(nodes),names)}catch(e){}},G.opts&&G.opts.soft?6000:2600);
+
+/* 적등방 입단 막기: 삼경과 같은 방식 */
+const redClosed=()=>{samClosed();return!!(FLAGS.red_closed&&FLAGS.red_closed.on)};
+const facShut=f=>f==='sam'?samClosed():f==='red'?redClosed():false;
+{const os0=openScene;openScene=function(sc,keep){try{const m=G.me;if(sc&&(sc.id==='redfree'||sc.id==='borrow')&&m&&m.fac!=='red'&&redClosed()){scene=null;
+  return done(sc.title||'적등방','사내가 펼치려던 장부를 도로 덮는다.\n「요즘은 객을 안 받아. 위에서 그러래.」\n탁자 위 붉은 등 하나가 꺼져 있다.',['지금은 적등방이 새 객을 받지 않아요'])}}catch(e){}return os0.apply(this,arguments)}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
