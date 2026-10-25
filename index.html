@@ -1658,9 +1658,9 @@ function openForm(edit){const c=edit?G.me:null;const st=c?{...c.stats}:{str:10,a
     const name=v('f-name');if(!name){err.textContent='이름을 적어 주세요.';return}if(!c&&pool>0){err.textContent=`능력치 포인트가 ${pool} 남았어요.`;return}if(!c&&typeof facShut==='function'&&facShut(v('f-fac'))){err.textContent=`지금은 ${FACS[v('f-fac')]}이 새 사람을 받지 않아요. 다른 소속을 골라 주세요.`;return}
     const prof={name,age:v('f-age'),gender:v('f-gender'),look:v('f-look'),pers:v('f-pers'),habit:v('f-habit'),likes:v('f-likes'),dislikes:v('f-dislikes'),fear:v('f-fear'),fearNote:v('f-fearnote'),keep:v('f-keep'),quote:v('f-quote'),memo:v('f-memo'),secret:v('f-secret'),color,img,portrait};
     if(c){Object.assign(G.me,prof);const nj=v('f-job');if(nj!==(G.me.job||'')){if(G.me.work)toast('일하는 중이라 생업은 퇴근한 뒤에 바꿀 수 있어요.');else{G.me.job=nj||null;log(nj?`생업을 바꿨다: ${nj}`:'생업을 그만뒀다.','work')}}log('프로필을 고쳤다.','life')}
-    else{const reason=v('f-reason'),fac=v('f-fac'),job=v('f-job')||null;const debt0=fac==='red'||reason==='debt'?1000:0;
+    else{const reason=v('f-reason'),fac=v('f-fac'),job=v('f-job')||null;const debt0=fac==='red'||reason==='debt'?1500:0;
       G.me={...prof,statV2:true,statV3:true,sxp:{},reason,fac,job,rank:fac==='red'?'guest':fac==='sam'?'rookie':'',addr:assignAddr(fac),code:'#'+Math.random().toString(36).slice(2,6).toUpperCase(),stats:{...st},
-        hp:100,mind:80,en:EN_MAX,enAt:T(),ts:T(),money:fac==='red'?60:120,debt:debt0,debt0,merit:0,credit:0,rep:0,sam:{patrol:0,cleanup:0,seal:0},items:{},clues:0,hidden:[],hints:[],wrongRule:false,marks:[],fx:[],traces:{},qdone:{},work:null,nz:null,fugitive:null,cell:null,created:T()};
+        hp:100,mind:80,en:EN_MAX,enAt:T(),ts:T(),money:fac==='red'?60:120,debt:debt0,debt0,intr:debt0>0?1:0,merit:0,credit:0,rep:0,sam:{patrol:0,cleanup:0,seal:0},items:{},clues:0,hidden:[],hints:[],wrongRule:false,marks:[],fx:[],traces:{},qdone:{},work:null,nz:null,fugitive:null,cell:null,created:T()};
       G.me.cell=homeCell(G.me);if(reason==='lost'){G.me.cell='3-2';G.me.items.plate=0}
       log(reason==='lost'?'눈을 떴을 때 처음 보는 방이었다. 4동 중층, 천이 덮인 기계들 사이. 어떻게 왔는지 기억나지 않는다.':`백계성에 짐을 풀었다. ${G.me.addr}.`,'life');
       post('all','sys',`${name}이(가) 성채에 들어왔다.`)}
@@ -3034,7 +3034,7 @@ function facCounts(){const c={red:0,sam:0,free:0};const all=[...SAMPLE_IDS.map(k
 
 /* ---------- 입주 신고: 고른 진영이 어떤 곳인지 보여 준다 ---------- */
 const FAC_DESC={
- red:{t:'적등방 · 붉은 등 아래의 조직',l:['돈을 빌려주고 장부로 사람을 묶는다. 장부에 서명하면 「객」이 되고, 빚을 갚으며 등잡이 → 홍봉·백선 → 향주로 올라간다.','공적과 신용을 쌓는다. 홍등동이 집이고, 국숫집이 반값이다. 마작은 빚으로도 걸 수 있다.','들어오기는 쉽지만 나가기는 거의 불가능하다. 몰래 달아나면 도망자가 된다.']},
+ red:{t:'적등방 · 붉은 등 아래의 조직',l:['돈을 빌려주고 장부로 사람을 묶는다. 장부에 서명하면 「객」이 되고, 빚을 갚으며 등잡이 → 홍봉·백선 → 향주로 올라간다.','빚 $1500을 안고 시작하고, 남은 빚에는 매주 10%씩 이자가 붙는다. 공적과 신용을 쌓는다. 홍등동이 집이고, 국숫집이 반값이다. 마작은 빚으로도 걸 수 있다.','들어오기는 쉽지만 나가기는 거의 불가능하다. 몰래 달아나면 도망자가 된다.']},
  sam:{t:'삼경 · 밤에 깨어 있는 자경단',l:['증축 시간에도 밖을 도는 사람들. 순찰을 돌고, 수칙을 붙이고, 사라진 사람을 찾는다. 신참 → 조장 → 대장으로 올라간다.','순찰과 현장 수습 횟수를 쌓는다. 종루동이 집이고, 삼경 의원이 반값이다.','돈은 적게 번다. 홍등루에서는 판돈을 두 배로 부르고, 적등방과 사이가 나쁘다.']},
  free:{t:'무소속 · 어디에도 묶이지 않은 사람',l:['철창 하숙에서 시작한다. 정해진 생업 없이 떠돌이 일로 버틴다.','평판을 쌓는다. 나중에 삼경에 들어가거나, 홍등루에서 빚을 지고 적등방에 들거나, 문패를 구해 주소를 얻을 수 있다.','누구에게도 빚지지 않았지만, 아무도 지켜 주지 않는다.']}};
 function facDescDraw(){const box=document.getElementById('facDesc');const sel=document.getElementById('f-fac');if(!box||!sel)return;const d=FAC_DESC[sel.value];if(!d){box.replaceChildren();return}
@@ -3140,18 +3140,18 @@ function fixFac(nf){const m=G.me;const old=m.fac;if(!nf||nf===old||!canFixFac(m)
   if(typeof facShut==='function'&&facShut(nf))return toast(`지금은 ${FACS[nf]}이 새 사람을 받지 않아 ${FACS[nf]}(으)로는 바꿀 수 없어요.`);
   if(nf==='sam'&&m.samLeft&&T()-m.samLeft.at<SAM_REJOIN)return toast('완장을 반납한 지 7일이 안 돼 삼경으로는 바꿀 수 없어요.');if(m.work)return toast('일하는 중에는 소속을 바꿀 수 없어요. 퇴근한 뒤에 해 주세요.');
   if(old==='red'){m.debt=0;m.debt0=0;m.merit=0;m.credit=0}
-  if(nf==='red'){m.debt=1000;m.debt0=1000}
+  if(nf==='red'){m.debt=1500;m.debt0=1500;m.intr=1}
   m.fac=nf;m.rank=nf==='red'?'guest':nf==='sam'?'rookie':'';if(!m.hasAddr)m.addr=assignAddr(nf);
   const jobs=jobsFor(m);if(!jobs.includes(m.job))m.job=jobs[0]||null;m.cell=homeCell(m);
   m.facFix={from:old,to:nf,at:T()};log(`소속을 정정했다: ${FACS[old]} → ${FACS[nf]}. 새 주소는 ${m.addr}.`,'fac');
-  toast(`소속을 ${FACS[nf]}(으)로 바꿨어요.${nf==='red'?' 빚 $1000이 생겼어요.':old==='red'?' 적등방 빚은 사라졌어요.':''}`);save();render()}
+  toast(`소속을 ${FACS[nf]}(으)로 바꿨어요.${nf==='red'?' 빚 $1500이 생겼어요. 남은 빚에는 매주 10% 이자가 붙어요.':old==='red'?' 적등방 빚은 사라졌어요.':''}`);save();render()}
 {const o0=openForm;openForm=function(edit){const r=o0.apply(this,arguments);if(!edit||!canFixFac(G.me))return r;try{
   const m=G.me;const form=document.querySelector('#modalRoot form');const job=document.getElementById('f-job');if(!form)return r;
   const opts=['red','sam','free'].filter(f=>f===m.fac||!((typeof facShut==='function'&&facShut(f))||(f==='sam'&&m.samLeft&&T()-m.samLeft.at<SAM_REJOIN)));
   const s=h('select',{id:'f-fixfac'},opts.map(f=>h('option',{value:f},FACS[f]+(f===m.fac?' (지금)':''))));s.value=m.fac;
   const left=Math.max(1,Math.ceil((FIX_WINDOW-(T()-(m.created||0)))/36e5));
   const box=h('div',{class:'stack',style:'gap:6px;grid-column:1/-1'},h('label',{class:'field full'},h('span',null,'소속 정정'),s),
-    h('p',{class:'mute',style:'margin:0;font-size:12.5px'},`만든 지 3일이 안 된 캐릭터는 소속을 한 번 바꿀 수 있어요. ${left}시간 남았어요. 적등방에서 나가면 빚이 사라지고, 적등방으로 가면 빚 $1000이 생겨요. 주소와 생업도 새 소속에 맞게 바뀌어요.`));
+    h('p',{class:'mute',style:'margin:0;font-size:12.5px'},`만든 지 3일이 안 된 캐릭터는 소속을 한 번 바꿀 수 있어요. ${left}시간 남았어요. 적등방에서 나가면 빚이 사라지고, 적등방으로 가면 빚 $1500이 생기고 매주 이자가 붙어요. 주소와 생업도 새 소속에 맞게 바뀌어요.`));
   const anchor=job?job.closest('.field')||job:null;if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(box,anchor);else form.append(box);
   form.addEventListener('submit',()=>{setTimeout(()=>{if(!form.isConnected&&s.value!==G.me.fac)fixFac(s.value)},0)})}catch(e){}return r}}
 
@@ -4130,6 +4130,15 @@ if(typeof loadInboxExtra==='function'&&typeof inboxItems==='function'){
   return out.sort((a,b)=>b.t-a.t).slice(0,60)}}
 INBOX_C['댓글']='var(--tube)';
 }
+
+/* ---------- 적등방 빚 이자: 새로 들어온 캐릭터부터 남은 빚에 주 10% (원금의 두 배까지만) ---------- */
+const INTR_RATE=.1,DEBT_START=1500;
+const intrCap=m=>Math.max(DEBT_START*2,(+m.debt0||0)*2);
+const intrNext=m=>m&&m.intr&&m.debt>0?Math.max(0,Math.min(Math.ceil(m.debt*INTR_RATE),intrCap(m)-m.debt)):0;
+{const rc0=rentCheck;rentCheck=function(){const m=G.me;const prev=m?m.rentWeek:null;const w=weekIdx(T());const r=rc0.apply(this,arguments);
+  try{if(m&&m.intr&&prev!=null&&w>prev){for(let i=0;i<w-prev;i++){const x=intrNext(m);if(x>0){m.debt+=x;m.intrTot=(m.intrTot||0)+x;log(`적등방 장부에 이번 주 이자 $${x}가 붙었다. 남은 빚 $${m.debt}.`,'fac')}else if(m.debt>0&&m.debt>=intrCap(m)){log(`장부의 이자 칸이 꽉 찼다. 더는 붙지 않는다. 남은 빚 $${m.debt}.`,'fac');break}}}}catch(e){}return r}}
+{const fc2=factionCard;factionCard=function(){const el=fc2.apply(this,arguments);try{const m=G.me;if(el&&m&&m.intr&&m.debt>0){const x=intrNext(m);
+  el.append(h('p',{class:'mute',style:'margin:0;font-size:12px'},x>0?`남은 빚에 매주 10% 이자가 붙어요. 다음 주 이자 $${x}. 이자로는 빚이 $${intrCap(m)}까지만 불어나요.`:`이자 칸이 꽉 찼어요. 빚이 $${intrCap(m)}을 넘게 불어나지는 않아요.`))}}catch(e){}return el}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
