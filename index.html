@@ -143,7 +143,7 @@ textarea{resize:vertical;min-height:62px}
 .msg.ooc .who{color:var(--ink);font-weight:600}
 .msg.hammer{color:var(--tube);letter-spacing:.2em}
 .msg.radio{background:var(--sunk);border:1px solid rgba(125,242,207,.35);border-radius:3px;padding:8px 10px;color:var(--tube);text-shadow:0 0 6px rgba(125,242,207,.4)}
-.composer{display:flex;gap:6px} .msg em.act{font-style:italic;opacity:.72}
+.composer{display:flex;gap:6px}.composer>input,.composer>textarea{flex:1 1 auto;min-width:0}.composer>button{flex:none;white-space:nowrap;font-size:14px;padding-left:12px;padding-right:12px}@media(max-width:420px){.composer>button{font-size:13px;padding-left:10px;padding-right:10px}} .msg em.act{font-style:italic;opacity:.72}
 .person{display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:center;padding:5px 4px;border-radius:4px;cursor:pointer;border:0;background:transparent;text-align:left;font-weight:400;width:100%}
 .person:hover{background:var(--wall)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--dim)} .dot.on{background:var(--good)}
@@ -256,6 +256,7 @@ body.build{background:#0E1110}
 .section-map.foggy .cell.fog3 b{filter:blur(.6px)}
 #rainfx{position:fixed;inset:0;pointer-events:none;z-index:4;background-image:repeating-linear-gradient(100deg,transparent 0 18px,rgba(170,210,225,.16) 18px 19px,transparent 19px 41px);background-size:240px 240px;animation:rainfall .55s linear infinite;-webkit-mask-image:linear-gradient(90deg,#000 0,transparent 9%,transparent 91%,#000 100%);mask-image:linear-gradient(90deg,#000 0,transparent 9%,transparent 91%,#000 100%)}
 .toymachine,.toycap{display:inline-block;line-height:0;image-rendering:pixelated}.toycap.shake{animation:toyshake .16s linear 4}@keyframes toyshake{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
+.sheet dd{white-space:pre-wrap;overflow-wrap:anywhere}
 @keyframes rainfall{from{background-position:0 0}to{background-position:-40px 240px}}
 @keyframes quake{0%,6%,33%,39%,66%,72%,100%{transform:translate(0,0)}2%{transform:translate(1px,1px)}35%{transform:translate(-1px,1px)}68%{transform:translate(1px,-1px)}}
 body.build #view{animation:quake 2.7s infinite}
@@ -1679,7 +1680,7 @@ function openForm(edit){const c=edit?G.me:null;const st=c?{...c.stats}:{str:10,a
       fld('무서워하는 것',sel('f-fear',[['','고르지 않음'],...FEARS.map(f=>[f,f])],c?c.fear:'')),fld('무서워하는 것 (자유)',inp('f-fearnote',c&&c.fearNote,'설정용',80)),
       fld('늘 지니고 다니는 물건',inp('f-keep',c&&c.keep,'예: 멈춘 손목시계, 카세트',60),true),
       fld('대표 대사',inp('f-quote',c&&c.quote,'',80),true),
-      fld('자유 메모',ta('f-memo',c&&c.memo,'관계, TMI…',600),true),
+      fld('자유 메모',ta('f-memo',c&&c.memo,'관계, TMI…',2000),true),
       fld('비밀 (본인과 운영자만)',ta('f-secret',c&&c.secret,'',400),true)),
     h('div',{class:'stack',style:'gap:6px'},h('div',{class:'row'},h('span',{class:'lbl'},'능력치'),poolTxt),statBox),
     h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},'대표 색'),sw),err,
@@ -1712,7 +1713,7 @@ function addByCode(raw){if(!G.me)return toast('먼저 입주 신고를 해 주�
   const r=relOf(id);if(r.friend)return toast(`${SAMPLES[id].name}과(와)는 이미 지인이에요.`);befriend(id)}
 function openSheet(id){const isMe=id==='me';const p=isMe?G.me:SAMPLES[id];const r=isMe?null:relOf(id);
   const rows=isMe?[['나이',p.age],['성별',p.gender],['주소',p.addr],['생업',p.job||'없음'],['외형',p.look],['성격',p.pers],['버릇',p.habit],['좋아하는 것',p.likes],['싫어하는 것',p.dislikes],['무서워하는 것',[p.fear,p.fearNote].filter(Boolean).join(' · ')],['지니는 물건',p.keep],['메모',p.memo],['비밀',p.secret],['흔적',(p.marks||[]).join(', ')]]:
-    [['나이',p.age],['성별',p.gender],['생업',p.job||'없음'],['외형',p.look],['성격',p.pers]];
+    [['나이',p.age],['성별',p.gender],['생업',p.job||'없음'],['외형',p.look],['성격',p.pers],['버릇',p.habit],['좋아하는 것',p.likes],['싫어하는 것',p.dislikes],['무서워하는 것',[p.fear,p.fearNote].filter(Boolean).join(' · ')],['지니는 물건',p.keep],['메모',p.memo]];
   const body=h('div',{class:'stack sheet'},
     h('div',{class:'row'},h('div',{class:'wrap',style:'gap:12px;flex-wrap:nowrap'},avEl(p,'big'),h('div',null,h('div',{class:'mute',style:'font-size:12px'},facMark(isMe&&p.fugitive?'free':p.fac,13,'margin-right:5px;vertical-align:-2px'),isMe?rankLabel(p):`${FACS[p.fac]}${p.rank?' · '+p.rank:''}`,' ',h('span',{class:'num dim'},p.code)),h('h2',{class:'disp',style:'font-size:26px'},isMe?p.name:(p.name)),!isMe&&typeof sb==='undefined'?h('span',{class:'tag amb'},'예시 주민'):null)),h('button',{class:'ghost',onclick:closeModal},'닫기')),
     p.portrait?h('img',{class:'portrait',src:p.portrait,alt:p.name+' 전신 이미지'}):null,
@@ -1935,7 +1936,7 @@ function meFromRow(r){const m=Object.assign({},r.state||{},r.sheet||{});m.id=r.i
   m.items=m.items||{};m.hidden=m.hidden||[];m.hints=m.hints||[];m.marks=m.marks||[];m.fx=m.fx||[];m.traces=m.traces||{};m.qdone=m.qdone||{};m.sam=m.sam||{patrol:0,cleanup:0,seal:0};m.sxp=m.sxp||{};m.statV2=m.statV3=true;
   if(m.en==null){m.en=EN_MAX;m.enAt=T()}if(m.ts==null)m.ts=T();if(m.hp==null)m.hp=100;if(m.mind==null)m.mind=80;if(m.money==null)m.money=100;if(m.debt==null)m.debt=0;
   G.log=Array.isArray(m.log)?m.log:[];delete m.log;return m}
-function personFromRow(r){const s=r.sheet||{};return{id:r.id,owner:r.owner,name:r.name,code:r.code,color:s.color||'#5E6A71',img:r.icon_url,portrait:r.portrait_url,fac:r.faction,rank:RANKN[r.rank]||'',cell:r.cell,age:s.age,gender:s.gender,look:s.look,pers:s.pers,quote:s.quote,job:s.job,addr:s.addr,room:s.room||[],roomNote:s.roomNote||'',clues:+s.clues||0,dexN:s.dexN||0,dexT:s.dexT||0,stats:r.stats||{},created:Date.parse(r.created_at),active:Date.parse(r.active_at),isNpc:r.is_npc}}
+function personFromRow(r){const s=r.sheet||{};return{id:r.id,owner:r.owner,name:r.name,code:r.code,color:s.color||'#5E6A71',img:r.icon_url,portrait:r.portrait_url,fac:r.faction,rank:RANKN[r.rank]||'',cell:r.cell,age:s.age,gender:s.gender,look:s.look,pers:s.pers,habit:s.habit,likes:s.likes,dislikes:s.dislikes,fear:s.fear,fearNote:s.fearNote,keep:s.keep,memo:s.memo,quote:s.quote,job:s.job,addr:s.addr,room:s.room||[],roomNote:s.roomNote||'',clues:+s.clues||0,dexN:s.dexN||0,dexT:s.dexT||0,stats:r.stats||{},created:Date.parse(r.created_at),active:Date.parse(r.active_at),isNpc:r.is_npc}}
 
 /* ---------- 이미지 ---------- */
 async function uploadImage(dataUrl,kind){const blob=await (await fetch(dataUrl)).blob();const path=`${AUTH.id}/${G.me.id}-${kind}.jpg`;
@@ -4018,6 +4019,8 @@ async function syncCheck(){if(!G.me||!G.me.id||!sb||saving||SYNC_BUSY)return;SYN
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCheck()});
 window.addEventListener('focus',()=>syncCheck());window.addEventListener('pageshow',()=>syncCheck());
 setInterval(()=>{if(!document.hidden)syncCheck()},40000);
+
+{const de0=deepEnd;deepEnd=function(){const r=de0.apply(this,arguments);try{clearTimeout(SYNC_T);SYNC_T=null;dirty=true;flush()}catch(e){}return r}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
