@@ -1969,7 +1969,7 @@ function renderChat(){const C=$('chatCard'),m=G.me;const ch=sub.chat;const list=
     items.forEach(x=>{const mine=m&&x.character_id===m.id;const p=mine?m:SAMPLES[x.character_id];const name=p?p.name:'누군가';const t=Date.parse(x.created_at);
       if(ch==='ooc'){list.append(h('div',{class:'msg ooc'},h('time',null,hm(t)),h('span',{class:'who'},mine?'나':`${name} 오너`),x.text));return}
       list.append(h('div',{class:'msg'},h('time',null,hm(t)),h('span',{class:'who',style:`color:${p&&p.color!=='#0B0B0B'?p.color:'#9E9184'}`},mine?name:scramble(name)),x.text,mine||isAdminUser()?h('button',{class:'ghost del sm',style:'font-size:11px;padding:0 4px',onclick:async()=>{await sb.from('messages').delete().eq('id',x.id);CHAT[key]=CHAT[key].filter(y=>y.id!==x.id);renderChat()}},'지우기'):null))})}
-  C.replaceChildren(...[h('div',{class:'row'},h('span',{class:'lbl'},'무전'),h('div',{class:'wrap'},[['cell','현장'],['all','전체'],['ooc','오너'],['dm','1:1'+(dmUnread()?' '+dmUnread():'')],['radio','자정 라디오']].map(([k,n])=>h('button',{class:'sm'+(ch===k?' pri':''),style:k==='dm'&&dmUnread()&&ch!==k?'color:var(--bad);border-color:var(--bad)':'',onclick:()=>{sub.chat=k;if(k==='radio')sfx('static');renderChat()}},n)))),
+  chatPut(C,[h('div',{class:'row'},h('span',{class:'lbl'},'무전'),h('div',{class:'wrap'},[['cell','현장'],['all','전체'],['ooc','오너'],['dm','1:1'+(dmUnread()?' '+dmUnread():'')],['radio','자정 라디오']].map(([k,n])=>h('button',{class:'sm'+(ch===k?' pri':''),style:k==='dm'&&dmUnread()&&ch!==k?'color:var(--bad);border-color:var(--bad)':'',onclick:()=>{sub.chat=k;if(k==='radio')sfx('static');renderChat()}},n)))),
     h('p',{class:'dim',style:'margin:0;font-size:12px'},ch==='cell'?(m?`${CELLS[m.cell].n}에 있는 사람에게만 보여요.`:''):ch==='all'?'성채 전체에 들려요. 캐릭터로 말하는 곳이에요.':ch==='ooc'?'오너끼리 이야기하는 곳이에요 (OOC).':ch==='dm'?'나와 나눈 1:1 대화 목록이에요.':'매일 자정, 누가 송출하는지 모르는 방송.'),
     list,m&&ch!=='radio'&&ch!=='dm'?chatForm:null,hasFx('gum')&&ch!=='radio'&&ch!=='ooc'?h('p',{class:'dim',style:'margin:0;font-size:12px'},'빈 잇몸 때문에 발음이 새요.'):null].filter(Boolean));
   requestAnimationFrame(()=>{list.scrollTop=list.scrollHeight})}
@@ -2435,6 +2435,136 @@ function openInbox(){const m=G.me;if(!m)return;const list=h('div',{class:'stack'
     filt,list));
   m.inboxSeen=T();(m.ghostp||[]).forEach(g=>g.read=true);save();pagerLabel()}
 $('btnPager')&&($('btnPager').onclick=openInbox);
+
+/* ---------- 배경음악: 칸과 시간에 따라 바뀌는 백계성 라디오 ---------- */
+(()=>{
+let NOISE=null,OUTB=null,BUS=null,REV=null,RADIO_IN=null,DRY_IN=null,crackG=null,current=null,timer=null,step=0,nextT=0,drones=[],built=false,hiddenAt=0;
+const mtof=m=>440*Math.pow(2,(m-69)/12);
+const bgmOn=()=>sndOn()&&G.opts.bgm!==false;
+const bgmVol=()=>G.opts.bgmVol==null?0.55:G.opts.bgmVol;
+const radioOn=()=>G.opts.bgmRadio!==false;
+function build(){if(built||!AC||!MASTER)return built;built=true;
+  OUTB=AC.createGain();OUTB.gain.value=bgmVol();const comp=AC.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=3;OUTB.connect(comp);comp.connect(MASTER);
+  REV=AC.createConvolver();const len=AC.sampleRate*2.8,ir=AC.createBuffer(2,len,AC.sampleRate);
+  for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6)}REV.buffer=ir;
+  const nl=AC.sampleRate*2;NOISE=AC.createBuffer(1,nl,AC.sampleRate);const nd=NOISE.getChannelData(0);for(let i=0;i<nl;i++)nd[i]=Math.random()*2-1;
+  RADIO_IN=AC.createGain();const hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=380;const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=3000;
+  const pk=AC.createBiquadFilter();pk.type='peaking';pk.frequency.value=1500;pk.gain.value=4;pk.Q.value=.8;
+  const ws=AC.createWaveShaper();const curve=new Float32Array(1024);for(let i=0;i<1024;i++){const x=i/511.5-1;curve[i]=Math.tanh(x*1.8)}ws.curve=curve;
+  const flutter=AC.createGain();const fl=AC.createOscillator(),flg=AC.createGain();fl.frequency.value=.7;flg.gain.value=.06;fl.connect(flg);flg.connect(flutter.gain);fl.start();
+  RADIO_IN.connect(hp);hp.connect(pk);pk.connect(lp);lp.connect(ws);ws.connect(flutter);flutter.connect(OUTB);
+  DRY_IN=AC.createGain();DRY_IN.connect(OUTB);
+  const revOut=AC.createGain();revOut.gain.value=.9;REV.connect(revOut);revOut.connect(routeIn());REV._out=revOut;
+  const cl=AC.sampleRate*3,cb=AC.createBuffer(1,cl,AC.sampleRate),cd=cb.getChannelData(0);for(let i=0;i<cl;i++){cd[i]=Math.random()<.0009?(Math.random()*2-1)*.9:(Math.random()*2-1)*.012}
+  const cr=AC.createBufferSource();cr.buffer=cb;cr.loop=true;crackG=AC.createGain();crackG.gain.value=0;cr.connect(crackG);crackG.connect(OUTB);cr.start();
+  return true}
+function routeIn(){return radioOn()?RADIO_IN:DRY_IN}
+function rewire(){if(!built)return;if(BUS){BUS.disconnect();BUS.connect(routeIn())}if(REV&&REV._out){REV._out.disconnect();REV._out.connect(routeIn())}crackG.gain.setTargetAtTime(current&&radioOn()?.5:0,AC.currentTime,.2)}
+const out=()=>BUS;
+function voice(g,rev){if(!BUS)return;g.connect(out());if(rev){const s=AC.createGain();s.gain.value=rev;g.connect(s);s.connect(REV)}}
+function envG(t,a,peak,hold,rel){const g=AC.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+a);g.gain.setValueAtTime(peak,t+a+hold);g.gain.exponentialRampToValueAtTime(.0001,t+a+hold+rel);return g}
+function noiseHit(t,dur,peak,type,f,q,rev){const s=AC.createBufferSource(),fl=AC.createBiquadFilter(),g=AC.createGain();s.buffer=NOISE;fl.type=type;fl.frequency.value=f;fl.Q.value=q||1;
+  g.gain.setValueAtTime(peak,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);s.connect(fl);fl.connect(g);voice(g,rev);s.start(t,Math.random()*1.5);s.stop(t+dur+.05)}
+/* ---------- 악기 ---------- */
+const I={
+ erhu(t,m,dur,lv=.16,rev=.35){const f=mtof(m),g=envG(t,.09,lv,Math.max(.05,dur-.2),.22),lp=AC.createBiquadFilter(),pk=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2600;pk.type='peaking';pk.frequency.value=1100;pk.gain.value=6;pk.Q.value=1.4;
+   const vib=AC.createOscillator(),vg=AC.createGain();vib.frequency.value=5.6;vg.gain.setValueAtTime(0,t);vg.gain.linearRampToValueAtTime(f*.014,t+Math.min(.45,dur*.6));vib.connect(vg);
+   [0,6].forEach(dt=>{const o=AC.createOscillator();o.type='sawtooth';o.detune.value=dt;o.frequency.setValueAtTime(f*.94,t);o.frequency.exponentialRampToValueAtTime(f,t+.09);vg.connect(o.frequency);o.connect(lp);o.start(t);o.stop(t+dur+.3)});
+   lp.connect(pk);pk.connect(g);voice(g,rev);vib.start(t);vib.stop(t+dur+.3)},
+ lead(t,m,dur,lv=.08,rev=.25){const f=mtof(m),g=envG(t,.02,lv,Math.max(.04,dur-.12),.18),lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.setValueAtTime(3200,t);lp.frequency.exponentialRampToValueAtTime(1400,t+dur);
+   const vib=AC.createOscillator(),vg=AC.createGain();vib.frequency.value=5;vg.gain.setValueAtTime(0,t);vg.gain.linearRampToValueAtTime(f*.008,t+.35);vib.connect(vg);
+   [['square',0],['sawtooth',-8]].forEach(([ty,dt])=>{const o=AC.createOscillator();o.type=ty;o.detune.value=dt;o.frequency.value=f;vg.connect(o.frequency);o.connect(lp);o.start(t);o.stop(t+dur+.25)});lp.connect(g);voice(g,rev);vib.start(t);vib.stop(t+dur+.25)},
+ ep(t,m,dur,lv=.06,rev=.2){const f=mtof(m);[[1,1],[2,.25],[3.01,.06]].forEach(([h,a])=>{const o=AC.createOscillator();o.type='sine';o.frequency.value=f*h;const g=AC.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(lv*a,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+Math.min(2.2,dur+1));o.connect(g);voice(g,rev);o.start(t);o.stop(t+2.4)})},
+ piano(t,m,lv=.09,rev=.6){const f=mtof(m);[[1,1,'triangle'],[2,.18,'sine'],[3,.06,'sine']].forEach(([h,a,ty])=>{const o=AC.createOscillator();o.type=ty;o.frequency.value=f*h;const g=AC.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(lv*a,t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+3.2/h);o.connect(g);voice(g,rev);o.start(t);o.stop(t+3.4)})},
+ pad(t,ns,dur,lv=.028,cut=900,rev=.4){const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=cut;const g=envG(t,.7,1,Math.max(.1,dur-1),1.2);lp.connect(g);voice(g,rev);
+   ns.forEach(m=>[-7,7].forEach(dt=>{const o=AC.createOscillator();o.type='sawtooth';o.frequency.value=mtof(m);o.detune.value=dt;const og=AC.createGain();og.gain.value=lv;o.connect(og);og.connect(lp);o.start(t);o.stop(t+dur+1.4)}))},
+ bass(t,m,dur,lv=.22){const f=mtof(m),g=envG(t,.01,lv,Math.max(.03,dur*.6),.2),lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=520;
+   [['triangle',1],['sine',.5]].forEach(([ty,h])=>{const o=AC.createOscillator();o.type=ty;o.frequency.value=f*h;o.connect(lp);o.start(t);o.stop(t+dur+.3)});lp.connect(g);voice(g,0)},
+ kick(t,lv=.7){const o=AC.createOscillator(),g=AC.createGain();o.frequency.setValueAtTime(115,t);o.frequency.exponentialRampToValueAtTime(42,t+.16);g.gain.setValueAtTime(lv,t);g.gain.exponentialRampToValueAtTime(.0001,t+.32);o.connect(g);voice(g,0);o.start(t);o.stop(t+.35)},
+ snare(t,lv=.22){noiseHit(t,.16,lv,'bandpass',1900,.7,.25);const o=AC.createOscillator(),g=AC.createGain();o.frequency.value=185;g.gain.setValueAtTime(lv*.8,t);g.gain.exponentialRampToValueAtTime(.0001,t+.08);o.connect(g);voice(g,0);o.start(t);o.stop(t+.1)},
+ rim(t,lv=.18){noiseHit(t,.035,lv,'bandpass',2600,5,.3);const o=AC.createOscillator(),g=AC.createGain();o.type='triangle';o.frequency.value=780;g.gain.setValueAtTime(lv*.6,t);g.gain.exponentialRampToValueAtTime(.0001,t+.04);o.connect(g);voice(g,.2);o.start(t);o.stop(t+.06)},
+ hat(t,open,lv=.06){noiseHit(t,open?.16:.03,lv,'highpass',7200,.7,0)},
+ clack(t){for(let i=0;i<2+Math.floor(Math.random()*3);i++){const s=t+i*(.05+Math.random()*.06);noiseHit(s,.022,.12,'bandpass',3400+Math.random()*1200,7,.5)}},
+ bell(t,m,lv=.12){const f=mtof(m);[[1,1],[2.4,.4],[3,.25],[4.2,.15]].forEach(([h,a])=>{const o=AC.createOscillator();o.frequency.value=f*h;const g=AC.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(lv*a,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+2.8/h);o.connect(g);voice(g,.5);o.start(t);o.stop(t+3)})},
+ glass(t,m,dur,lv=.05){const o=AC.createOscillator(),o2=AC.createOscillator();o.frequency.value=mtof(m);o2.frequency.value=mtof(m)*1.003;const g=envG(t,1.6,lv,dur,3);o.connect(g);o2.connect(g);voice(g,.9);o.start(t);o2.start(t);o.stop(t+dur+5);o2.stop(t+dur+5)},
+ thud(t,lv=.35){const o=AC.createOscillator(),g=AC.createGain(),lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=260;o.frequency.setValueAtTime(90,t);o.frequency.exponentialRampToValueAtTime(38,t+.4);g.gain.setValueAtTime(lv,t);g.gain.exponentialRampToValueAtTime(.0001,t+.6);o.connect(lp);lp.connect(g);voice(g,.8);o.start(t);o.stop(t+.7);noiseHit(t,.12,lv*.25,'lowpass',500,1,.8)},
+ tune(t){const s=AC.createBufferSource(),bp=AC.createBiquadFilter(),g=AC.createGain();s.buffer=NOISE;bp.type='bandpass';bp.Q.value=3;bp.frequency.setValueAtTime(600,t);bp.frequency.exponentialRampToValueAtTime(3600,t+.35);bp.frequency.exponentialRampToValueAtTime(900,t+.7);
+   g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.22,t+.05);g.gain.exponentialRampToValueAtTime(.0001,t+.8);s.connect(bp);bp.connect(g);g.connect(OUTB);s.start(t);s.stop(t+.85);
+   const o=AC.createOscillator(),og=AC.createGain();o.frequency.setValueAtTime(1800,t);o.frequency.exponentialRampToValueAtTime(400,t+.6);og.gain.setValueAtTime(.025,t);og.gain.exponentialRampToValueAtTime(.0001,t+.6);o.connect(og);og.connect(OUTB);o.start(t);o.stop(t+.65)}};
+
+/* ---------- 곡 ---------- */
+const Am9=[57,60,64,67,71],Fma7=[53,57,60,64],Dm9=[50,53,57,60,64],E7=[52,56,59,62],G7=[55,59,62,65];
+const SONGS={
+ red:{bpm:70,bars:8,swing:.06,chords:[Am9,Fma7,Dm9,E7,Am9,Fma7,G7,Am9],
+  mel:[[[0,76,6],[6,74,2],[8,72,4],[12,69,4]],[[0,72,3],[3,74,1],[4,76,8],[12,79,4]],[[0,81,6],[6,79,2],[8,76,4],[12,74,4]],[[0,76,12]],
+       [[0,69,4],[4,72,4],[8,74,2],[10,76,2],[12,79,4]],[[0,76,6],[6,74,2],[8,72,8]],[[0,74,3],[3,72,1],[4,69,4],[8,67,4],[12,64,4]],[[0,69,14]]],
+  inst:'erhu',bassSteps:[0,6,8,14],kick:[0,10],rim:[4,12],snare:[],hat:[2,6,10,14],openHat:[],
+  extra(t,bar,s){if(s===0&&Math.random()<.35)I.clack(t+Math.random()*2)}},
+ tea:{bpm:96,bars:8,swing:0,chords:[[60,64,67,71],[57,60,64,67],[53,57,60,64],[55,59,62,65],[60,64,67,71],[57,60,64,67],[50,53,57,60],[55,59,62,67]],
+  mel:[[[0,76,2],[2,79,2],[4,81,4],[8,79,2],[10,76,2],[12,74,4]],[[0,72,4],[4,76,2],[6,74,2],[8,72,6],[14,69,2]],[[0,72,2],[2,74,2],[4,76,4],[8,79,4],[12,76,4]],[[0,74,12]],
+       [[0,76,2],[2,79,2],[4,81,4],[8,79,2],[10,76,2],[12,74,4]],[[0,72,4],[4,76,2],[6,79,2],[8,81,6],[14,79,2]],[[0,77,4],[4,76,2],[6,74,2],[8,72,4],[12,74,4]],[[0,72,14]]],
+  inst:'lead',comp:[0,3,6,10,12],bassSteps:[0,4,8,10,12],kick:[0,8],snare:[4,12],rim:[],hat:[0,2,4,6,8,10,12,14],openHat:[14],padLv:.016},
+ mid:{bpm:60,bars:8,swing:0,chords:[[50,57,60,65],[46,53,58,62],[53,57,60,64],[48,55,60,64],[50,57,60,65],[46,53,58,62],[43,50,55,58],[45,52,57,61]],
+  notes:[[[0,74],[6,77],[10,81]],[[2,82],[8,77]],[[0,79],[4,76],[12,72]],[[6,74]],[[0,74],[6,77],[10,81]],[[2,84],[8,82],[12,81]],[[0,79],[8,77]],[[4,76],[10,69]]],
+  inst:'piano',bassSteps:[0],kick:[],snare:[],rim:[],hat:[],openHat:[],padLv:.02,
+  intro(t){[79,76,72,67].forEach((m,i)=>I.bell(t+i*.42,m,.1))}},
+ build:{bpm:50,bars:4,swing:0,ambient:true,
+  extra(t,bar,s){if(s===0&&bar%2===0){const base=t+Math.random()*1.5;for(let i=0;i<3;i++)I.thud(base+i*.95,.22+Math.random()*.08)}
+   if(s%8===0&&Math.random()<.45){const pool=[81,84,86,87,88,93];I.glass(t,pool[Math.floor(Math.random()*pool.length)],2.5,.035)}
+   if(s===8&&Math.random()<.5){const ms=[[69,3],[72,1.5],[70,3]];const p=ms[Math.floor(Math.random()*ms.length)];I.erhu(t,p[0]-12,p[1],.07,.85)}}}};
+
+function startDrones(){const t=AC.currentTime;[[33,.05],[40,.035],[45,.02]].forEach(([m,lv])=>{const o=AC.createOscillator(),lp=AC.createBiquadFilter(),g=AC.createGain(),lfo=AC.createOscillator(),lg=AC.createGain();
+  o.type='sawtooth';o.frequency.value=mtof(m);lp.type='lowpass';lp.frequency.value=260;lfo.frequency.value=.07+Math.random()*.05;lg.gain.value=140;lfo.connect(lg);lg.connect(lp.frequency);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(lv,t+3);o.connect(lp);lp.connect(g);voice(g,.5);o.start();lfo.start();drones.push(o,lfo)})}
+function schedule(song,st,t){const bar=Math.floor(st/16)%song.bars,s=st%16,sx=60/song.bpm/4,barDur=sx*16;
+  if(st===0&&song.intro&&hour()===0)song.intro(t);
+  if(!song.ambient){
+   if(s===0)I.pad(t,song.chords[bar],barDur,song.padLv||.026);
+   if(song.bassSteps.includes(s)){const r=song.chords[bar][0];I.bass(t,r<48?r:r-12,sx*(s===0?3:1.6))}
+   if(song.comp&&song.comp.includes(s))song.chords[bar].forEach((m,i)=>I.ep(t+i*.006,m+12,sx*2,.035,.2));
+   if(song.kick.includes(s))I.kick(t,.6);
+   if(song.snare.includes(s))I.snare(t);
+   if(song.rim.includes(s))I.rim(t);
+   if(song.hat.includes(s))I.hat(t,song.openHat.includes(s),s%4===0?.05:.035);
+   if(song.mel)for(const[ms,m,len]of song.mel[bar])if(ms===s&&m)I[song.inst](t,m,len*sx);
+   if(song.notes)for(const[ms,m]of song.notes[bar])if(ms===s)I.piano(t,m);}
+  if(song.extra)song.extra(t,bar,s)}
+function tickB(){if(!current||!BUS)return;const song=SONGS[current];const sx=60/song.bpm/4;
+  if(nextT<AC.currentTime-1)nextT=AC.currentTime+.05;
+  while(nextT<AC.currentTime+.15){let t=nextT;if(song.swing&&step%2===1)t+=sx*song.swing*2;schedule(song,step,t);nextT+=sx;step++}}
+function stopB(fade){if(!BUS)return;const b=BUS,t=AC.currentTime;b.gain.cancelScheduledValues(t);b.gain.setValueAtTime(b.gain.value,t);b.gain.linearRampToValueAtTime(0,t+fade);setTimeout(()=>{try{b.disconnect()}catch(e){}},fade*1000+800);
+  drones.forEach(o=>{try{o.stop(t+fade+.1)}catch(e){}});drones=[];clearInterval(timer);timer=null;BUS=null}
+function playB(id,tuneIn){const t=AC.currentTime;if(BUS)stopB(1.6);current=id;
+  if(tuneIn)I.tune(t);BUS=AC.createGain();BUS.gain.setValueAtTime(0,t);BUS.gain.linearRampToValueAtTime(1,t+2.2);BUS.connect(routeIn());
+  step=0;nextT=t+(tuneIn?.55:.2);if(SONGS[id].ambient)startDrones();timer=setInterval(tickB,25);rewire()}
+/* 어느 곡을 틀지: 증축 시간 > 자정 > 칸 */
+function pick(){const m=G.me;if(!m||!m.cell)return null;if(isBuild())return'build';if(hour()===0)return'mid';
+  const[d,t]=cellDT(m.cell);if(d===1)return'red';if(t===4)return'build';if(d===0)return'tea';if(d===2)return'mid';return'build'}
+window.bgmUpdate=function(){if(!AC||AC.state!=='running')return;
+  const want=bgmOn()&&!document.hidden?pick():null;
+  if(!want){if(current){stopB(1.2);current=null;if(crackG)crackG.gain.setTargetAtTime(0,AC.currentTime,.3)}return}
+  if(!build())return;OUTB.gain.setTargetAtTime(bgmVol(),AC.currentTime,.1);
+  if(want!==current)playB(want,!!current)};
+window.bgmNow=()=>current;
+window.bgmRewire=()=>rewire();
+document.addEventListener('visibilitychange',()=>{try{bgmUpdate()}catch(e){}});
+{const a0=ambUpdate;ambUpdate=function(){const r=a0.apply(this,arguments);try{bgmUpdate()}catch(e){}return r}}
+{const r0=render;render=function(){const r=r0.apply(this,arguments);try{bgmUpdate()}catch(e){}return r}}
+{const s0=soundSettings;soundSettings=function(){const el=s0.apply(this,arguments);const o=G.opts;
+  const vol=h('input',{type:'range',min:'0',max:'1',step:'0.05',value:String(bgmVol()),style:'width:140px',oninput:e=>{o.bgmVol=+e.target.value;save();try{bgmUpdate()}catch(x){}}});
+  el.append(
+    h('label',{class:'row'},h('span',null,'배경음악',h('div',{class:'mute',style:'font-size:12px'},'백계성 라디오. 홍등동은 「홍등루의 밤」, 정문동은 「차찬텡 라디오」, 종루동과 자정은 「자정 방송」, 빈동·수로와 새벽 3시는 「증축 전야」')),h('input',{type:'checkbox',style:'width:auto',checked:o.bgm!==false?true:null,onchange:e=>{o.bgm=e.target.checked;save();if(o.bgm&&typeof unlockAudio==='function')unlockAudio();bgmUpdate()}})),
+    h('label',{class:'row'},h('span',null,'낡은 라디오 음질',h('div',{class:'mute',style:'font-size:12px'},'배경음악을 오래된 라디오처럼 좁고 지직거리게 들려줘요')),h('input',{type:'checkbox',style:'width:auto',checked:o.bgmRadio!==false?true:null,onchange:e=>{o.bgmRadio=e.target.checked;save();rewire()}})),
+    h('label',{class:'row'},h('span',null,'배경음악 음량'),vol));return el}}
+})();
+
+/* 무전 입력칸은 다시 그릴 때도 제자리에 둔다. 옮기면 휴대폰에서 키보드가 닫히고 보내기 터치가 취소된다. */
+function chatPut(C,arr){const f=arr.indexOf(chatForm);if(f<0||chatForm.parentNode!==C){C.replaceChildren(...arr);return}
+  [...C.childNodes].forEach(n=>{if(n!==chatForm)n.remove()});arr.slice(0,f).forEach(n=>C.insertBefore(n,chatForm));arr.slice(f+1).forEach(n=>C.append(n))}
+{const sb0=chatForm.querySelector('button[type=submit]');let tx=0,ty=0;
+  if(sb0){sb0.addEventListener('touchstart',e=>{const t=e.touches[0];tx=t.clientX;ty=t.clientY},{passive:true});
+   sb0.addEventListener('touchend',e=>{const t=e.changedTouches[0];if(Math.abs(t.clientX-tx)>12||Math.abs(t.clientY-ty)>12)return;e.preventDefault();
+     if(chatForm.requestSubmit)chatForm.requestSubmit();else chatForm.dispatchEvent(new Event('submit',{cancelable:true}))},{passive:false})}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
