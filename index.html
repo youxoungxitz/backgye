@@ -255,6 +255,7 @@ body.build{background:#0E1110}
 .section-map.foggy .cell.fog3::after{background:linear-gradient(180deg,rgba(225,232,230,.35),rgba(225,232,230,.62))}
 .section-map.foggy .cell.fog3 b{filter:blur(.6px)}
 #rainfx{position:fixed;inset:0;pointer-events:none;z-index:4;background-image:repeating-linear-gradient(100deg,transparent 0 18px,rgba(170,210,225,.16) 18px 19px,transparent 19px 41px);background-size:240px 240px;animation:rainfall .55s linear infinite;-webkit-mask-image:linear-gradient(90deg,#000 0,transparent 9%,transparent 91%,#000 100%);mask-image:linear-gradient(90deg,#000 0,transparent 9%,transparent 91%,#000 100%)}
+.toymachine,.toycap{display:inline-block;line-height:0;image-rendering:pixelated}.toycap.shake{animation:toyshake .16s linear 4}@keyframes toyshake{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
 @keyframes rainfall{from{background-position:0 0}to{background-position:-40px 240px}}
 @keyframes quake{0%,6%,33%,39%,66%,72%,100%{transform:translate(0,0)}2%{transform:translate(1px,1px)}35%{transform:translate(-1px,1px)}68%{transform:translate(1px,-1px)}}
 body.build #view{animation:quake 2.7s infinite}
@@ -870,24 +871,24 @@ function dexBody(){const m=G.me,all=dexAll(),got=m&&m.dex||{};const n=all.filter
 const ROOM_MAX=6;
 const ROOMFX={bowl:'밤새 그릇에 젓가락 부딪치는 소리가 났다.',mirror:'거울 조각에 비친 방에 내가 없었다. 아침엔 다시 있었다.',tape:'꺼 둔 카세트가 혼자 돌아갔다. 쿵, 쿵, 쿵.',button:'숫자 없는 버튼에 밤새 희미한 불이 켜졌다 꺼졌다.',number:'종이에 적힌 번호 한 자리가 바뀌어 있다.',molar:'어금니가 서랍 안에서 달그락거렸다.',nail:'못이 아침마다 조금씩 벽 쪽으로 굴러가 있다.',plate:'문패의 빈 이름 칸에 손톱자국이 하나 늘었다.',film:'필름을 불빛에 비추자 계단 그림자가 한 칸 늘어 있었다.',lantern:'등불 아래 누가 잠깐 앉았다 갔다. 방이 따뜻하다.'};
 function roomNight(){const m=G.me;if(!m||!(m.room||[]).length)return;const d=dayIdx(T());if(m.roomDay===d||hour()>=5)return;m.roomDay=d;if(!chance(.6))return;
-  const k=pick(m.room);const rw=k==='lantern'?{mind:5}:chance(.3)?{mind:-3,clue:1}:{mind:-3};const out=give(rw);log(`내 방에서: ${ROOMFX[k]||'무언가 소리가 났다.'} (${out.join(', ')})`,'haunt');toast('방에서 무언가 소리가 났다. 수첩 일지를 보세요.')}
+  const fxr=m.room.filter(k=>ROOMFX[k]);if(!fxr.length)return;const k=pick(fxr);const rw=k==='lantern'?{mind:5}:chance(.3)?{mind:-3,clue:1}:{mind:-3};const out=give(rw);log(`내 방에서: ${ROOMFX[k]||'무언가 소리가 났다.'} (${out.join(', ')})`,'haunt');toast('방에서 무언가 소리가 났다. 수첩 일지를 보세요.')}
 function openRoom(){const m=G.me;if(!m)return;m.room=m.room||[];const own=Object.keys(m.items).filter(k=>m.items[k]>0&&k!=='anesth');
   const note=h('input',{id:'roomNote',maxlength:60,placeholder:'방문에 붙일 쪽지 (60자)',value:m.roomNote||''});
   const refresh=()=>{save();closeModal();openRoom();render()};
   openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'내 방'),h('button',{class:'ghost',onclick:closeModal},'닫기')),
     h('p',{class:'mute',style:'margin:0'},`${m.addr||''} · 밤물건을 최대 ${ROOM_MAX}개까지 둘 수 있어요. 지인이 놀러 와서 볼 수 있어요. 어떤 물건은 밤에 소리를 내요.`),
     h('span',{class:'lbl'},`놓아둔 물건 ${m.room.length} / ${ROOM_MAX}`),
-    m.room.length?m.room.map((k,i)=>h('div',{class:'pl'},h('div',null,itemIcon(k),h('b',null,ITEMS[k]?ITEMS[k].n:k),h('div',{class:'mute',style:'font-size:12.5px'},ITEMS[k]?ITEMS[k].d:'')),h('button',{class:'sm',onclick:()=>{m.room.splice(i,1);m.items[k]=(m.items[k]||0)+1;refresh()}},'치우기'))):h('p',{class:'mute',style:'margin:0;font-size:13px'},'아직 아무것도 없다. 침대 하나, 철망 문 하나.'),
+    m.room.length?m.room.map((k,i)=>h('div',{class:'pl'},h('div',null,itemIcon(k),h('b',null,toyName(k)),h('div',{class:'mute',style:'font-size:12.5px'},toyDesc(k))),h('button',{class:'sm',onclick:()=>{m.room.splice(i,1);if(typeof TOYS!=='undefined'&&TOYS[k]){m.toys=m.toys||{};m.toys[k]=(m.toys[k]||0)+1}else m.items[k]=(m.items[k]||0)+1;refresh()}},'치우기'))):h('p',{class:'mute',style:'margin:0;font-size:13px'},'아직 아무것도 없다. 침대 하나, 철망 문 하나.'),
     h('span',{class:'lbl'},'가진 밤물건'),
     own.length?own.map(k=>h('div',{class:'pl'},h('div',null,itemIcon(k),h('b',null,ITEMS[k].n),` × ${m.items[k]}`),h('button',{class:'sm',disabled:m.room.length>=ROOM_MAX,onclick:()=>{m.items[k]--;m.room.push(k);refresh()}},'놓기'))):h('p',{class:'mute',style:'margin:0;font-size:13px'},'놓을 밤물건이 없어요. 수칙을 어기면 얻을 수 있어요.'),
     h('form',{class:'composer',onsubmit:e=>{e.preventDefault();m.roomNote=note.value.trim();save();toast('쪽지를 붙였어요.');render()}},note,h('button',{type:'submit',class:'sm'},'붙이기'))))}
 function roomEl(p,isMe,id){const room=p.room||[];if(!isMe&&!room.length&&!p.roomNote)return null;const r=!isMe&&G.rel?G.rel[id]:null;
   return h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},'방'),
-    room.length?h('div',{class:'wrap'},room.map(k=>h('span',{class:'tag'},ITEMS[k]?ITEMS[k].n:k))):h('span',{class:'mute',style:'font-size:13px'},'아무것도 놓여 있지 않다.'),
+    room.length?h('div',{class:'wrap'},room.map(k=>h('span',{class:'tag'},toyName(k)))):h('span',{class:'mute',style:'font-size:13px'},'아무것도 놓여 있지 않다.'),
     p.roomNote?h('div',{class:'hand'},'「'+p.roomNote+'」'):null,
     isMe?h('button',{class:'sm',onclick:()=>{closeModal();openRoom()}},'방 꾸미기'):r&&r.friend?h('button',{class:'sm',onclick:()=>{closeModal();visitRoom(id)}},'방에 놀러 가기 · 하루 3번'):null)}
 function visitRoom(id){if(!ready())return;const p=SAMPLES[id];if(!p)return;const dl=daily();dl.visit=dl.visit||0;if(dl.visit>=3)return toast('오늘은 많이 놀러 다녔어요.');dl.visit++;
-  const room=p.room||[];const lines=room.map(k=>`${ITEMS[k]?ITEMS[k].n:k}이(가) 놓여 있다.`);const spooky=room.filter(k=>ROOMFX[k]&&k!=='lantern');
+  const room=p.room||[];const lines=room.map(k=>`${toyName(k)}이(가) 놓여 있다.`);const spooky=room.filter(k=>ROOMFX[k]&&k!=='lantern');
   const rw={mind:4,en:1};let tail='';if(spooky.length&&chance(.4)){const k=pick(spooky);tail='\n\n'+ROOMFX[k].replace('밤새 ','앉아 있는 동안 ');rw.mind=-2}
   const out=give(rw);log(`${p.name}의 방에 놀러 갔다.`,'rel');
   done('방 구경',`${p.name}의 방. ${p.addr?p.addr+'. ':''}${p.roomNote?'방문에 쪽지가 붙어 있다. 「'+p.roomNote+'」\n':''}${lines.length?lines.join(' '):'침대 하나, 철망 문 하나. 아무것도 없다.'}\n${p.name}이(가) 차를 한 잔 내왔다.`+tail,out,rw.mind<0)}
@@ -3473,7 +3474,7 @@ function deepRoomById(id){const[a,b,c]=id.split('.');return DR[a][b][c]}
 function deepSeq(sp){const seq=[];const cnt={1:5,2:5,3:5,4:4};for(const t of[1,2,3,4]){const p=deepPool(sp,t).sort(()=>Math.random()-.5);seq.push(...p.slice(0,cnt[t]))}return seq}
 function deepHas(k){const d=G.me.deep;return(d&&(d.pocket.items[k]||0)>0)||(G.me.items[k]||0)>0}
 function deepUse(k){const d=G.me.deep;if((d.pocket.items[k]||0)>0)d.pocket.items[k]--;else if((G.me.items[k]||0)>0)G.me.items[k]--}
-function deepPocketTxt(pk){const a=[];if(pk.money)a.push('$'+pk.money);if(pk.clue)a.push('설계도 조각 '+pk.clue);for(const k in pk.items)if(pk.items[k]>0)a.push(`${ITEMS[k]?ITEMS[k].n:k}${pk.items[k]>1?' ×'+pk.items[k]:''}`);return a.length?a.join(', '):'비어 있음'}
+function deepPocketTxt(pk){const a=[];if(pk.money)a.push('$'+pk.money);if(pk.clue)a.push('설계도 조각 '+pk.clue);for(const k in pk.items)if(pk.items[k]>0)a.push(`${toyName(k)}${pk.items[k]>1?' ×'+pk.items[k]:''}`);return a.length?a.join(', '):'비어 있음'}
 function deepApply(rw){const m=G.me,d=m.deep,out=[];if(!rw)return out;
   if(rw.light){d.light+=rw.light;out.push(`등불 ${rw.light>0?'+':''}${rw.light}`)}
   if(rw.money){d.pocket.money+=rw.money;out.push(`주머니 +$${rw.money}`)}
@@ -3607,7 +3608,7 @@ function raDraw(g,kind,p,night,haunt){const R=(x,y,w,h,c)=>{g.fillStyle=c;g.fill
   /* 섬망이나 증축 시간: 방 구석에 누가 서 있다 */
   if(haunt){const hx=kind==='sam'?32:kind==='flat'?78:kind==='red'?62:88,hy=kind==='cage'?18:16;g.fillStyle='rgba(0,0,0,.82)';g.fillRect(hx+2,hy,4,4);g.fillRect(hx,hy+4,8,14);g.fillRect(hx+1,hy+18,2,10);g.fillRect(hx+5,hy+18,2,10);g.fillStyle='#FF3D33';g.fillRect(hx+3,hy+1,1,1);g.fillRect(hx+5,hy+1,1,1)}}}
 function roomArt(p,isMe){const kind=raKind(p);const cv=document.createElement('canvas');cv.width=RA_W;cv.height=RA_H;cv.className='roomart';cv.setAttribute('role','img');
-  const names=((p&&p.room)||[]).map(k=>ITEMS[k]?ITEMS[k].n:k);cv.setAttribute('aria-label',`${RA_KIND[kind].n} 방 그림${names.length?'. 놓인 물건: '+names.join(', '):''}`);
+  const names=((p&&p.room)||[]).map(k=>toyName(k));cv.setAttribute('aria-label',`${RA_KIND[kind].n} 방 그림${names.length?'. 놓인 물건: '+names.join(', '):''}`);
   const x=typeof hour==='function'?hour():12;const night=x>=19||x<6;const haunt=!!(isMe&&((typeof hasFx==='function'&&hasFx('delirium'))||(typeof isBuild==='function'&&isBuild())));
   try{raDraw(cv.getContext('2d'),kind,p,night,haunt)}catch(e){}
   return h('figure',{class:'roomfig'},cv,h('figcaption',null,`${p&&p.addr&&String(p.addr).includes(RA_KIND[kind].n.split(' ').pop())?'':RA_KIND[kind].n+' · '}${(p&&p.addr)||''}${night?' · 밤':''}`))}
@@ -3881,6 +3882,142 @@ function rainFrame(t){const R=RAIN;if(!R.on)return;R.raf=requestAnimationFrame(r
 function rainSet(on){const R=RAIN;if(on===R.on)return;R.on=on;cancelAnimationFrame(R.raf);if(on){if(!R.cv){R.cv=document.createElement('canvas');R.cv.id='rainglass';R.cv.setAttribute('aria-hidden','true');document.body.append(R.cv);R.g=R.cv.getContext('2d');addEventListener('resize',()=>{if(R.on)rainSize()})}R.cv.hidden=false;rainSize();R.last=0;R.raf=requestAnimationFrame(rainFrame)}else{cancelAnimationFrame(R.raf);if(R.cv)R.cv.hidden=true}}
 document.addEventListener('visibilitychange',()=>{cancelAnimationFrame(RAIN.raf);if(!document.hidden&&RAIN.on){RAIN.last=0;RAIN.raf=requestAnimationFrame(rainFrame)}});
 {const rd2=render;render=function(){const out=rd2.apply(this,arguments);try{const rain=weather()[0]==='비'&&!(G.opts&&G.opts.soft)&&G.opts.rainGlass!==false;rainSet(!!rain);const old=document.getElementById('rainfx');if(old)old.hidden=true}catch(e){}return out}}
+
+/* ---------- 문방구 뽑기: 인쇄소 1층 대성문구, 캡슐 뽑기 기계 ---------- */
+const TOY_PRICE=10,TOY_DAY=10;
+const TOY_RAR={c:['흔함',''],u:['드묾','good'],r:['귀함','amb'],x:['괴담','red']};
+const TOYS={
+ toy_eraser:{n:'얼굴 지우개',r:'c',d:'웃는 얼굴 지우개. 쓸수록 표정이 닳는다.'},
+ toy_marble:{n:'유리구슬',r:'c',d:'안에 파란 물결이 갇혀 있다. 귀에 대면 파도 소리가 나는 것 같다.'},
+ toy_ddakji:{n:'종이 딱지',r:'c',d:'접힌 모서리에 누가 이름을 적다 말았다.'},
+ toy_ring:{n:'플라스틱 반지',r:'c',d:'빨간 보석이 박힌 반지. 새끼손가락에도 안 들어간다.'},
+ toy_bell:{n:'고양이 방울',r:'c',d:'흔들면 딸랑. 수로 고양이들이 이 소리를 좋아한다.'},
+ toy_whistle:{n:'물새 피리',r:'c',d:'물을 넣고 불면 새 소리가 난다. 성채에서 새를 본 사람은 별로 없다.'},
+ toy_star:{n:'야광 별 스티커',r:'u',d:'불을 끄면 천장에 별이 뜬다. 세어 보면 하나가 늘 모자라다.'},
+ toy_frog:{n:'태엽 개구리',r:'u',d:'태엽을 감으면 세 번 뛰고 멈춘다. 꼭 세 번.'},
+ toy_lamp:{n:'꼬마 홍등',r:'u',d:'손가락만 한 홍등. 건전지 넣는 곳이 없는데 켜진다.'},
+ toy_chick:{n:'전자 병아리',r:'u',d:'액정 속에서 삑삑거린다. 밥을 안 주면 하루 만에 하늘나라로 간다.'},
+ toy_lift:{n:'엘리베이터 열쇠고리',r:'r',d:'버튼을 누르면 「땡」 소리가 난다. 층 표시는 늘 같은 숫자다.'},
+ toy_coin:{n:'금박 행운 동전',r:'r',d:'던지면 늘 앞면이 나온다. 뒤집어 봐도 앞면이다.'},
+ toy_globe:{n:'성채 스노볼',r:'r',d:'유리 안에 작은 성채가 있다. 흔들면 눈 대신 재가 내린다.'},
+ toy_tag:{n:'남의 이름표',r:'x',d:'반 이름과 번호가 적힌 국민학교 이름표. 이 동네에 국민학교는 없다.'},
+ toy_eye:{n:'미지근한 구슬',r:'x',d:'눈동자 무늬 구슬. 쥐면 미지근하다. 내려놓으면 굴러서 나를 본다.'},
+ toy_hair:{n:'젖은 캡슐',r:'x',d:'열리지 않는 캡슐. 안에서 물소리가 나고, 흔들면 머리카락이 비친다.'},
+};
+const TOY_W={c:58,u:28,r:11,x:3};
+const TOY_CAP={c:['#F2C14E','#F0F0E8'],u:['#4A8AC8','#F0F0E8'],r:['#E86AA0','#FFF0B0'],x:['#14181A','#3A4A50']};
+const TOY_OWNER=['「동전은 위로, 손잡이는 오른쪽으로. 거꾸로 돌리면 안 돼.」','「그 기계는 가끔 내가 넣은 적 없는 걸 뱉어. 그런 건 나한테 가져오지 마.」','「껍데기는 여기 바구니에 버리고 가. 모으는 애가 있어.」','「겹친 거 있으면 세 개 가져와. 한 판 돌리게 해 줄게.」','「밤에는 기계 안 돌려. 혼자 도는 소리가 나도 신경 쓰지 마.」'];
+Object.assign(ROOMFX,{
+ toy_frog:'태엽을 감은 적 없는 개구리가 아침에 문 앞까지 가 있었다. 세 칸.',
+ toy_tag:'이름표 번호 칸이 지워졌다가 다시 적혀 있다. 아까와 다른 번호다.',
+ toy_eye:'구슬이 밤새 굴러 침대 쪽을 보고 있었다.',
+ toy_hair:'캡슐 안 물소리가 밤새 조금씩 커졌다. 아침엔 바닥이 젖어 있었다.'});
+Object.assign(RA_SPR,{
+ toy_eraser:{c:{k:'#5A3A3A',p:'#F2B8B8',d:'#3A2A2A'},p:['.kkkkkkkk.','kppppppppk','kpdppppdpk','kppppppppk','kppddddppk','kppppppppk','.kkkkkkkk.']},
+ toy_marble:{c:{k:'#1A2A3A',w:'#E8F4F8',b:'#4A8AC8',l:'#9AC8E8'},p:['...kkkk...','..kllllk..','.klwlbblk.','.kllbbblk.','.klbbbllk.','..kllllk..','...kkkk...']},
+ toy_ddakji:{c:{k:'#1A1A1A',r:'#B0262A',b:'#3A5AA8'},p:['kkkkkkkkkk','krrrrkbbbk','krrrkbbbbk','krrkbbbbbk','krkbbbbbbk','kkbbbbbbbk','kkkkkkkkkk']},
+ toy_ring:{c:{k:'#5A4A20',g:'#E8D070',r:'#E03030',w:'#FFC0C0'},p:['...krrk...','..krwrrk..','..krrrrk..','...kggk...','..g....g..','..g....g..','...gggg...']},
+ toy_bell:{c:{k:'#5A4410',y:'#E8C040',r:'#C0302A',d:'#2A2010'},p:['....rr....','...rrrr...','...kyyk...','..kyyyyk..','.kyyyyyyk.','.kyydyyyk.','.kyyyyyyk.','..kkddkk..']},
+ toy_whistle:{c:{k:'#2A3A2A',g:'#7AB07A',y:'#E8C040',w:'#F0F0E8'},p:['...kkk....','..kgwgk...','..kggggkyy','.kgggggk..','kgggggk...','.kkkkk....']},
+ toy_star:{c:{g:'#C8F0A0'},p:['....g.....','....g.....','...ggg....','ggggggggg.','..ggggg...','..gg.gg...','.g.....g..']},
+ toy_frog:{c:{k:'#1A3A1A',g:'#4AA04A',w:'#F0F0E8',s:'#9A9A98'},p:['.kw..wk...','kgwkkwgk..','kggggggk..','kgkkkkgk..','.kggggk.ss','kgk..kgkss','kk....kk..']},
+ toy_lamp:{c:{k:'#2A1A0E',r:'#D2352A',y:'#FFD27A'},p:['....k.....','...kkk....','..krrrk...','..ryyyr...','..rrrrr...','..ryyyr...','..krrrk...','....y.....']},
+ toy_chick:{c:{k:'#2A2A2A',e:'#E86AA0',l:'#B8D0A0',d:'#3A4A30'},p:['...kkkk...','..keeeek..','.kekkkkek.','.kekldlek.','.keklllek.','.kekkkkek.','.keekekek.','..keeeek..','...kkkk...']},
+ toy_lift:{c:{k:'#3A3A3A',s:'#B8B8B0',r:'#E03030',y:'#F2C14E'},p:['....ss....','...s..s...','....ss....','.kkkkkk...','.kyyyyk...','.kkkkkk...','.ksrrsk...','.ksrrsk...','.kkkkkk...']},
+ toy_coin:{c:{k:'#6A5010',g:'#E8C850',w:'#FFF0B0'},p:['...kkkk...','..kggggk..','.kgwggggk.','.kgwgkggk.','.kgggkggk.','.kggggggk.','..kggggk..','...kkkk...']},
+ toy_globe:{c:{k:'#2A3A4A',b:'#A8C8D8',w:'#E8E8E8',d:'#3A3A3A',r:'#8A3A2A'},p:['...kkkk...','..kbwbbk..','.kbbbwbbk.','.kbdbdbbk.','.kbdddddk.','..kddddk..','.krrrrrrk.','.kkkkkkkk.']},
+ toy_tag:{c:{k:'#3A3428',w:'#EDE6D0',r:'#9A2A2A',b:'#3A3A8A'},p:['kkkkkkkkkk','kwwwwwwwwk','kwbbwbbbwk','kwwwwwwwwk','kwbbbbwwrk','kkkkkkkkkk']},
+ toy_eye:{c:{k:'#1A1A1A',w:'#F0ECE0',r:'#B03030',p:'#101010',v:'#D88080'},p:['...kkkk...','..kwwvwk..','.kwvrrwvk.','.kwrppvwk.','.kwrpprwk.','.kvwrrwwk.','..kwwvwk..','...kkkk...']},
+ toy_hair:{c:{k:'#1A2A30',b:'#5A8AA0',w:'#C8E0E8',h:'#0A0A0A'},p:['...kkkk...','..kbbbbk..','.kbbhbbbk.','.kkkkkkkk.','.kwwhwwwk.','.kwhwwhwk.','..kwwhwk..','...kkkk...']}});
+try{MAPI.capsule={c:{r:'#E05A4A',g:'#BFD8E0',y:'#F2C14E'},p:['.gggggg.','gyggrgyg','gggyggg.','rrrrrrrr','rr.rrrrr','rrrrrrrr']};MAP_PLACE_ICON.toyshop='capsule';MAP_PRI.push('toyshop')}catch(e){}
+PLACES.toyshop={n:'대성문구',act:()=>openGacha(),btn:'문방구 뽑기'};
+try{const c=CELLS['2-2'];c.p=(c.p||[]).concat('toyshop');c.d+=' 1층 구석엔 「대성문구」가 붙어 있고, 문 앞에 캡슐 뽑기 기계가 서 있다.'}catch(e){}
+try{SFX.crank=t=>{for(let i=0;i<5;i++)noise(t+i*.11,.04,.32,'bandpass',1700+i*90,4)};
+ SFX.capsule=t=>{noise(t,.05,.35,'highpass',2600);tone('square',820,t+.04,.002,.05,.08,520);tone('triangle',1400,t+.18,.002,.06,.12,1500)}}catch(e){}
+
+const toyName=k=>TOYS[k]?TOYS[k].n:(ITEMS[k]?ITEMS[k].n:k);
+const toyDesc=k=>TOYS[k]?TOYS[k].d:(ITEMS[k]?ITEMS[k].d:'');
+function toyRoll(){const W=Object.entries(TOY_W);let n=Math.random()*W.reduce((a,[,w])=>a+w,0),rar='c';for(const[r,w]of W){n-=w;if(n<0){rar=r;break}}
+  return pick(Object.keys(TOYS).filter(k=>TOYS[k].r===rar))}
+function toyDupes(m){return Object.values(m.toys||{}).reduce((a,n)=>a+Math.max(0,n-1),0)}
+function toyFull(){return Object.keys(TOYS).filter(k=>TOYS[k].r!=='x')}
+function toyCapEl(rar,cls){const[a,b]=TOY_CAP[rar]||TOY_CAP.c;const s=h('span',{class:'toycap '+(cls||''),'aria-hidden':'true'});
+  s.innerHTML=`<svg viewBox="0 0 10 10" width="56" height="56" shape-rendering="crispEdges"><rect x="3" y="1" width="4" height="1" fill="#111"/><rect x="2" y="2" width="6" height="1" fill="${a}"/><rect x="1" y="3" width="8" height="2" fill="${a}"/><rect x="2" y="3" width="1" height="1" fill="#fff" opacity=".7"/><rect x="1" y="5" width="8" height="1" fill="#111"/><rect x="1" y="6" width="8" height="1" fill="${b}"/><rect x="2" y="7" width="6" height="1" fill="${b}"/><rect x="3" y="8" width="4" height="1" fill="#111"/></svg>`;return s}
+function toyMachine(){const P=['..kkkkkkkkkk..','.kggggggggggk.','kggyygbbggppgk','kgyyybbbgpppgk','kpygbbwwgyyggk','kppyywwwbbyypk','.kkkkkkkkkkkk.','.krrrrrrrrrrk.','.krrsssrrrrrk.','.krsskssrkkrk.','.krrsssrrkdrk.','.krrrrrrrkkrk.','.krrrrrrrrrrk.','.kkkkkkkkkkkk.','..kk......kk..'];
+  const C={k:'#111',g:'#BFD8E0',y:'#F2C14E',b:'#4A8AC8',p:'#E86AA0',w:'#F0F0E8',r:'#B0262A',s:'#9A9C98',d:'#3A0A08'};let r='';
+  P.forEach((row,y)=>{for(let x=0;x<row.length;x++)if(row[x]!=='.')r+=`<rect x="${x}" y="${y}" width="1" height="1" fill="${C[row[x]]}"/>`});
+  const s=h('span',{class:'toymachine','aria-hidden':'true'});s.innerHTML=`<svg viewBox="0 0 14 15" width="112" height="120" shape-rendering="crispEdges">${r}</svg>`;return s}
+
+function toyGet(k,how){const m=G.me;m.toys=m.toys||{};const first=!m.toys[k];m.toys[k]=(m.toys[k]||0)+1;const T=TOYS[k];
+  log(`대성문구 뽑기${how?' ('+how+')':''}: 「${T.n}」${first?' · 처음 나온 것':''}`,T.r==='x'?'haunt':'life');
+  if(T.r==='x'){give({mind:-4});try{sfx('static')}catch(e){}}
+  let bonus='';const full=toyFull();if(!m.toyDone&&full.every(x=>m.toys[x])){m.toyDone=1;give({money:100});log('문방구 할머니가 진열장 사탕을 한 줌 쥐여 줬다. 「다 모은 애는 오랜만이네.」 ($+100)','life');bonus='진열장 칸을 다 채웠다. 할머니가 $100과 사탕을 쥐여 줬다.'}
+  save();return{first,bonus}}
+function toyPull(free){if(!ready())return;const m=G.me;const dl=daily();dl.gacha=dl.gacha||0;
+  if(dl.gacha>=TOY_DAY)return toast('기계가 동전을 더 먹지 않는다. 내일 다시.');
+  if(!free&&m.money<TOY_PRICE)return toast(`동전이 모자라요. $${TOY_PRICE}`);
+  if(free){if(toyDupes(m)<3)return;let left=3;const ks=Object.keys(m.toys).sort((a,b)=>m.toys[b]-m.toys[a]);for(const k of ks){while(left&&m.toys[k]>1){m.toys[k]--;left--}}}
+  else m.money-=TOY_PRICE;
+  dl.gacha++;const k=toyRoll(),T=TOYS[k];const res=toyGet(k,free?'겹친 것 셋과 바꿈':'');
+  const box=document.getElementById('toyOut');if(!box){render();return}
+  const still=matchMedia('(prefers-reduced-motion: reduce)').matches;const btns=document.querySelectorAll('#toyBtns button');btns.forEach(b=>b.disabled=true);
+  box.replaceChildren(h('p',{class:'mute',style:'margin:0'},'드르륵, 드르륵…'));try{sfx('crank')}catch(e){}
+  setTimeout(()=>{box.replaceChildren(toyCapEl(T.r,still?'':'shake'),h('p',{class:'mute',style:'margin:0'},'딸깍. 캡슐이 굴러 나왔다.'))},still?0:650);
+  setTimeout(()=>{try{sfx('capsule')}catch(e){}const[rn,rc]=TOY_RAR[T.r];
+    box.replaceChildren(...[h('div',{class:'row',style:'gap:12px;align-items:center;justify-content:flex-start'},itemIcon(k,48),h('div',{class:'stack',style:'gap:4px'},h('div',{class:'wrap',style:'gap:6px'},h('b',null,T.n),h('span',{class:'tag '+rc},rn),res.first?h('span',{class:'tag tube'},'새로 나옴'):h('span',{class:'tag'},`× ${m.toys[k]}`)),h('p',{class:'mute',style:'margin:0;font-size:13px'},T.d))),
+      T.r==='x'?h('p',{class:'hand',style:'margin:0;color:var(--lantern)'},'할머니가 캡슐을 보더니 눈을 피한다. 「…그건 내가 넣은 게 아니야.」 (정신력 -4)'):null,
+      res.bonus?h('p',{class:'hand',style:'margin:0;color:var(--good)'},res.bonus):null].filter(Boolean));
+    const bk=document.getElementById('toyBook');if(bk)bk.replaceWith(toyBook());
+    gachaStatus();render()},still?150:1350)}
+function gachaStatus(){const m=G.me,dl=daily();const el=document.getElementById('toyStat');if(el)el.textContent=`가진 돈 $${m.money} · 오늘 ${dl.gacha||0} / ${TOY_DAY}판 · 겹친 것 ${toyDupes(m)}개`;
+  const fb=document.getElementById('toyFree');if(fb)fb.hidden=toyDupes(m)<3;document.querySelectorAll('#toyBtns button').forEach(b=>b.disabled=false)}
+function toyBook(){const m=G.me,got=m.toys||{};const all=Object.keys(TOYS);const full=toyFull();const n=full.filter(k=>got[k]).length;
+  return h('div',{class:'stack',id:'toyBook',style:'gap:8px'},h('div',{class:'row'},h('span',{class:'lbl'},'진열장'),h('b',{class:'num'},`${n} / ${full.length}`)),
+    h('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:6px'},all.map(k=>{const T=TOYS[k],c=got[k];const[rn,rc]=TOY_RAR[T.r];
+      return c?h('div',{class:'pl',style:'flex-direction:column;align-items:flex-start;gap:2px',title:T.d},h('div',null,itemIcon(k),h('b',{style:'font-size:13px'},T.n)),h('span',{class:'dim num',style:'font-size:11px'},`${rn} · × ${c}`))
+        :h('div',{class:'pl dim',style:'font-size:13px'+(T.r==='x'?';border-style:dashed':'')},T.r==='x'?'？？？ · 괴담':'？？？')})),
+    h('p',{class:'dim',style:'margin:0;font-size:12px'},'괴담 칸을 뺀 진열장을 다 채우면 할머니가 뭔가 준대요. 뽑은 건 내 방에 놓을 수 있어요.'))}
+function openGacha(){if(!ready())return;const m=G.me;m.toys=m.toys||{};const dl=daily();dl.gacha=dl.gacha||0;
+  openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'대성문구'),h('button',{class:'ghost',onclick:closeModal},'닫기')),
+    h('p',{class:'mute',style:'margin:0'},'인쇄소 1층 구석. 연필, 딱지, 색종이 사이로 할머니가 졸고 있다. 문 앞에 빨간 캡슐 뽑기 기계.'),
+    h('p',{class:'hand',style:'margin:0'},pick(TOY_OWNER)),
+    h('div',{class:'row',style:'gap:14px;align-items:center;justify-content:flex-start;flex-wrap:wrap'},toyMachine(),h('div',{id:'toyOut',class:'stack',style:'gap:6px;flex:1;min-width:200px'},h('p',{class:'mute',style:'margin:0'},`한 판 $${TOY_PRICE}. 하루 ${TOY_DAY}판까지.`))),
+    h('div',{class:'mute num',id:'toyStat',style:'font-size:12.5px'}),
+    h('div',{class:'wrap',id:'toyBtns'},h('button',{class:'pri',onclick:()=>toyPull(false)},`동전 넣고 돌리기 ($${TOY_PRICE})`),h('button',{id:'toyFree',hidden:toyDupes(m)<3,onclick:()=>toyPull(true)},'겹친 것 셋 주고 한 판'),h('button',{onclick:()=>{closeModal();openRoom()}},'내 방에 놓으러')),
+    toyBook()));gachaStatus()}
+
+/* 내 방에 뽑기 장난감도 놓을 수 있게 */
+{const o1=openRoom;openRoom=function(){const r=o1.apply(this,arguments);try{const m=G.me;const st=document.querySelector('#modalRoot .stack');const own=Object.keys(m.toys||{}).filter(k=>m.toys[k]>0&&TOYS[k]);
+  if(st&&own.length){const form=st.querySelector('form.composer');const refresh=()=>{save();closeModal();openRoom();render()};
+   const sec=[h('span',{class:'lbl'},'뽑기 장난감'),...own.map(k=>h('div',{class:'pl'},h('div',null,itemIcon(k),h('b',null,TOYS[k].n),` × ${m.toys[k]}`),h('button',{class:'sm',disabled:m.room.length>=ROOM_MAX,onclick:()=>{m.toys[k]--;m.room.push(k);refresh()}},'놓기')))];
+   sec.forEach(e=>form?st.insertBefore(e,form):st.append(e))}}catch(e){}return r}}
+
+/* ---------- 기기 간 동기화: 저장할 때마다 판(rev)을 올리고, 서버가 더 새것이면 덮어쓰지 않고 서버 상태로 맞춘다 ---------- */
+let SYNC_LAST=null,SYNC_BUSY=false,SYNC_T=null;
+/* 시간이 흐르며 저절로 바뀌는 값(ts, enAt, 소수점 회복)은 '진행'으로 치지 않는다 */
+function syncKey(row){const s=Object.assign({},row.state);delete s.ts;delete s.enAt;if(s.mind!=null)s.mind=Math.round(s.mind);if(s.hp!=null)s.hp=Math.round(s.hp);return JSON.stringify(Object.assign({},row,{state:s}))}
+/* 1초마다 save()가 불려도 저장이 밀리지 않게: 타이머를 새로 걸지 않고 기다린다 */
+save=function(){try{localStorage.setItem(LOCALKEY,JSON.stringify({opts:G.opts,intro:G.intro}))}catch(e){}if(!G.me||!sb)return;dirty=true;if(!SYNC_T)SYNC_T=setTimeout(()=>{SYNC_T=null;flush()},1500)};
+async function syncAdopt(why){const id=G.me&&G.me.id;if(!id)return false;const{data:r,error}=await sb.from('characters').select('*').eq('id',id).maybeSingle();if(error||!r||!G.me||G.me.id!==id)return false;
+  const sec=G.me.secret;clearTimeout(saveT);clearTimeout(SYNC_T);SYNC_T=null;dirty=false;G.me=meFromRow(r);G.me.secret=sec;if(!G.me.addr)G.me.addr=assignAddr(G.me.fac);if(!G.me.cell)G.me.cell=homeCell(G.me);
+  SYNC_LAST=syncKey(rowFromMe());lastSaved=SYNC_LAST;try{render()}catch(e){}if(why!=='quiet')toast('다른 기기에서 한 진행으로 맞췄어요.');return true}
+async function syncRev(){const{data,error}=await sb.from('characters').select('state').eq('id',G.me.id).maybeSingle();if(error)throw error;return+(data&&data.state&&data.state.rev)||0}
+flush=async function(){if(saving||!dirty||!G.me||!G.me.id||!sb)return;saving=true;dirty=false;
+  try{const mr=+G.me.rev||0;const hb=lastSaved==='';const ck=syncKey(rowFromMe());if(ck===SYNC_LAST&&!hb)return;
+    const sr=await syncRev();
+    if(sr>mr){await syncAdopt();return}
+    const now=new Date().toISOString();
+    if(ck===SYNC_LAST){const{error}=await sb.from('characters').update({active_at:now}).eq('id',G.me.id);if(!error)lastSaved=ck}
+    else{G.me.rev=sr+1;const r2=rowFromMe();const k2=syncKey(r2);r2.active_at=now;const{error}=await sb.from('characters').update(r2).eq('id',G.me.id);
+      if(error){G.me.rev=mr;dirty=true;toast('저장하지 못했어요. 연결을 확인해 주세요.')}else{SYNC_LAST=k2;lastSaved=k2}}}
+  catch(e){dirty=true;toast('저장하지 못했어요. 연결을 확인해 주세요.')}
+  finally{saving=false}
+  if(dirty&&!SYNC_T)SYNC_T=setTimeout(()=>{SYNC_T=null;flush()},1500)};
+async function syncCheck(){if(!G.me||!G.me.id||!sb||saving||SYNC_BUSY)return;SYNC_BUSY=true;try{const sr=await syncRev();if(sr>(+G.me.rev||0))await syncAdopt()}catch(e){}finally{SYNC_BUSY=false}}
+{const pc0=playChar;playChar=async function(row){SYNC_LAST=null;const r=await pc0.apply(this,arguments);try{if(G.me&&G.me.id===row.id)SYNC_LAST=syncKey(rowFromMe())}catch(e){}return r}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCheck()});
+window.addEventListener('focus',()=>syncCheck());window.addEventListener('pageshow',()=>syncCheck());
+setInterval(()=>{if(!document.hidden)syncCheck()},40000);
 
 /* ---------- 시작 ---------- */
 async function boot(){
