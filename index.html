@@ -235,6 +235,11 @@ body.build{background:#0E1110}
 .dlr{color:var(--bad)!important;text-shadow:1px 0 rgba(255,61,51,.55),-1px 0 rgba(120,220,200,.45);animation:dlrj .12s steps(2) infinite}
 @keyframes dlrj{0%{transform:translateX(0)}50%{transform:translateX(1px)}100%{transform:translateX(-1px)}}
 @media (prefers-reduced-motion:reduce){.dlr{animation:none}}
+.msg.ooc{border-left:3px solid var(--oc,transparent);padding-left:7px}
+.msg.ooc:not(.cont){margin-top:7px}
+.msg.ooc.cont{margin-top:1px}
+.msg.ooc.cont time{opacity:.45}
+.msg .who .facmark{display:inline-block}
 </style>
 </head>
 <body>
@@ -1972,9 +1977,9 @@ function renderChat(){const C=$('chatCard'),m=G.me;const ch=sub.chat;const list=
   else{const key=chKey();if(!CHAT[key]){CHAT[key]=[];if(sb&&m)loadChannel(key)}const items=CHAT[key].slice(-80);
     if(isBuild()&&ch==='all')list.append(h('div',{class:'msg hammer'},h('time',null,hm(T())),'쿵 · · · 쿵 · · · 쿵'));
     if(!items.length)list.append(h('div',{class:'mute',style:'font-size:13px'},ch==='cell'?'이 칸은 조용하다.':'아직 조용하다.'));
-    items.forEach(x=>{const mine=m&&x.character_id===m.id;const p=mine?m:SAMPLES[x.character_id];const name=p?p.name:'누군가';const t=Date.parse(x.created_at);
-      if(ch==='ooc'){list.append(h('div',{class:'msg ooc'},h('time',null,hm(t)),h('span',{class:'who'},mine?'나':`${name} 오너`),x.text));return}
-      list.append(h('div',{class:'msg'},h('time',null,hm(t)),h('span',{class:'who',style:`color:${p&&p.color!=='#0B0B0B'?p.color:'#9E9184'}`},mine?name:scramble(name)),x.text,mine||isAdminUser()?h('button',{class:'ghost del sm',style:'font-size:11px;padding:0 4px',onclick:async()=>{await sb.from('messages').delete().eq('id',x.id);CHAT[key]=CHAT[key].filter(y=>y.id!==x.id);renderChat()}},'지우기'):null))})}
+    items.forEach((x,i)=>{const mine=m&&x.character_id===m.id;const p=mine?m:SAMPLES[x.character_id];const name=p?p.name:'누군가';const t=Date.parse(x.created_at);
+      if(ch==='ooc'){const pv=items[i-1];const cont=!!(pv&&pv.character_id===x.character_id&&t-Date.parse(pv.created_at)<5*MIN);const col=p&&p.color&&p.color!=='#0B0B0B'?p.color:'#9E9184';list.append(h('div',{class:'msg ooc'+(cont?' cont':''),style:`--oc:${col}`},h('time',null,hm(t)),cont?'':h('span',{class:'who',style:`color:${col}`},p?facMark(p.fugitive&&mine?'free':p.fac,12,'margin-right:4px;vertical-align:-1px'):'',mine?'나':`${name} 오너`),x.text));return}
+      list.append(h('div',{class:'msg'},h('time',null,hm(t)),h('span',{class:'who',style:`color:${p&&p.color!=='#0B0B0B'?p.color:'#9E9184'}`},p?facMark(p.fugitive&&mine?'free':p.fac,12,'margin-right:4px;vertical-align:-1px'):'',mine?name:scramble(name)),x.text,mine||isAdminUser()?h('button',{class:'ghost del sm',style:'font-size:11px;padding:0 4px',onclick:async()=>{await sb.from('messages').delete().eq('id',x.id);CHAT[key]=CHAT[key].filter(y=>y.id!==x.id);renderChat()}},'지우기'):null))})}
   chatPut(C,[h('div',{class:'row'},h('span',{class:'lbl'},'무전'),h('div',{class:'wrap'},[['cell','현장'],['all','전체'],['ooc','오너'],['dm','1:1'+(dmUnread()?' '+dmUnread():'')],['radio','자정 라디오']].map(([k,n])=>h('button',{class:'sm'+(ch===k?' pri':''),style:k==='dm'&&dmUnread()&&ch!==k?'color:var(--bad);border-color:var(--bad)':'',onclick:()=>{sub.chat=k;if(k==='radio')sfx('static');renderChat()}},n)))),
     h('p',{class:'dim',style:'margin:0;font-size:12px'},ch==='cell'?(m?`${CELLS[m.cell].n}에 있는 사람에게만 보여요.`:''):ch==='all'?'성채 전체에 들려요. 캐릭터로 말하는 곳이에요.':ch==='ooc'?'오너끼리 이야기하는 곳이에요 (OOC).':ch==='dm'?'나와 나눈 1:1 대화 목록이에요.':'매일 자정, 누가 송출하는지 모르는 방송.'),
     list,m&&ch!=='radio'&&ch!=='dm'?chatForm:null,hasFx('gum')&&ch!=='radio'&&ch!=='ooc'?h('p',{class:'dim',style:'margin:0;font-size:12px'},'빈 잇몸 때문에 발음이 새요.'):null].filter(Boolean));
