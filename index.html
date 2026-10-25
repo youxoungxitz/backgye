@@ -259,6 +259,7 @@ body.build{background:#0E1110}
 .sheet dd{white-space:pre-wrap;overflow-wrap:anywhere}
 .tcms{border-top:1px solid var(--line);padding-top:8px}.tcm{display:flex;flex-direction:column;gap:3px;padding:6px 0;border-top:1px dashed var(--line)}.tcms>.tcm:first-of-type{border-top:0}.tcm.re{margin-left:16px;padding-left:10px;border-left:2px solid var(--line);border-top:0}
 .nbrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-top:1px dashed var(--line)}.nbrow:first-child{border-top:0}.nbrow.got{opacity:.55}.nbmark{display:inline-block;font-size:10px;line-height:1;padding:2px 4px;margin:0 4px;border:1px solid var(--tube);color:var(--tube);border-radius:3px;vertical-align:1px;font-weight:400}
+.talkcard{display:block;width:100%;text-align:left;white-space:normal;line-height:1.6;padding:10px 12px;font-size:14.5px}.talkcard.on{border-color:var(--tube);color:var(--tube);box-shadow:0 0 0 1px var(--tube) inset}.talkbox{border-top:1px solid var(--line);padding-top:10px}
 @keyframes rainfall{from{background-position:0 0}to{background-position:-40px 240px}}
 @keyframes quake{0%,6%,33%,39%,66%,72%,100%{transform:translate(0,0)}2%{transform:translate(1px,1px)}35%{transform:translate(-1px,1px)}68%{transform:translate(1px,-1px)}}
 body.build #view{animation:quake 2.7s infinite}
@@ -1938,7 +1939,7 @@ function meFromRow(r){const m=Object.assign({},r.state||{},r.sheet||{});m.id=r.i
   m.items=m.items||{};m.hidden=m.hidden||[];m.hints=m.hints||[];m.marks=m.marks||[];m.fx=m.fx||[];m.traces=m.traces||{};m.qdone=m.qdone||{};m.sam=m.sam||{patrol:0,cleanup:0,seal:0};m.sxp=m.sxp||{};m.statV2=m.statV3=true;
   if(m.en==null){m.en=EN_MAX;m.enAt=T()}if(m.ts==null)m.ts=T();if(m.hp==null)m.hp=100;if(m.mind==null)m.mind=80;if(m.money==null)m.money=100;if(m.debt==null)m.debt=0;
   G.log=Array.isArray(m.log)?m.log:[];delete m.log;return m}
-function personFromRow(r){const s=r.sheet||{};return{id:r.id,owner:r.owner,name:r.name,code:r.code,color:s.color||'#5E6A71',img:r.icon_url,portrait:r.portrait_url,fac:r.faction,rank:RANKN[r.rank]||'',cell:r.cell,age:s.age,gender:s.gender,look:s.look,pers:s.pers,habit:s.habit,likes:s.likes,dislikes:s.dislikes,fear:s.fear,fearNote:s.fearNote,keep:s.keep,memo:s.memo,quote:s.quote,job:s.job,addr:s.addr,room:s.room||[],roomNote:s.roomNote||'',clues:+s.clues||0,dexN:s.dexN||0,dexT:s.dexT||0,stats:r.stats||{},created:Date.parse(r.created_at),active:Date.parse(r.active_at),isNpc:r.is_npc}}
+function personFromRow(r){const s=r.sheet||{};return{id:r.id,owner:r.owner,name:r.name,code:r.code,color:s.color||'#5E6A71',img:r.icon_url,portrait:r.portrait_url,fac:r.faction,rank:RANKN[r.rank]||'',cell:r.cell,age:s.age,gender:s.gender,look:s.look,pers:s.pers,reason:s.reason,habit:s.habit,likes:s.likes,dislikes:s.dislikes,fear:s.fear,fearNote:s.fearNote,keep:s.keep,memo:s.memo,quote:s.quote,job:s.job,addr:s.addr,room:s.room||[],roomNote:s.roomNote||'',clues:+s.clues||0,dexN:s.dexN||0,dexT:s.dexT||0,stats:r.stats||{},created:Date.parse(r.created_at),active:Date.parse(r.active_at),isNpc:r.is_npc}}
 
 /* ---------- 이미지 ---------- */
 async function uploadImage(dataUrl,kind){const blob=await (await fetch(dataUrl)).blob();const path=`${AUTH.id}/${G.me.id}-${kind}.jpg`;
@@ -4196,6 +4197,118 @@ function doze(){const m=G.me;if(!m)return;if(!m.work)return toast('출근해 있
 function dozeCutPay(fn){return function(){const w=G.me&&G.me.work;if(!w||!w.cut)return fn.apply(this,arguments);const j=w.job,o=PAY[j];PAY[j]=Math.max(0,Math.floor((o||40)*(1-w.cut)));try{return fn.apply(this,arguments)}finally{PAY[j]=o}}}
 finishWork=dozeCutPay(finishWork);
 if(typeof earlyLeave==='function')earlyLeave=dozeCutPay(earlyLeave);
+
+/* ---------- 이야기 나누기: 처음 보는 사이는 「말 걸기」, 지인·가까운 사이는 「이야기 나누기」, 깊은 사이는 「속 이야기」 ---------- */
+const TALK_DAY=3,TALK_TTL=86400e3;
+const TALK_TIER=[
+ {n:'말 걸기',who:'처음 보는 사이',d:'처음 보는 사람에게 가볍게 말을 걸어요.',mind:2},
+ {n:'이야기 나누기',who:'지인 · 가까운 사이',d:'아는 사이끼리 레이란과 바깥, 지난 이야기를 나눠요.',mind:3},
+ {n:'속 이야기',who:'깊은 사이',d:'깊은 사이에서만 꺼낼 수 있는 이야기예요.',mind:5}];
+/* q: 기본 · tb: 상대가 여기서 태어난 사람 · ab: 내가 여기서 태어난 사람 · tl: 상대가 기억이 없는 사람 */
+const TALK_Q={
+ 0:[
+  {id:'c1',q:'레이란 시내 가 본 적 있어요? 전차가 아직 다닌다던데.',tb:'여기서 태어났다면서요. 시내는 가 본 적 있어요?',ab:'저는 여기서 나서 시내를 몰라요. 전차라는 게 정말 있어요?'},
+  {id:'c2',q:'몇 층 살아요? 아, 한 층 낮춰서 말해도 돼요.'},
+  {id:'c3',q:'국숫집 가 봤어요? 4번 테이블 말고요.'},
+  {id:'c4',q:'여기 들어온 지 얼마나 됐어요?',tb:'여기서 태어났다면서요. 바깥에서 온 사람들, 처음 보면 다들 신기해해요?',tl:'여기 들어온 지 얼마나 됐어요? …아, 그것도 기억이 안 나요?'},
+  {id:'c5',q:'항구 쪽에서 왔어요? 바다 냄새가 나서요.',tb:'바다 냄새 맡아 본 적 있어요? 배수로 쪽 말고, 진짜 바다요.',ab:'바깥 사람한테서는 바다 냄새가 난다던데, 정말이에요?'},
+  {id:'c6',q:'비 오는 날 빨래는 어디 널어요? 옥상은 안 된다던데.'},
+  {id:'c7',q:'바깥에서는 무슨 일 했어요?',tb:'여기서 자라면 무슨 일부터 배워요?',tl:'혹시 들어오기 전 일, 하나라도 기억나는 거 있어요?'},
+  {id:'c8',q:'새벽 3시에 망치 소리 들어 봤어요?'},
+  {id:'c9',q:'이 칸 자주 와요? 처음 보는 얼굴이라서요.'}],
+ 1:[
+  {id:'m1',q:'백계성 나가면 제일 먼저 뭐 할 거야?',tb:'바깥에 나갈 수 있으면, 제일 먼저 뭘 보고 싶어?'},
+  {id:'m2',q:'시내에서 제일 맛있게 먹은 게 뭐야?',tb:'바깥 음식 중에 제일 먹어 보고 싶은 거 있어?',ab:'나는 바깥 음식을 몰라서. 시내에서 제일 맛있는 게 뭐야?'},
+  {id:'m3',q:'여기 오기 전엔 어떻게 살았어?',tb:'어릴 때 이 안에서 뭐 하고 놀았어?',tl:'기억 안 나는 거, 가끔 꿈에서라도 보여?'},
+  {id:'m4',q:'레이란 항구에 배 들어오는 소리 기억나?',tb:'배 고동 소리 들어 봤어? 가끔 밤에 들린다는 사람이 있던데.'},
+  {id:'m5',q:'제일 무서웠던 수칙이 뭐야?'},
+  {id:'m6',q:'바깥에 기다리는 사람 있어?',tb:'이 안에서 누구 기다리는 사람 있어?'},
+  {id:'m7',q:'전차 타 본 적 있어? 2층 맨 앞자리.',tb:'전차 모형 본 적 있어? 문방구 뽑기에서 가끔 나온대.',ab:'전차 2층 맨 앞자리가 그렇게 좋대. 타 봤어?'},
+  {id:'m8',q:'여기서 제일 좋아하는 데가 어디야?'},
+  {id:'m9',q:'나가면 어디서 살고 싶어?',tb:'평생 여기서 살 거야?'},
+  {id:'m10',q:'레이란 시내는 지금쯤 많이 변했을까?',tb:'바깥이 어떻게 생겼을 것 같아? 상상해 본 거라도.'}],
+ 2:[
+  {id:'d1',q:'언젠가 나가게 되면, 나도 같이 데려갈 거야?',tb:'바깥에 나가자고 하면, 나랑 같이 가 줄 거야?'},
+  {id:'d2',q:'여기 들어오던 날 밤 이야기, 아직 아무한테도 안 했지?',tb:'여기서 태어난 거, 원망해 본 적 있어?',tl:'기억이 안 난다는 거, 사실 무섭지 않아?'},
+  {id:'d3',q:'내가 어느 날 이름을 잃으면, 어떻게 찾아 줄 거야?'},
+  {id:'d4',q:'바깥에 두고 온 것 중에 하나만 되찾을 수 있으면?',tb:'바깥에서 하나만 가져올 수 있으면 뭘 갖고 싶어?'},
+  {id:'d5',q:'아무한테도 안 한 얘기, 하나만 해 줘.'},
+  {id:'d6',q:'백계성이 끝까지 안 놔주면 어떡할래?'},
+  {id:'d7',q:'레이란에서 마지막으로 본 풍경이 뭐야?',tb:'네가 상상하는 레이란 얘기 해 줘. 틀려도 돼.',ab:'나는 바깥을 몰라. 네가 마지막으로 본 레이란 얘기 해 줘.'},
+  {id:'d8',q:'증축 소리 들릴 때, 무슨 생각 해?'}]};
+/* 이상한 화제: 대답이 오면 성채가 한 줄 덧붙인다 */
+const TALK_ODD=[
+ {id:'o1',q:'바다, 무슨 색이었지? 갑자기 기억이 안 나서.',tb:'바다 본 적 있어? 사람들이 다 다른 색이라고 하던데.',after:'두 사람은 바다 색을 다르게 기억했다. 둘 다 그 사실을 알아차리지 못했다.'},
+ {id:'o2',q:'레이란에서 마지막으로 본 사람 이름, 기억나?',tb:'바깥에서 들어온 사람한테 이름을 물어보면, 다들 한 박자 늦게 대답하더라.',after:'대답에 적힌 이름이 잠깐 흐릿해졌다가 다시 또렷해졌다.'},
+ {id:'o3',q:'바깥 날씨, 요즘은 어떨까?',after:'창밖이 유난히 하얗다. 둘 다 그걸 안개라고 생각했다.'},
+ {id:'o4',q:'정문 밖으로 나간 사람, 돌아오는 거 본 적 있어?',after:'둘 다 「있다」고 하려다가, 그게 누구였는지 떠올리지 못했다.'},
+ {id:'o5',q:'레이란 항구 이름이 뭐였더라?',after:'두 사람이 말한 항구 이름은 서로 달랐다.'},
+ {id:'o6',q:'전차 종점이 어디였지?',after:'종점 이름을 말하는 순간, 어디선가 망치 소리가 한 번 났다.'}];
+const TALK_SCENE=[
+ ['처음 나눈 말치고는 오래 이야기했다. 헤어질 때 서로 이름을 한 번 더 확인했다.','계단참에 선 채로 잠깐 이야기했다. 위층에서 누가 내려오는 소리에 말이 끊겼다.','말을 걸길 잘했다. 다음에 마주치면 고개 정도는 끄덕일 것 같다.','처음 듣는 목소리였다. 이상하게 어디서 들어 본 것 같았다.'],
+ ['차찬텡 구석 자리에서 식은 밀크티를 두고 한참 이야기했다.','옥상 난간에 기대 이야기했다. 바람이 말을 반쯤 가져갔다.','국숫집에서 국수가 불도록 이야기했다. 4번 테이블은 비어 있었다.','복도 형광등 아래에서 이야기했다. 형광등이 두 번 깜빡이는 동안 둘 다 말이 없었다.'],
+ ['불 꺼진 복도 끝에서 작게 이야기했다. 서로 얼굴은 잘 보이지 않았다.','이야기가 끝나고도 한참 아무 말 없이 앉아 있었다.','증축 소리가 그칠 때까지 이야기했다. 대답을 다 듣고 나서야 문을 잠갔다.','같은 담요를 덮고 이야기했다. 누가 먼저 잠들었는지는 아무도 모른다.']];
+let TALKS=[];
+const talkTier=pid=>{const st=stageOf(G.rel&&G.rel[pid]);return st===0?0:st===3?2:1};
+const talkName=id=>G.me&&G.me.id===id?G.me.name:(SAMPLES[id]?SAMPLES[id].name:'누군가');
+const talkLive=x=>x.status==='open'&&Date.now()-Date.parse(x.created_at)<TALK_TTL;
+function talkQ(c,me,p){const tr=p&&p.reason,ar=me&&me.reason;return(tr==='born'&&c.tb)||(tr==='lost'&&c.tl)||(ar==='born'&&c.ab)||c.q}
+async function loadTalks(){const m=G.me;if(!m||!sb)return;try{const{data,error}=await sb.from('talks').select('*').or(`from_char.eq.${m.id},to_char.eq.${m.id}`).order('created_at',{ascending:false}).limit(60);if(!error)TALKS=(data||[]).filter(x=>Date.now()-Date.parse(x.created_at)<7*86400e3)}catch(e){}}
+function talkUpsert(x){if(!x||!G.me||(x.from_char!==G.me.id&&x.to_char!==G.me.id))return;const i=TALKS.findIndex(y=>y.id===x.id);if(i>=0)TALKS[i]=x;else TALKS.unshift(x);try{pagerLabel()}catch(e){}}
+function talkPick(pid){const m=G.me,p=SAMPLES[pid];if(!m||!p)return;if(!ready())return;const tier=talkTier(pid);const dl=daily();dl.talk=dl.talk||0;
+  if(dl.talk>=TALK_DAY)return toast(`오늘은 이야기를 ${TALK_DAY}번 걸었어요. 내일 또 걸 수 있어요.`);
+  if(TALKS.some(x=>x.from_char===m.id&&x.to_char===pid&&talkLive(x)))return toast('먼저 건 이야기에 아직 대답이 없어요.');
+  const pool=TALK_Q[tier].slice();const cards=[];while(cards.length<3&&pool.length)cards.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
+  if(chance(.15))cards[Math.floor(Math.random()*cards.length)]=pick(TALK_ODD);
+  const T0=TALK_TIER[tier];let chosen=null;const ask=h('input',{maxlength:120,placeholder:'덧붙일 한마디 (선택, 120자)'});const list=h('div',{class:'stack',style:'gap:6px'});
+  const draw=()=>list.replaceChildren(...cards.map(c=>{const q=talkQ(c,m,p);return h('button',{class:'talkcard'+(chosen===c?' on':''),onclick:()=>{chosen=c;draw()}},'「'+q+'」')}));draw();
+  openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},`${T0.n} · ${p.name}`),h('button',{class:'ghost',onclick:closeModal},'닫기')),
+    h('p',{class:'mute',style:'margin:0;font-size:13px'},`${T0.d} 화제를 하나 고르세요. 상대가 하루 안에 대답하면 둘 다 정신이 조금 회복돼요.`),
+    list,ask,h('div',{class:'wrap'},h('button',{class:'pri',onclick:()=>{if(!chosen)return toast('화제를 하나 골라 주세요.');talkSend(pid,tier,chosen,ask.value)}},'말을 건다'),h('button',{class:'ghost sm',onclick:()=>{closeModal();talkPick(pid)}},'다른 화제'))))}
+async function talkSend(pid,tier,c,ask){const m=G.me,p=SAMPLES[pid];const q=talkQ(c,m,p);
+  const{data,error}=await sb.from('talks').insert({from_char:m.id,to_char:pid,tier,topic:c.id,q,ask:String(ask||'').trim().slice(0,120)}).select().single();
+  if(error)return toast('말을 걸지 못했어요. 운영자에게 14_talks.sql 실행을 부탁해 주세요.');
+  const dl=daily();dl.talk=(dl.talk||0)+1;talkUpsert(data);log(`${p.name}에게 말을 걸었다. 「${q}」`,'life');save();closeModal();toast(`${p.name}에게 말을 걸었어요. 대답이 오면 삐삐함에 떠요.`)}
+function talkAnswerOpen(x){const from=talkName(x.from_char);const T0=TALK_TIER[x.tier]||TALK_TIER[0];const ta=h('textarea',{maxlength:300,rows:4,placeholder:'캐릭터로 대답해 주세요 (300자). *행동*은 별표로 감싸요.'});
+  openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},`${from}의 ${T0.n}`),h('button',{class:'ghost',onclick:closeModal},'닫기')),
+    h('blockquote',{class:'hand',style:'margin:0'},'「'+x.q+'」'),x.ask?h('p',{style:'margin:0;font-size:14px'},...(typeof actNodes==='function'?actNodes(x.ask):[x.ask])):null,
+    ta,h('div',{class:'wrap'},h('button',{class:'pri',onclick:()=>talkAnswer(x,ta.value,false)},'대답한다'),h('button',{class:'ghost sm',onclick:()=>talkAnswer(x,'',true)},'얼버무린다'))))}
+const talkPlain=t=>String(t||'').replace(/\*([^*\n]+)\*/g,'($1)');
+function talkOdd(x){const o=TALK_ODD.find(c=>c.id===x.topic);return o?o.after:''}
+async function talkAnswer(x,text,dodge){const m=G.me;text=String(text||'').trim();if(!dodge&&!text)return toast('대답을 적어 주세요.');
+  const upd={status:dodge?'dodged':'done',answer:dodge?null:text.slice(0,300),answered_at:new Date().toISOString()};
+  const{error}=await sb.from('talks').update(upd).eq('id',x.id);if(error)return toast('대답하지 못했어요.');Object.assign(x,upd);talkUpsert(x);closeModal();
+  const from=talkName(x.from_char),T0=TALK_TIER[x.tier]||TALK_TIER[0];
+  if(dodge){log(`${from}의 이야기를 얼버무렸다.`,'life');save();return done(T0.n,`「${x.q}」\n\n대충 웃어넘겼다. ${from}은(는) 더 묻지 않았다.`,[])}
+  const out=give({mind:T0.mind});const odd=talkOdd(x);const sc=pick(TALK_SCENE[x.tier]||TALK_SCENE[0]);
+  if(G.rel&&G.rel[x.from_char]&&G.rel[x.from_char].friend&&typeof bondRelLog==='function')bondRelLog(x.from_char,`[${T0.n}] ${from}: 「${x.q}」 / ${m.name}: 「${text}」`.slice(0,295));
+  log(`${from}과(와) 이야기를 나눴다. 「${x.q}」`,odd?'haunt':'life');save();
+  done(T0.n,`${from}: 「${x.q}」${x.ask?'\n'+talkPlain(x.ask):''}\n나: 「${talkPlain(text)}」\n\n${sc}${odd?'\n\n'+odd:''}`,out,false)}
+function talkResultOpen(x){const m=G.me;m.talkSeen=m.talkSeen||{};const first=!m.talkSeen[x.id];m.talkSeen[x.id]=1;const to=talkName(x.to_char),T0=TALK_TIER[x.tier]||TALK_TIER[0];closeModal();
+  if(x.status==='dodged'){save();return done(T0.n,`「${x.q}」\n\n${to}은(는) 대충 웃어넘겼다. 오늘은 거기까지인 것 같다.`,[])}
+  const out=first?give({mind:T0.mind}):[];const odd=talkOdd(x);const sc=pick(TALK_SCENE[x.tier]||TALK_SCENE[0]);save();
+  done(T0.n,`나: 「${x.q}」${x.ask?'\n'+talkPlain(x.ask):''}\n${to}: 「${talkPlain(x.answer)}」\n\n${sc}${odd?'\n\n'+odd:''}`,out,false);
+  if(first&&x.tier===0&&!(G.rel&&G.rel[x.to_char]&&G.rel[x.to_char].friend))setTimeout(()=>toast(`${to}에게 지인 신청을 보내 볼 수도 있어요.`),900)}
+/* 시트에 버튼 */
+function talkEl(pid){const m=G.me,p=SAMPLES[pid];if(!m||!p||p.isNpc||(typeof sameOwner==='function'&&sameOwner(pid)))return null;const tier=talkTier(pid),T0=TALK_TIER[tier];
+  const inc=TALKS.filter(x=>x.from_char===pid&&x.to_char===m.id&&talkLive(x));const out=TALKS.find(x=>x.from_char===m.id&&x.to_char===pid&&talkLive(x));const left=TALK_DAY-(daily().talk||0);
+  return h('div',{class:'stack talkbox',style:'gap:6px'},h('span',{class:'lbl'},`이야기 · ${T0.who}`),
+    ...inc.map(x=>h('div',{class:'banner',style:'color:var(--ink);display:flex;gap:8px;align-items:center;flex-wrap:wrap'},h('span',{style:'flex:1;min-width:0'},`「${x.q}」`),h('button',{class:'sm pri',onclick:()=>{closeModal();talkAnswerOpen(x)}},'대답하기'))),
+    out?h('p',{class:'dim',style:'margin:0;font-size:12.5px'},`대답 기다리는 중: 「${out.q}」`):null,
+    h('div',{class:'wrap',style:'gap:6px;align-items:center'},h('button',{class:'sm'+(tier===2?' pri':''),disabled:(!!out||left<=0)||null,onclick:()=>{closeModal();talkPick(pid)}},T0.n),h('span',{class:'dim',style:'font-size:12px'},`${T0.d} 오늘 ${Math.max(0,left)}번 남음`)))}
+{const os3=openSheet;openSheet=function(id){const r=os3.apply(this,arguments);try{if(id!=='me'&&sb){const el=talkEl(id);const sh=document.querySelector('#modalRoot .sheet');if(el&&sh){const dl=sh.querySelector('dl');if(dl)dl.after(el);else sh.append(el)}}}catch(e){}return r}}
+/* 삐삐함 */
+if(typeof loadInboxExtra==='function'&&typeof inboxItems==='function'){
+ {const li=loadInboxExtra;loadInboxExtra=async function(){await loadTalks();return li.apply(this,arguments)}}
+ {const ib=inboxItems;inboxItems=function(){const out=ib.apply(this,arguments);const m=G.me;if(!m)return out;const seen=m.talkSeen||{};
+   for(const x of TALKS){const T0=TALK_TIER[x.tier]||TALK_TIER[0];
+     if(x.to_char===m.id&&talkLive(x))out.push({k:'말 걸어옴',t:Date.parse(x.created_at),title:`${talkName(x.from_char)} · ${T0.n}`,body:'「'+x.q+'」',unread:true,go:()=>{closeModal();talkAnswerOpen(x)}});
+     else if(x.from_char===m.id&&(x.status==='done'||x.status==='dodged'))out.push({k:'대답 옴',t:Date.parse(x.answered_at||x.created_at),title:`${talkName(x.to_char)}이(가) ${x.status==='done'?'대답했어요':'얼버무렸어요'} · ${T0.n}`,body:x.answer||'',unread:!seen[x.id],go:()=>talkResultOpen(x)})}
+   return out.sort((a,b)=>b.t-a.t).slice(0,60)}}
+ INBOX_C['말 걸어옴']='var(--amber,#FFC247)';
+}
+if(typeof subscribe==='function'){const s1=subscribe;subscribe=function(){const r=s1.apply(this,arguments);try{sb.channel('baekgye-talk').on('postgres_changes',{event:'*',schema:'public',table:'talks'},pl=>{const x=pl.new;if(!x||!x.id)return;const fresh=!TALKS.some(y=>y.id===x.id&&y.status===x.status);talkUpsert(x);
+  if(fresh&&G.me){if(x.to_char===G.me.id&&x.status==='open')toast(`${talkName(x.from_char)}이(가) 말을 걸었어요. 삐삐함을 보세요.`);else if(x.from_char===G.me.id&&x.status==='done')toast(`${talkName(x.to_char)}이(가) 대답했어요.`)}}).subscribe()}catch(e){}return r}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
