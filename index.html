@@ -262,6 +262,7 @@ body.build{background:#0E1110}
 .talkcard{display:block;width:100%;text-align:left;white-space:normal;line-height:1.6;padding:10px 12px;font-size:14.5px}.talkcard.on{border-color:var(--tube);color:var(--tube);box-shadow:0 0 0 1px var(--tube) inset}.talkbox{border-top:1px solid var(--line);padding-top:10px}
 .mmdcell{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:4px;background:rgba(40,8,8,.28)}.mmdcell.here{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad) inset}.mmdz{font-size:22px;color:var(--bad);opacity:.85;width:28px;text-align:center;flex:none;line-height:1.2}
 .mmdrooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px;margin-top:6px}.mmdroom{padding:6px 8px;font-size:12.5px;text-align:left;line-height:1.35;display:flex;flex-direction:column;align-items:flex-start;gap:1px}.mmdroom.gone{opacity:.3;border-style:dashed;text-decoration:line-through}.mmdroom.extra{border-color:var(--bad)}.mmdroom.ph{border-color:var(--bad);color:var(--bad);animation:buzz 2.2s infinite}.mmdroom.here{border-color:var(--tube);box-shadow:0 0 0 1px var(--tube) inset}
+.feelbar{position:relative;height:6px;background:var(--line);border-radius:3px;overflow:hidden}.feelbar i{position:absolute;top:0;bottom:0}.feelbar b{position:absolute;top:-2px;bottom:-2px;width:1px;background:var(--mute)}
 @keyframes rainfall{from{background-position:0 0}to{background-position:-40px 240px}}
 @keyframes quake{0%,6%,33%,39%,66%,72%,100%{transform:translate(0,0)}2%{transform:translate(1px,1px)}35%{transform:translate(-1px,1px)}68%{transform:translate(1px,-1px)}}
 body.build #view{animation:quake 2.7s infinite}
@@ -2209,7 +2210,7 @@ function openDM(pid){const m=G.me;if(!m)return;if(typeof sameOwner==='function'&
   DM_DRAW=draw;draw();dmMarkRead(pid);
   openModal(h('div',{class:'stack'},h('div',{class:'row'},h('div',{class:'wrap'},p?avEl(p):null,h('h2',{class:'disp',style:'font-size:22px'},dmName(pid))),h('button',{class:'ghost',onclick:()=>{DM_OPEN=null;closeModal()}},'닫기')),
     h('p',{class:'dim',style:'margin:0;font-size:12px'},'캐릭터로 나누는 1:1 대화예요. 두 사람과 운영자만 볼 수 있어요. *고개를 끄덕인다*처럼 별표로 감싸면 행동 묘사가 돼요.'),list,
-    h('form',{class:'composer',onsubmit:async e=>{e.preventDefault();let v=inp.value.trim();if(!v)return;if(hasFx('gum'))v=gumKeep(v);inp.value='';
+    h('form',{class:'composer',onsubmit:async e=>{e.preventDefault();let v=inp.value.trim();if(!v)return;if(hasFx('gum'))v=gumKeep(v);if(typeof fxSpeech==='function')v=fxSpeech(v);inp.value='';
       const{data,error}=await sb.from('direct_messages').insert({from_char:m.id,to_char:pid,text:v}).select().single();if(error){toast('보내지 못했어요.');inp.value=v;return}
       if(data&&!DMS.some(x=>x.id===data.id))DMS.unshift(normDM(data));draw();renderChat()}},inp,h('button',{type:'submit',class:'pri'},'보내기'))));setTimeout(()=>inp.focus(),50)}
 let DM_DRAW=null;
@@ -4711,6 +4712,60 @@ if(typeof inboxItems==='function'){const ib2=inboxItems;inboxItems=function(){co
     if(x.to_char===m.id&&actLive(x))clean.push({k:'같이 하자',_act:1,t:Date.parse(x.created_at),title:`${talkName(x.from_char)} · ${a.n}`,body:'「'+x.q+'」',unread:true,go:()=>{closeModal();actOpen(x)}});
     else if(x.from_char===m.id&&(x.status==='done'||x.status==='dodged'))clean.push({k:'대답 옴',_act:1,t:Date.parse(x.answered_at||x.created_at),title:`${talkName(x.to_char)}이(가) ${x.status==='done'?'받아 줬어요':'거절했어요'} · ${a.n}`,body:'',unread:!seen[x.id],go:()=>actResult(x)})}
   return clean.sort((a,b)=>b.t-a.t).slice(0,60)};if(typeof INBOX_C!=='undefined')INBOX_C['같이 하자']='var(--tube)'}
+
+/* ---------- 괴이화: 증축 시간(새벽 3~4시)에 돌아다니면 쌓인다. 하룻밤에 두 단계까지 ---------- */
+function corrBuildTry(why){try{if(!G.me||!isBuild()||!chance(.25))return;const dl=daily();dl.corrBuild=dl.corrBuild||0;if(dl.corrBuild>=2)return;dl.corrBuild++;corruptUp(why)}catch(e){}}
+{const mv2=move;move=function(k){const c0=G.me&&G.me.cell;const r=mv2.apply(this,arguments);try{if(G.me&&G.me.cell!==c0)corrBuildTry('증축 소리 속을 걸었다. 계단 한 칸이 발밑에서 새로 생겼다.')}catch(e){}return r}}
+{const ex3=explore;explore=function(){const s=fxSnap();const r=ex3.apply(this,arguments);try{if(fxMoved(s))corrBuildTry('망치 소리가 바로 옆 벽 안에서 났다. 벽이 내 쪽으로 한 뼘 자랐다.')}catch(e){}return r}}
+{const vs1=visit;visit=function(id){const s=fxSnap();const r=vs1.apply(this,arguments);try{if(fxMoved(s))corrBuildTry('증축 시간에 괴담 장소에 들렀다. 돌아 나올 때 문이 하나 늘어 있었다.')}catch(e){}return r}}
+
+/* ---------- 관계 포인트(둘이 같이 쌓는 것) + 한쪽 마음(내 캐릭터 → 상대, 공개 범위 선택) ---------- */
+const FEEL_TAGS=['','호감','신뢰','동경','애정','짝사랑','보호하고 싶음','빚진 마음','경계','불편','질투','애증','두려움','증오'];
+const FEEL_VIS={self:'나만 보기',them:'상대에게만',all:'모두에게'};
+let FEEL=[],FEEL_AT=0,FEEL_OFF=false;
+async function loadFeel(force){if(!sb||!G.me)return;if(!force&&Date.now()-FEEL_AT<60e3)return;FEEL_AT=Date.now();try{const{data,error}=await sb.from('feelings').select('*').limit(1000);if(error){FEEL_OFF=true;return}FEEL_OFF=false;FEEL=data||[]}catch(e){}}
+const feelOf=(a,b)=>FEEL.find(x=>x.from_char===a&&x.to_char===b);
+function feelWord(s){s=+s||0;return s<=-60?'증오':s<=-20?'싫음':s<20?'무덤덤':s<60?'호감':s<90?'애정':'전부'}
+function feelBar(s){s=+s||0;const w=Math.abs(s)/2;return h('div',{class:'feelbar'},h('i',{style:`left:${s<0?50-w:50}%;width:${w}%;background:${s<0?'var(--bad)':'var(--lantern)'}`}),h('b',{style:'left:50%'}))}
+function feelLine(x,from,to){const p=[x.tag?h('span',{class:'tag red'},x.tag):null,h('span',{class:'num',style:'font-size:12.5px'},`${feelWord(x.score)} ${x.score>0?'+':''}${x.score}`),x.note?h('span',{class:'hand',style:'font-size:13px'},'「'+x.note+'」'):null];
+  return h('div',{class:'stack',style:'gap:4px'},h('div',{class:'row',style:'gap:6px;justify-content:flex-start;flex-wrap:wrap'},from?h('b',{style:'font-size:13px'},`${from} → ${to}`):null,...p.filter(Boolean)),feelBar(x.score))}
+async function feelSave(pid,tag,score,note,vis){const m=G.me;const row={from_char:m.id,to_char:pid,tag,score:Math.max(-100,Math.min(100,Math.round(+score||0))),note:String(note||'').trim().slice(0,60),vis,updated_at:new Date().toISOString()};
+  const{error}=await sb.from('feelings').upsert(row,{onConflict:'from_char,to_char'});if(error)return toast('남기지 못했어요. 운영자에게 15_feelings.sql 실행을 부탁해 주세요.');
+  const i=FEEL.findIndex(x=>x.from_char===m.id&&x.to_char===pid);if(i>=0)FEEL[i]=row;else FEEL.push(row);toast(`마음을 적어 두었어요 · ${FEEL_VIS[vis]}`);closeModal();openSheet(pid)}
+async function feelDel(pid){const m=G.me;const{error}=await sb.from('feelings').delete().eq('from_char',m.id).eq('to_char',pid);if(error)return toast('지우지 못했어요.');FEEL=FEEL.filter(x=>!(x.from_char===m.id&&x.to_char===pid));toast('마음을 지웠어요.');closeModal();openSheet(pid)}
+/* 관계 포인트: 장면 수로 단계가 정해진다 (아는 사이 → 가까운 사이 5 → 깊은 사이 12) */
+const REL_NEED=[0,5,12];
+async function relBreak(pid,box){try{const[a,b]=pairOf(pid);const{data}=await sb.from('relation_logs').select('text').eq('a',a).eq('b',b).limit(300);const rows=data||[];const c={};const cat=t=>/^\[같이 둘러보기\]/.test(t)?'같이 둘러보기':/^\[직접 쓴 장면\]/.test(t)?'직접 쓴 장면':/^\[(말 걸기|이야기 나누기|속 이야기)\]/.test(t)?'이야기':/^\[둘만의 수칙\]/.test(t)?'둘만의 수칙':'함께한 장면';
+  for(const r of rows){const k=cat(String(r.text||''));c[k]=(c[k]||0)+1}const ent=Object.entries(c).sort((x,y)=>y[1]-x[1]);if(box)box.replaceChildren(...(ent.length?ent.map(([k,n])=>h('span',{class:'tag'},`${k} ${n}`)):[h('span',{class:'dim',style:'font-size:11.5px'},'아직 기록으로 남은 장면이 없어요.')]))}catch(e){if(box)box.replaceChildren()}}
+function relPointsEl(pid,r){if(!r||!r.friend)return null;const st=stageOf(r),sc=r.scenes||0;const next=st===1?5:st===2?12:null;const prev=st===1?0:st===2?5:12;const pct=next?Math.min(100,Math.round((sc-prev)/(next-prev)*100)):100;
+  const br=h('div',{class:'wrap',style:'gap:4px'},h('span',{class:'dim',style:'font-size:11.5px'},'불러오는 중…'));if(sb)relBreak(pid,br);
+  return h('div',{class:'stack talkbox',style:'gap:6px'},h('div',{class:'row'},h('span',{class:'lbl'},'관계 포인트 · 둘이 같이 쌓는 것'),h('b',{class:'num',style:'font-size:13px'},next?`${STAGES[st]} · ${sc} / ${next}`:`${STAGES[st]} · ${sc}`)),
+    h('div',{style:'height:6px;background:var(--line);border-radius:3px;overflow:hidden'},h('div',{style:`height:100%;width:${pct}%;background:var(--tube)`})),
+    h('p',{class:'dim',style:'margin:0;font-size:12px'},next?`장면을 ${next-sc}번 더 함께하면 「${STAGES[st+1]}」가 돼요.`:'더 오를 단계가 없어요. 깊은 사이예요.'),
+    br,(r.neg||0)>0?h('p',{class:'dim',style:'margin:0;font-size:12px;color:var(--bad)'},`앙금 ${r.neg} · 나쁘게 끝난 장면`):null)}
+/* 한쪽 마음 */
+function feelEl(pid){const m=G.me,p=SAMPLES[pid];if(!m||!p||p.isNpc||(typeof sameOwner==='function'&&sameOwner(pid)))return null;
+  if(FEEL_OFF)return h('div',{class:'stack talkbox',style:'gap:6px'},h('span',{class:'lbl'},'마음'),h('p',{class:'mute',style:'margin:0;font-size:12.5px'},'운영자가 15_feelings.sql을 실행하면 열려요.'));
+  const mine=feelOf(m.id,pid),theirs=feelOf(pid,m.id);
+  const tag=h('select',null,FEEL_TAGS.map(t=>h('option',{value:t},t||'꼬리표 없음')));tag.value=mine?mine.tag:'';
+  const sc=h('input',{type:'range',min:'-100',max:'100',step:'5',value:String(mine?mine.score:0),style:'padding:0'});const scL=h('span',{class:'num',style:'font-size:12.5px;min-width:72px;text-align:right'});const upd=()=>scL.textContent=`${feelWord(sc.value)} ${+sc.value>0?'+':''}${sc.value}`;sc.addEventListener('input',upd);upd();
+  const note=h('input',{maxlength:60,placeholder:'한 줄 메모 (60자, 선택)',value:mine?mine.note:''});
+  let vis=mine?mine.vis:'self';const vb=h('div',{class:'wrap',style:'gap:4px'});const drawV=()=>vb.replaceChildren(...Object.entries(FEEL_VIS).map(([k,n])=>h('button',{type:'button',class:'sm'+(vis===k?' pri':''),onclick:()=>{vis=k;drawV()}},n)));drawV();
+  return h('div',{class:'stack talkbox',style:'gap:8px'},h('span',{class:'lbl'},`마음 · ${m.name} → ${p.name}`),
+    theirs?h('div',{class:'stack',style:'gap:4px;padding:8px 10px;border:1px dashed var(--line);border-radius:4px'},h('span',{class:'dim',style:'font-size:11.5px'},`${p.name}이(가) ${theirs.vis==='them'?'나에게만':'모두에게'} 보여 준 마음`),feelLine(theirs)):null,
+    h('div',{class:'row',style:'gap:8px'},tag,scL),sc,note,
+    h('div',{class:'row',style:'gap:8px;flex-wrap:wrap'},h('span',{class:'dim',style:'font-size:12px'},'공개 범위'),vb),
+    h('div',{class:'wrap'},h('button',{class:'sm pri',onclick:()=>feelSave(pid,tag.value,sc.value,note.value,vis)},mine?'고쳐 두기':'적어 두기'),mine?h('button',{class:'sm ghost',onclick:()=>feelDel(pid)},'지우기'):null),
+    h('p',{class:'dim',style:'margin:0;font-size:11.5px'},'나만 보기는 나만, 상대에게만은 나와 상대만, 모두에게는 이 사람 프로필을 여는 누구나 볼 수 있어요. 관계 포인트와 달리 내 캐릭터 쪽 마음만 적는 거예요.'))}
+/* 남의 프로필: 그 사람이 모두에게 공개한 마음들 */
+function feelPublicEl(pid){const list=FEEL.filter(x=>x.vis==='all'&&(x.from_char===pid||x.to_char===pid)&&!(G.me&&(x.from_char===G.me.id&&x.to_char===pid)));if(!list.length)return null;const nm=id=>G.me&&id===G.me.id?G.me.name:(SAMPLES[id]?SAMPLES[id].name:'누군가');
+  return h('div',{class:'stack talkbox',style:'gap:8px'},h('span',{class:'lbl'},'공개된 마음'),...list.slice(0,8).map(x=>feelLine(x,nm(x.from_char),nm(x.to_char))))}
+{const os5=openSheet;openSheet=function(id){const r=os5.apply(this,arguments);try{const sh=document.querySelector('#modalRoot .sheet');if(!sh)return r;
+  const put=()=>{sh.querySelectorAll('.feelzone').forEach(e=>e.remove());const zone=h('div',{class:'stack feelzone',style:'gap:10px'});
+    if(id==='me'){const mine=FEEL.filter(x=>G.me&&x.from_char===G.me.id);if(mine.length)zone.append(h('div',{class:'stack talkbox',style:'gap:8px'},h('span',{class:'lbl'},'내가 적어 둔 마음'),...mine.map(x=>h('div',{class:'stack',style:'gap:2px'},feelLine(x,G.me.name,SAMPLES[x.to_char]?SAMPLES[x.to_char].name:'누군가'),h('span',{class:'dim',style:'font-size:11px'},FEEL_VIS[x.vis])))))}
+    else{const r0=G.rel&&G.rel[id];const a=relPointsEl(id,r0),b=feelEl(id),c=feelPublicEl(id);[a,b,c].forEach(x=>{if(x)zone.append(x)})}
+    if(zone.children.length){const tb=sh.querySelector('.talkbox');if(tb)tb.before(zone);else{const dl=sh.querySelector('dl');if(dl)dl.after(zone);else sh.append(zone)}}};
+  put();if(sb)loadFeel().then(()=>{if(document.querySelector('#modalRoot .sheet')===sh)put()})}catch(e){}return r}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
