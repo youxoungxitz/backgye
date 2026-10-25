@@ -261,6 +261,7 @@ body.build{background:#0E1110}
 .nbrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-top:1px dashed var(--line)}.nbrow:first-child{border-top:0}.nbrow.got{opacity:.55}.nbmark{display:inline-block;font-size:10px;line-height:1;padding:2px 4px;margin:0 4px;border:1px solid var(--tube);color:var(--tube);border-radius:3px;vertical-align:1px;font-weight:400}
 .talkcard{display:block;width:100%;text-align:left;white-space:normal;line-height:1.6;padding:10px 12px;font-size:14.5px}.talkcard.on{border-color:var(--tube);color:var(--tube);box-shadow:0 0 0 1px var(--tube) inset}.talkbox{border-top:1px solid var(--line);padding-top:10px}
 .mmdcell{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:4px;background:rgba(40,8,8,.28)}.mmdcell.here{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad) inset}.mmdz{font-size:22px;color:var(--bad);opacity:.85;width:28px;text-align:center;flex:none;line-height:1.2}
+.mmdrooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px;margin-top:6px}.mmdroom{padding:6px 8px;font-size:12.5px;text-align:left;line-height:1.35;display:flex;flex-direction:column;align-items:flex-start;gap:1px}.mmdroom.gone{opacity:.3;border-style:dashed;text-decoration:line-through}.mmdroom.extra{border-color:var(--bad)}.mmdroom.ph{border-color:var(--bad);color:var(--bad);animation:buzz 2.2s infinite}.mmdroom.here{border-color:var(--tube);box-shadow:0 0 0 1px var(--tube) inset}
 @keyframes rainfall{from{background-position:0 0}to{background-position:-40px 240px}}
 @keyframes quake{0%,6%,33%,39%,66%,72%,100%{transform:translate(0,0)}2%{transform:translate(1px,1px)}35%{transform:translate(-1px,1px)}68%{transform:translate(1px,-1px)}}
 body.build #view{animation:quake 2.7s infinite}
@@ -334,7 +335,7 @@ const weekIdx=ts=>Math.floor((dayIdx(ts)+3)/7);
 const dur=ms=>{ms=Math.max(0,ms);const s=Math.floor(ms/1000),hh=Math.floor(s/3600),mm=Math.floor(s%3600/60),ss=s%60;return hh?`${hh}:${pad(mm)}:${pad(ss)}`:`${mm}:${pad(ss)}`};
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const ri=(a,b)=>Math.floor(rnd(a,b+1));
-const pick=a=>a[Math.floor(Math.random()*a.length)];
+const pick=a=>pickFresh(a);
 const chance=p=>Math.random()<p;
 function rng(seed){let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2800)}
@@ -1865,7 +1866,7 @@ function renderPeople(){const P=$('peopleCard'),m=G.me;const k=m?m.cell:null;
       ghost?h('div',{class:'person',style:'cursor:default'},h('div',{class:'av',style:'background:#2a2a2a'}),h('span',null,h('b',{class:'dim'},'아는 사람'),h('div',{class:'dim',style:'font-size:12px'},'명부에 없음')),h('span',{class:'dot on'})):null,
       !here.length&&m&&!ghost?h('div',{class:'mute',style:'font-size:13px;padding:6px 0'},quietTxt('이 칸엔 아무도 없다.')):null))}
 const chatIn=h('input',{id:'chatIn',maxlength:200,placeholder:'메시지 · *행동*은 별표로 감싸요'});
-const chatForm=h('form',{class:'composer',onsubmit:e=>{e.preventDefault();if(!G.me)return;let v=chatIn.value.trim();if(!v)return;if(hasFx('gum')&&sub.chat!=='ooc')v=gumify(v);if(sub.chat!=='ooc'&&typeof fxSpeech==='function')v=fxSpeech(v);post(sub.chat==='all'?'all':sub.chat==='ooc'?'ooc':'cell:'+G.me.cell,'me',v);chatIn.value='';save();renderChat()}},chatIn,h('button',{type:'submit',class:'pri'},'보내기'));
+const chatForm=h('form',{class:'composer',onsubmit:e=>{e.preventDefault();if(!G.me)return;let v=chatIn.value.trim();if(!v)return;if(hasFx('gum')&&sub.chat!=='ooc')v=gumify(v);if(sub.chat!=='ooc'&&typeof fxSpeech==='function')v=fxSpeech(v);post(sub.chat==='all'?'all':sub.chat==='ooc'?'ooc':'cell:'+(typeof chCell==='function'?chCell(G.me.cell):G.me.cell),'me',v);chatIn.value='';save();renderChat()}},chatIn,h('button',{type:'submit',class:'pri'},'보내기'));
 function renderChat(){const C=$('chatCard'),m=G.me;const ch=sub.chat;
   const list=h('div',{class:'chlist',id:'chlist'});
   if(ch==='radio'){list.append(h('div',{class:'msg radio'},h('time',null,'00:00'),radioText()));radioExtra().forEach(x=>list.append(x))}
@@ -1874,7 +1875,7 @@ function renderChat(){const C=$('chatCard'),m=G.me;const ch=sub.chat;
     items.forEach(x=>{if(x.who==='hammer'){list.append(h('div',{class:'msg hammer'},h('time',null,hm(x.t)),x.text));return}if(x.who==='sys'){list.append(h('div',{class:'msg sys'},h('time',null,hm(x.t)),x.text));return}
       const p=x.who==='me'?m:SAMPLES[x.who];if(!p)return;if(ch==='ooc'){list.append(h('div',{class:'msg ooc'},h('time',null,hm(x.t)),h('span',{class:'who'},x.who==='me'?'나':`${p.name} 오너`),x.text));return}list.append(h('div',{class:'msg'},h('time',null,hm(x.t)),h('span',{class:'who',style:`color:${p.color==='#0B0B0B'?'#9E9184':p.color}`},x.who==='me'?p.name:(p.name)),x.text))})}
   C.replaceChildren(...[h('div',{class:'row'},h('span',{class:'lbl'},'무전'),h('div',{class:'wrap'},[['cell','현장'],['all','전체'],['ooc','오너'],['radio','자정 라디오']].map(([k,n])=>h('button',{class:'sm'+(ch===k?' pri':''),onclick:()=>{sub.chat=k;if(k==='radio')sfx('static');renderChat()}},n)))),
-    h('p',{class:'dim',style:'margin:0;font-size:12px'},ch==='cell'?(m?`${CELLS[m.cell].n}에 있는 사람에게만 보여요.`:''):ch==='all'?'성채 전체에 들려요. 캐릭터로 말하는 곳이에요.':ch==='ooc'?'오너끼리 이야기하는 곳이에요 (OOC). 캐릭터가 아니라 오너로 말해요.':'매일 자정, 누가 송출하는지 모르는 방송.'),
+    h('p',{class:'dim',style:'margin:0;font-size:12px'},ch==='cell'?(m?(typeof isMMD==='function'&&isMMD(m.cell)?`무명동 ${TIERS[mmdParse(m.cell).t].n}에 있는 사람에게만 들려요.`:`${CELLS[m.cell].n}에 있는 사람에게만 보여요.`):''):ch==='all'?'성채 전체에 들려요. 캐릭터로 말하는 곳이에요.':ch==='ooc'?'오너끼리 이야기하는 곳이에요 (OOC). 캐릭터가 아니라 오너로 말해요.':'매일 자정, 누가 송출하는지 모르는 방송.'),
     list,m&&ch!=='radio'?chatForm:null,hasFx('gum')&&ch!=='radio'&&ch!=='ooc'?h('p',{class:'dim',style:'margin:0;font-size:12px'},'빈 잇몸 때문에 발음이 새요.'):null].filter(Boolean));
   requestAnimationFrame(()=>{list.scrollTop=list.scrollHeight})}
 
@@ -2010,7 +2011,7 @@ async function addByCode(raw){if(!G.me)return toast('먼저 캐릭터를 골라 
   if(!id)return toast('그 코드를 가진 주민이 없어요.');if(relOf(id).friend)return toast(`${SAMPLES[id].name}과(와)는 이미 지인이에요.`);befriend(id)}
 
 /* ---------- 무전 · 벽 · 공지 ---------- */
-const chKey=()=>sub.chat==='all'?'all':sub.chat==='ooc'?'ooc':'cell:'+(G.me?G.me.cell:'');
+const chKey=()=>sub.chat==='all'?'all':sub.chat==='ooc'?'ooc':'cell:'+(G.me?(typeof chCell==='function'?chCell(G.me.cell):G.me.cell):'');
 async function loadChannel(ch){const{data}=await sb.from('messages').select('*').eq('channel',ch).order('created_at',{ascending:false}).limit(60);CHAT[ch]=(data||[]).reverse();if(chKey()===ch)renderChat()}
 async function post(ch,who,text){if(who!=='me'||!G.me)return;const{error}=await sb.from('messages').insert({channel:ch,character_id:G.me.id,text});if(error)toast('보내지 못했어요.')}
 function renderChat(){const C=$('chatCard'),m=G.me;const ch=sub.chat;const list=h('div',{class:'chlist',id:'chlist'});
@@ -2023,7 +2024,7 @@ function renderChat(){const C=$('chatCard'),m=G.me;const ch=sub.chat;const list=
       if(ch==='ooc'){const pv=items[i-1];const cont=!!(pv&&pv.character_id===x.character_id&&t-Date.parse(pv.created_at)<5*MIN);const col=p&&p.color&&p.color!=='#0B0B0B'?p.color:'#9E9184';list.append(h('div',{class:'msg ooc'+(cont?' cont':''),style:`--oc:${col}`},h('time',null,hm(t)),cont?'':h('span',{class:'who',style:`color:${col}`},p?facMark(p.fugitive&&mine?'free':p.fac,12,'margin-right:4px;vertical-align:-1px'):'',mine?'나':`${name} 오너`,p&&(typeof isNewbie==='function'&&isNewbie(p))?h('span',{class:'nbmark'},'새'):null),...(typeof actNodes==='function'?actNodes(x.text):[x.text])));return}
       list.append(h('div',{class:'msg'},h('time',null,hm(t)),h('span',{class:'who',style:`color:${p&&p.color!=='#0B0B0B'?p.color:'#9E9184'}`},p?facMark(p.fugitive&&mine?'free':p.fac,12,'margin-right:4px;vertical-align:-1px'):'',mine?name:scramble(name),p&&(typeof isNewbie==='function'&&isNewbie(p))?h('span',{class:'nbmark'},'새'):null),...(typeof actNodes==='function'?actNodes(x.text):[x.text]),mine||isAdminUser()?h('button',{class:'ghost del sm',style:'font-size:11px;padding:0 4px',onclick:async()=>{await sb.from('messages').delete().eq('id',x.id);CHAT[key]=CHAT[key].filter(y=>y.id!==x.id);renderChat()}},'지우기'):null))})}
   chatPut(C,[h('div',{class:'row'},h('span',{class:'lbl'},'무전'),h('div',{class:'wrap'},[['cell','현장'],['all','전체'],['ooc','오너'],['dm','1:1'+(dmUnread()?' '+dmUnread():'')],['radio','자정 라디오']].map(([k,n])=>h('button',{class:'sm'+(ch===k?' pri':''),style:k==='dm'&&dmUnread()&&ch!==k?'color:var(--bad);border-color:var(--bad)':'',onclick:()=>{sub.chat=k;if(k==='radio')sfx('static');renderChat()}},n)))),
-    h('p',{class:'dim',style:'margin:0;font-size:12px'},ch==='cell'?(m?`${CELLS[m.cell].n}에 있는 사람에게만 보여요.`:''):ch==='all'?'성채 전체에 들려요. 캐릭터로 말하는 곳이에요.':ch==='ooc'?'오너끼리 이야기하는 곳이에요 (OOC).':ch==='dm'?'나와 나눈 1:1 대화 목록이에요.':'매일 자정, 누가 송출하는지 모르는 방송.'),
+    h('p',{class:'dim',style:'margin:0;font-size:12px'},ch==='cell'?(m?(typeof isMMD==='function'&&isMMD(m.cell)?`무명동 ${TIERS[mmdParse(m.cell).t].n}에 있는 사람에게만 들려요.`:`${CELLS[m.cell].n}에 있는 사람에게만 보여요.`):''):ch==='all'?'성채 전체에 들려요. 캐릭터로 말하는 곳이에요.':ch==='ooc'?'오너끼리 이야기하는 곳이에요 (OOC).':ch==='dm'?'나와 나눈 1:1 대화 목록이에요.':'매일 자정, 누가 송출하는지 모르는 방송.'),
     list,m&&ch!=='radio'&&ch!=='dm'?chatForm:null,hasFx('gum')&&ch!=='radio'&&ch!=='ooc'?h('p',{class:'dim',style:'margin:0;font-size:12px'},'빈 잇몸 때문에 발음이 새요.'):null].filter(Boolean));
   requestAnimationFrame(()=>{list.scrollTop=list.scrollHeight})}
 function npcChatter(){}
@@ -4443,27 +4444,48 @@ Object.assign(HIDDEN,{mmd1:'무명동에서 내 이름이 적힌 문패를 보�
 
 /* 칸: 날마다 안쪽 방이 바뀐다 */
 const MMD_T=[
- {n:'빈 빨래줄',zh:'晾',d:'무명동 옥상. 날씨가 성채와 늘 다르다.',rooms:['남의 옷이 널린 줄이다. 옷마다 이름표가 꿰매져 있고, 그중 하나가 내 이름이다. 실밥 사이로 피가 배어 나온다.','하늘이 보이지 않는다. 올려다보면 천장이 있고, 천장에 사람 모양 얼룩이 빨래처럼 번져 마르는 중이다.','어제의 날씨다. 성채엔 비가 오는데 여긴 맑다. 내 그림자만 젖어서 뚝뚝 떨어진다.','머리카락이 널린 줄이다. 길이가 다 똑같고, 몇 가닥은 아직 두피 조각이 붙은 채 바람에 흔들린다.','빨래집게만 수백 개 걸린 줄이다. 집게마다 손톱이 하나씩 물려 있다. 뿌리까지 뽑힌 손톱이다.'],soft:['남의 옷이 널린 줄이다. 옷마다 이름표가 꿰매져 있고, 그중 하나가 내 이름이다.','하늘이 보이지 않는다. 올려다보면 낮은 천장이 있다.','어제의 날씨다. 성채엔 비가 오는데 여긴 맑다.'],warn:'성채와 날씨가 다르다. 위를 오래 보지 말 것.'},
- {n:'누군가의 집들',zh:'家',d:'무명동 상층. 문패에 주민들 이름이 뜨는 일이 있다.',rooms:['밥상이 차려진 빈집이다. 밥에서 아직 김이 오르고, 숟가락 옆에 뿌리째 뽑힌 이 하나가 놓여 있다.','내 방과 꼭 같은 방이다. 벽지 무늬까지 같다. 벽지 이음매가 벌어진 틈으로 살갗 같은 것이 숨 쉬듯 오르내린다.','아이 키 눈금이 새겨진 문틀이다. 눈금은 천장을 뚫고 계속 올라간다. 맨 위 눈금 옆 이름은 손톱으로 긁어 썼다.','문패가 전부 주민들 이름인 복도다. 내 이름 문패 아래에 날짜가 적혀 있다. 아직 오지 않은 날짜다.','이불이 깔린 방 열 개다. 이불마다 사람 모양으로 불룩하고, 하나는 숨을 쉰다. 이불 끝이 젖어 붉다.'],soft:['밥상이 차려진 빈집이다. 밥에서 아직 김이 오른다.','내 방과 꼭 같은 방이다. 벽지 무늬까지 같다.','문패가 전부 주민들 이름인 복도다.'],warn:'내 이름이 적힌 문패를 두드리지 말 것.'},
- {n:'설계도대로 지은 복도',zh:'圖',d:'무명동 중층. 설계도에 그려진 그대로다. 사람이 다닐 수 있게 그린 선이 아니다.',rooms:['끝이 없는 복도다. 열 걸음마다 같은 소화기가 있고, 소화기마다 피 묻은 손자국이 하나씩 늘어난다.','문만 있는 벽이다. 손잡이가 전부 따뜻하다. 하나는 안에서 천천히 돌아가고 있다.','천장에 달린 계단이다. 계단 끝에 누가 거꾸로 앉아, 목을 꺾은 채 나를 내려다본다.','벽돌로 막힌 창이 늘어선 복도다. 벽돌마다 날짜가 적혀 있다. 가장 최근 날짜는 내일이다.','바닥이 젖은 복도다. 발자국은 나 하나뿐인데, 첨벙거리는 소리는 둘이다.'],soft:['끝이 없는 복도다. 열 걸음마다 같은 소화기가 있다.','문만 있는 벽이다. 손잡이가 전부 따뜻하다.','벽돌로 막힌 창이 늘어선 복도다. 벽돌마다 날짜가 적혀 있다.'],warn:'계단을 세면서 걸을 것. 올라온 수와 내려갈 수가 같아야 한다.'},
- {n:'간판 없는 상점가',zh:'市',d:'무명동 골목. 날마다 다른 가게 두 곳이 문을 연다. 값은 돈으로 받지 않는다.',rooms:['정육점 같은 가게와 치과 같은 가게가 열었다. 둘 다 같은 냄새가 난다. 쇠 냄새와 단 냄새.','이발소와 사진관이 열었다. 이발소 바닥의 머리카락이 사진관 쪽으로 기어간다.','국숫집과 문방구가 열었다. 국수 그릇이 네 개씩 놓여 있고, 네 번째 그릇에만 국물이 붉다.','셔터가 반만 열린 가게 두 곳이다. 셔터 아래로 맨발들이 줄지어 서 있다. 발톱이 하나도 없다.','약국과 전당포가 열었다. 전당포 진열장에 사람 이름이 적힌 유리병이 늘어서 있다. 병 안에서 무언가가 바닥을 긁는다.'],soft:['정육점 같은 가게와 치과 같은 가게가 열었다.','이발소와 사진관이 열었다.','약국과 전당포가 열었다. 진열장에 이름이 적힌 병이 늘어서 있다.'],warn:'값은 돈으로 받지 않는다. 무엇을 내는지 끝까지 읽을 것.'},
- {n:'물 없는 수로',zh:'渠',d:'무명동 지하. 물이 흘러야 할 자리에 다른 것이 흐른다.',rooms:['말라 버린 수로다. 바닥에 물 대신 사람 이가 자갈처럼 깔려 있다. 밟을 때마다 바스락거린다.','물이 거꾸로 흐르는 수로다. 물이 천장으로 흘러 올라가 고이고, 고인 물에 얼굴들이 떠 있다. 다들 입을 벌리고 있다.','배가 멈춘 부두다. 배 안에 노 젓는 사람들이 앉아 있다. 손바닥이 노에 실로 꿰매져 있다.','하얀 김이 찬 수로다. 김 너머에서 누가 「바깥 이름」을 부른다.','벽돌로 막힌 수로 끝이다. 벽돌 틈으로 하얀 것이 천천히 스며 나온다.'],soft:['말라 버린 수로다. 바닥에 자갈이 깔려 있다.','물이 거꾸로 흐르는 수로다.','하얀 김이 찬 수로다. 김 너머에서 누가 이름을 부른다.'],warn:'바깥 이름을 부르는 소리에 대답하지 말 것.'}];
+ {n:'빈 빨래줄',zh:'晾',d:'무명동 옥상. 날씨가 성채와 늘 다르다.',rooms:['남의 옷이 널린 줄이다. 옷마다 이름표가 꿰매져 있고, 그중 하나가 내 이름이다. 실밥 사이로 피가 배어 나온다.','하늘이 보이지 않는다. 올려다보면 천장이 있고, 천장에 사람 모양 얼룩이 빨래처럼 번져 마르는 중이다.','어제의 날씨다. 성채엔 비가 오는데 여긴 맑다. 내 그림자만 젖어서 뚝뚝 떨어진다.','머리카락이 널린 줄이다. 길이가 다 똑같고, 몇 가닥은 아직 두피 조각이 붙은 채 바람에 흔들린다.','빨래집게만 수백 개 걸린 줄이다. 집게마다 손톱이 하나씩 물려 있다. 뿌리까지 뽑힌 손톱이다.','빨랫줄 대신 힘줄 같은 것이 팽팽하게 매여 있다. 바람이 불면 낮은 소리로 운다. 줄 끝이 누군가의 손목에 묶여 있다.','물탱크 뚜껑이 열려 있다. 물 대신 머리카락이 가득 차 있고, 그 사이로 손가락 하나가 까딱인다. 이리 오라고.','비둘기장이다. 횃대에 비둘기 대신 눈알이 줄지어 앉아 있다. 내가 움직이면 일제히 따라 돈다.','바닥에 분필로 그린 사람 윤곽이 스무 개다. 하나는 아직 따뜻하다. 비가 오는데 그 윤곽 안쪽만 젖지 않았다.','난간에 신발이 가지런히 놓여 있다. 짝이 다 맞는다. 신발마다 발목이 그대로 들어 있다.'],soft:['남의 옷이 널린 줄이다. 옷마다 이름표가 꿰매져 있고, 그중 하나가 내 이름이다.','하늘이 보이지 않는다. 올려다보면 낮은 천장이 있다.','어제의 날씨다. 성채엔 비가 오는데 여긴 맑다.','물탱크 뚜껑이 열려 있다. 안을 들여다보면 무언가 까딱인다.','난간에 신발이 가지런히 놓여 있다. 짝이 다 맞는다.'],warn:'성채와 날씨가 다르다. 위를 오래 보지 말 것.'},
+ {n:'누군가의 집들',zh:'家',d:'무명동 상층. 문패에 주민들 이름이 뜨는 일이 있다.',rooms:['밥상이 차려진 빈집이다. 밥에서 아직 김이 오르고, 숟가락 옆에 뿌리째 뽑힌 이 하나가 놓여 있다.','내 방과 꼭 같은 방이다. 벽지 무늬까지 같다. 벽지 이음매가 벌어진 틈으로 살갗 같은 것이 숨 쉬듯 오르내린다.','아이 키 눈금이 새겨진 문틀이다. 눈금은 천장을 뚫고 계속 올라간다. 맨 위 눈금 옆 이름은 손톱으로 긁어 썼다.','문패가 전부 주민들 이름인 복도다. 내 이름 문패 아래에 날짜가 적혀 있다. 아직 오지 않은 날짜다.','이불이 깔린 방 열 개다. 이불마다 사람 모양으로 불룩하고, 하나는 숨을 쉰다. 이불 끝이 젖어 붉다.','아기 침대가 놓인 방이다. 모빌 대신 젖니가 실에 꿰여 천천히 돈다. 아기는 없다. 베개가 움푹하다.','욕조에 붉은 물이 찰랑인다. 수면 아래에서 누가 눈을 뜬 채 숨을 참고 있다. 몇 시간째인지 모른다. 거품 하나 올라오지 않는다.','가족사진이 걸린 거실이다. 사진 속 얼굴이 전부 도려내져 있고, 도려낸 얼굴들은 식탁 위 접시에 가지런히 담겨 있다.','이불장에서 손톱 긁는 소리가 난다. 문틈 아래로 손톱이 하나, 둘, 밀려 나온다. 다 피에 젖어 있다.','부엌 도마 위에 피가 마르지 않은 칼이 있다. 도마의 칼자국을 세어 보니 성채 주민 수와 같다. 하나가 방금 늘었다.'],soft:['밥상이 차려진 빈집이다. 밥에서 아직 김이 오른다.','내 방과 꼭 같은 방이다. 벽지 무늬까지 같다.','문패가 전부 주민들 이름인 복도다.','아기 침대가 놓인 방이다. 모빌이 혼자 돈다.','가족사진이 걸린 거실이다. 사진 속 얼굴이 다 지워져 있다.'],warn:'내 이름이 적힌 문패를 두드리지 말 것.'},
+ {n:'설계도대로 지은 복도',zh:'圖',d:'무명동 중층. 설계도에 그려진 그대로다. 사람이 다닐 수 있게 그린 선이 아니다.',rooms:['끝이 없는 복도다. 열 걸음마다 같은 소화기가 있고, 소화기마다 피 묻은 손자국이 하나씩 늘어난다.','문만 있는 벽이다. 손잡이가 전부 따뜻하다. 하나는 안에서 천천히 돌아가고 있다.','천장에 달린 계단이다. 계단 끝에 누가 거꾸로 앉아, 목을 꺾은 채 나를 내려다본다.','벽돌로 막힌 창이 늘어선 복도다. 벽돌마다 날짜가 적혀 있다. 가장 최근 날짜는 내일이다.','바닥이 젖은 복도다. 발자국은 나 하나뿐인데, 첨벙거리는 소리는 둘이다.','복도 벽이 살갗처럼 무르다. 손으로 짚으면 자국이 남고, 자국이 천천히 멍으로 변한다.','엘리베이터 문이 열려 있다. 안은 끝없이 내려가는 수직 갱도다. 아래에서 누가 층수를 거꾸로 센다. 점점 가까워진다.','복도 한가운데 배수구가 있다. 구멍마다 손가락이 하나씩 위로 솟아 있다. 다가가면 쏙 들어간다.','스위치가 백 개 붙은 벽이다. 하나 누를 때마다 어디선가 비명이 한 번씩 끊긴다.','같은 방 번호가 열 번 반복되는 복도다. 문틈마다 같은 사람이 같은 자세로 엿보고 있다. 열 개의 눈이 동시에 깜빡인다.'],soft:['끝이 없는 복도다. 열 걸음마다 같은 소화기가 있다.','문만 있는 벽이다. 손잡이가 전부 따뜻하다.','벽돌로 막힌 창이 늘어선 복도다. 벽돌마다 날짜가 적혀 있다.','엘리베이터 문이 열려 있다. 안은 끝없이 내려가는 갱도다.','같은 방 번호가 열 번 반복되는 복도다.'],warn:'계단을 세면서 걸을 것. 올라온 수와 내려갈 수가 같아야 한다.'},
+ {n:'간판 없는 상점가',zh:'市',d:'무명동 골목. 날마다 다른 가게 두 곳이 문을 연다. 값은 돈으로 받지 않는다.',rooms:['정육점 같은 가게와 치과 같은 가게가 열었다. 둘 다 같은 냄새가 난다. 쇠 냄새와 단 냄새.','이발소와 사진관이 열었다. 이발소 바닥의 머리카락이 사진관 쪽으로 기어간다.','국숫집과 문방구가 열었다. 국수 그릇이 네 개씩 놓여 있고, 네 번째 그릇에만 국물이 붉다.','셔터가 반만 열린 가게 두 곳이다. 셔터 아래로 맨발들이 줄지어 서 있다. 발톱이 하나도 없다.','약국과 전당포가 열었다. 전당포 진열장에 사람 이름이 적힌 유리병이 늘어서 있다. 병 안에서 무언가가 바닥을 긁는다.','재봉소와 정육점이 열었다. 재봉틀에 걸린 건 천이 아니라 손바닥만 하게 잘린 가죽이다. 점이 있다. 누군가의 점이다.','사진관 진열창에 영정 사진이 걸려 있다. 맨 끝 한 장은 아직 현상 중이고, 윤곽이 점점 나를 닮아 간다.','약국과 이발소가 열었다. 약병마다 손톱이 담겨 있고, 이발 의자 아래엔 두피째 벗겨진 머리카락이 쌓여 있다.','국숫집 하나만 열었다. 손님들이 고개를 숙이고 먹는다. 그릇 속 면발이 꿈틀거린다. 아무도 씹지 않는다.','간판 없는 노점이다. 꼬치에 꿰인 것이 고기인지 손가락인지, 마디가 있다. 주인이 하나 권한다.'],soft:['정육점 같은 가게와 치과 같은 가게가 열었다.','이발소와 사진관이 열었다.','약국과 전당포가 열었다. 진열장에 이름이 적힌 병이 늘어서 있다.','사진관 진열창에 영정 사진이 걸려 있다. 맨 끝 한 장은 아직 현상 중이다.','국숫집 하나만 열었다. 손님들이 고개를 숙이고 먹는다.'],warn:'값은 돈으로 받지 않는다. 무엇을 내는지 끝까지 읽을 것.'},
+ {n:'물 없는 수로',zh:'渠',d:'무명동 지하. 물이 흘러야 할 자리에 다른 것이 흐른다.',rooms:['말라 버린 수로다. 바닥에 물 대신 사람 이가 자갈처럼 깔려 있다. 밟을 때마다 바스락거린다.','물이 거꾸로 흐르는 수로다. 물이 천장으로 흘러 올라가 고이고, 고인 물에 얼굴들이 떠 있다. 다들 입을 벌리고 있다.','배가 멈춘 부두다. 배 안에 노 젓는 사람들이 앉아 있다. 손바닥이 노에 실로 꿰매져 있다.','하얀 김이 찬 수로다. 김 너머에서 누가 「바깥 이름」을 부른다.','벽돌로 막힌 수로 끝이다. 벽돌 틈으로 하얀 것이 천천히 스며 나온다.','수로 벽에 사람이 한 줄로 박혀 있다. 벽돌처럼. 얼굴만 밖으로 나와 숨을 쉰다. 한 사람이 내 이름을 안다.','부두에 그물이 널려 있다. 걸려 있는 건 물고기가 아니라 머리카락 뭉치와 이름표들이다.','수문이 반쯤 열려 있다. 그 틈으로 하얀 손들이 안개처럼 흘러 들어와 바닥을 더듬는다. 발목을 찾고 있다.','배수관 끝에서 물 대신 피가 똑, 똑 떨어진다. 떨어지는 박자가 내 맥박과 같다.','수로 바닥에 아이 신발이 수십 켤레 줄지어 있다. 전부 바깥쪽을 향하고 있다.'],soft:['말라 버린 수로다. 바닥에 자갈이 깔려 있다.','물이 거꾸로 흐르는 수로다.','하얀 김이 찬 수로다. 김 너머에서 누가 이름을 부른다.','부두에 그물이 널려 있다. 이름표들이 걸려 있다.','수로 바닥에 아이 신발이 줄지어 있다. 전부 바깥쪽을 향하고 있다.'],warn:'바깥 이름을 부르는 소리에 대답하지 말 것.'}];
 function mmdRoom(t,day){const T0=MMD_T[t];const pool=G.opts&&G.opts.soft?T0.soft:T0.rooms;const r=rng((day==null?dayIdx(T()):day)*131+t*17);return pool[Math.floor(r()*pool.length)]}
-MMD_T.forEach((T0,t)=>{const k=cellKey(4,t);CELLS[k]={n:T0.n,p:[],get d(){return T0.d+' 오늘은 이렇다. '+mmdRoom(t)}}});
-CELLS['4-1'].p=['mmdroom'];CELLS['4-2'].p=['mmddesk'];CELLS['4-3'].p=['mmdshop'];
+const MMD_R=4,MMD_PH=9;
+const mmdKey=(t,r)=>`4-${t}-${r}`;
+function mmdLabel(t,r){if(r===MMD_PH)return['옥상 □','9□□호','5□□호','1□□호','B□'][t];return t===0?`옥상 ${r+1}`:t===4?`B${r+1}`:`${[0,9,5,1][t]}0${r+1}호`}
+const MMD_LAYOUT={};
+function mmdLayout(day){day=day==null?dayIdx(T()):day;if(MMD_LAYOUT[day])return MMD_LAYOUT[day];const r=rng(day*977+3);const st={};for(let t=0;t<5;t++)for(let i=0;i<MMD_R;i++)st[mmdKey(t,i)]='ok';
+  const left=t=>[...Array(MMD_R).keys()].filter(j=>st[mmdKey(t,j)]!=='gone').length;
+  let gone=0,tries=0;while(gone<3&&tries<80){tries++;const t=Math.floor(r()*5),i=Math.floor(r()*MMD_R),k=mmdKey(t,i);if(st[k]==='ok'&&left(t)>2){st[k]='gone';gone++}}
+  let ex=0;tries=0;while(ex<2&&tries<80){tries++;const k=mmdKey(Math.floor(r()*5),Math.floor(r()*MMD_R));if(st[k]==='ok'){st[k]='extra';ex++}}
+  const ph=r()<.4?Math.floor(r()*5):-1;const host={};
+  [[1,'mmdroom'],[2,'mmddesk'],[3,'mmdshop']].forEach(([t,p])=>{const ok=[...Array(MMD_R).keys()].filter(j=>st[mmdKey(t,j)]!=='gone');host[mmdKey(t,ok[Math.floor(r()*ok.length)])]=p});
+  return MMD_LAYOUT[day]={st,ph,host}}
+function mmdParse(k){const a=String(k).split('-').map(Number);return{t:a[1],r:a[2]}}
+function mmdExists(k){if(!isMMD(k))return true;const{t,r}=mmdParse(k);if(isNaN(r))return false;const L=mmdLayout();if(r===MMD_PH)return L.ph===t;return L.st[k]!=='gone'}
+function mmdState(k){const{r}=mmdParse(k);if(r===MMD_PH)return'phantom';return mmdLayout().st[k]||'ok'}
+function mmdRoomOf(k,day){const{t,r}=mmdParse(k);const T0=MMD_T[t];const pool=G.opts&&G.opts.soft?T0.soft:T0.rooms;const rr=rng((day==null?dayIdx(T()):day)*131+t*17);const idx=[...pool.keys()];for(let i=idx.length-1;i>0;i--){const j=Math.floor(rr()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]]}const slot=r===MMD_PH?4:(r||0);return pool[idx[slot%idx.length]]}
+for(let t=0;t<5;t++)for(const i of[0,1,2,3,MMD_PH]){const k=mmdKey(t,i);CELLS[k]={get n(){return MMD_T[t].n+' · '+mmdLabel(t,i)},get p(){const h0=mmdLayout().host[k];return h0?[h0]:[]},
+  get d(){const s=mmdState(k);return MMD_T[t].d+(i===MMD_PH?' 어제는 없던 방이다. 번호 칸이 비어 있다.':'')+' 오늘은 이렇다. '+mmdRoomOf(k)+(s==='extra'?' 이 방엔 문이 하나 더 있다. 들어온 문이 어느 쪽이었는지 헷갈린다.':'')}}}
+function mmdFloorKeys(t,all){return[0,1,2,3,MMD_PH].map(i=>mmdKey(t,i)).filter(k=>all||mmdExists(k))}
+function mmdAllKeys(){const o=[];for(let t=0;t<5;t++)o.push(...mmdFloorKeys(t));return o}
+function chCell(k){if(isMMD(k)){const{t}=mmdParse(k);return'4-'+t}return k}
+function mmdGoneYesterday(t){const y=mmdLayout(dayIdx(T())-1),n=mmdLayout();return[0,1,2,3].filter(i=>{const k=mmdKey(t,i);return y.st[k]!=='gone'&&n.st[k]==='gone'}).map(i=>mmdLabel(t,i))}
+function mmdFix(k){if(isMMD(k)&&isNaN(mmdParse(k).r)){const t=mmdParse(k).t;return mmdFloorKeys(t)[0]}return k}
 /* 엘리베이터 같은 무작위 이동이 무명동으로 떨어지지 않게 */
 function mmdKeysOut(){return Object.keys(CELLS).filter(k=>!isMMD(k))}
 
 /* 결과 처리: corr(괴이화) · blur(이름 흐림) · hide(숨은 수칙) · dup(방 물건 복제) */
 function mmdGive(rw){rw=Object.assign({},rw||{});const ex=[];const c=rw.corr,b=rw.blur,hd=rw.hide,dp=rw.dup;delete rw.corr;delete rw.blur;delete rw.hide;delete rw.dup;
-  if(G.me&&G.me.cell&&isMMD(G.me.cell)){if(rw.money>0)rw.money*=2;if(rw.clue>0)rw.clue*=2}
+  if(G.me&&G.me.cell&&isMMD(G.me.cell)){const st=mmdState(G.me.cell);const mul=st==='extra'||st==='phantom'?3:2;if(rw.money>0)rw.money*=mul;if(rw.clue>0)rw.clue*=mul}
   const out=give(rw);if(c&&typeof corruptUp==='function'){corruptUp('');out.push('괴이화')}if(b&&typeof fxGain==='function'){fxGain('blur','');out.push('이름 흐림')}if(hd&&discover(hd))out.push('숨은 수칙');
   if(dp){const rm=G.me.room||[];const k=rm.length?pick(rm):null;if(k&&ITEMS[k]){G.me.items[k]=(G.me.items[k]||0)+1;out.push(`밤물건 「${ITEMS[k].n}」`)}else if(k&&typeof TOYS!=='undefined'&&TOYS[k]){G.me.toys=G.me.toys||{};G.me.toys[k]=(G.me.toys[k]||0)+1;out.push(`장난감 「${TOYS[k].n}」`)}}
   return out}
 function mmdScene(id,title,ev){const m=G.me;const text=G.opts&&G.opts.soft&&ev.soft?ev.soft:ev.t;
   openScene({id,title,red:true,text,choices:ev.o.map(o=>({l:o.l,s:o.s,run:()=>{let ok=true,ct='';if(o.s){const c=chk(o.s,o.dc);ok=c.ok;ct=c.txt}
-    const res=o.r||(ok?o.ok:o.no);const out=mmdGive(res[1]);if(ct)out.unshift(ct);const bad=!o.r&&!ok;log(`무명동 · ${title}: ${res[0].split('\n')[0].slice(0,40)}…`,'haunt');
-    done(`무명동 · ${title}`,res[0],out,bad||!!(res[1]&&res[1].corr))}}))})}
+    const res=o.r||(ok?o.ok:o.no);const out=mmdGive(res[1]);if(ct)out.unshift(ct);const bad=!o.r&&!ok;const sid=id.replace('mmd_','');const ci=ev.o.indexOf(o);const sk=`${sid}.${ci}.${o.r?'r':ok?'ok':'no'}`;const txt=G.opts&&G.opts.soft&&typeof MMD_SOFT!=='undefined'&&MMD_SOFT[sk]?MMD_SOFT[sk]:res[0];
+    try{dexAdd('mmd:'+sid)}catch(e){}log(`무명동 · ${title}: ${txt.split('\n')[0].slice(0,40)}…`,'haunt');
+    done(`무명동 · ${title}`,txt,out,bad||!!(res[1]&&res[1].corr))}}))})}
 
 /* 둘러보기 사건: 층마다 둘 */
 const MMD_EV=[
@@ -4499,18 +4521,31 @@ const MMD_EV=[
      {l:'숨을 참고 벽돌을 살핀다',s:'sen',dc:12,ok:['벽돌마다 날짜가 적혀 있다. 하나를 빼내자 뒤에 젖은 신문 조각이 끼어 있다. 신문 날짜가 라디오가 말하는 오늘보다 한참 뒤다.',{clue:1,mind:-5}],no:['김을 들이마셨다. 잠깐, 내가 누군지 생각나지 않았다. 손등에 적어 둔 이름을 읽고서야 돌아왔다.',{mind:-10,fx:'delirium'}]}]}]];
 const MMD_AMB=['아무 일도 없었다. 그게 제일 이상하다.','벽에 귀를 대니 안쪽에서 누가 벽돌을 쌓고 있다.','바닥에 내 발자국이 먼저 찍혀 있었다. 방향이 반대다.','어디선가 국수 삶는 냄새가 난다. 국숫집은 이 동에 없다.','누가 내 이름을 부르다 말았다. 끝 글자가 없었다.'];
 
-function mmdExplore(){if(!ready())return;const m=G.me;const t=cellDT(m.cell)[1];if(!spend(2))return;
-  if(chance(isNightH()?.25:.12)&&typeof corruptUp==='function')corruptUp('무명동을 오래 걸었다.');
-  if(chance(.75)){const ev=pick(MMD_EV[t]);return mmdScene('mmd_'+ev.id,ev.n,ev)}
-  const out=mmdGive({money:5+Math.floor(Math.random()*8),mind:-3});log('무명동을 둘러보았다. '+out.join(', '),'haunt');done('무명동 · '+MMD_T[t].n,pick(MMD_AMB),out,false)}
+const MMD_PHEV=[
+ {id:'hole',n:'번호 없는 방',t:'번호 칸이 비어 있는 방이다. 안은 텅 비었고, 벽에 사람 키만 한 구멍이 하나 나 있다. 구멍 안에서 따뜻한 바람이 규칙적으로 분다. 숨이다. 구멍 가장자리가 젖어 있다.',soft:'번호 칸이 비어 있는 방이다. 벽에 사람 키만 한 구멍이 하나 나 있고, 안에서 따뜻한 바람이 분다.',
+  o:[{l:'구멍에 손을 넣는다',s:'nerve',dc:15,ok:['안쪽은 축축하고 따뜻했다. 손에 잡힌 건 설계도 원본 조각 뭉치였다. 손을 빼자 구멍이 오므라들며 닫혔다. 입 같았다.',{clue:2,mind:-12}],no:['구멍이 손목까지 삼켰다. 안쪽에서 이가 닿았다. 빼낸 손등에 잇자국이 동그랗게 남았고, 손톱 하나가 없었다.',{hp:-25,mind:-15,corr:1}]},
+   {l:'구멍에 대고 내 이름을 말한다',r:['구멍이 내 이름을 따라 했다. 한 글자 틀리게. 그 틀린 이름이 마음에 드는지 계속 중얼거렸다. 나올 때까지.',{clue:1,mind:-10,blur:1}]},
+   {l:'뒷걸음질로 나간다',r:['문을 닫고 돌아보니 문에 번호가 생겨 있었다. 내 방 번호였다.',{mind:-6}]}]},
+ {id:'obit',n:'어제 없던 방',t:'방 한가운데 상 위에 어제 날짜 신문과 오늘 날짜 부고가 놓여 있다. 부고 속 이름이 반쯤 지워져 있다. 남은 글자가 내 이름과 겹친다. 부고 귀퉁이에 피 묻은 지문.',soft:'상 위에 오늘 날짜 부고가 놓여 있다. 부고 속 이름이 반쯤 지워져 있다. 남은 글자가 내 이름과 겹친다.',
+  o:[{l:'부고를 찢는다',s:'str',dc:12,ok:['찢자 종이 안에서 피가 배어 나왔다. 찢긴 조각 뒷면에 설계도가 그려져 있다.',{clue:2,mind:-8}],no:['찢어지지 않았다. 종이가 손가락을 베었고, 베인 자리로 이름 한 글자가 빠져나가는 감각이 들었다.',{hp:-10,mind:-12,blur:1}]},
+   {l:'접어서 주머니에 넣는다',r:['주머니가 하루 종일 미지근했다. 꺼내 보니 부고가 아니라 이름 없는 문패였다.',{item:'noname',mind:-10,corr:1}]}]}];
+function mmdExplore(){if(!ready())return;const m=G.me;const t=mmdParse(m.cell).t;const st=mmdState(m.cell);
+  if(st==='phantom'){const dl=daily();if(dl.mmdPh)return toast('이 방은 오늘 더 아무것도 보여 주지 않는다.');if(!spend(2))return;dl.mmdPh=1;const ev=pick(MMD_PHEV);return mmdScene('mmd_'+ev.id,ev.n,ev)}
+  if(!spend(2))return;
+  if(chance((isNightH()?.25:.12)+(st==='extra'?.15:0))&&typeof corruptUp==='function')corruptUp('무명동을 오래 걸었다.');
+  if(st==='extra'||chance(.75)){const ev=pick(MMD_EV[t]);return mmdScene('mmd_'+ev.id,ev.n,ev)}
+  const out=mmdGive({money:5+Math.floor(Math.random()*8),mind:-3});log('무명동을 둘러보았다. '+out.join(', '),'haunt');done('무명동 · '+CELLS[m.cell].n,pick(MMD_AMB),out,false)}
 {const ex2=explore;explore=function(){const m=G.me;if(m&&isMMD(m.cell))return mmdExplore();return ex2.apply(this,arguments)}}
 
 /* 이동: 열리기 전엔 못 들어간다. 들어가 있을 땐 칸마다 정신 -2, 정신이 30 밑이면 길을 잃는다 */
-{const mv1=move;move=function(k){const m=G.me;if(!m)return mv1.apply(this,arguments);
+{const mv1=move;move=function(k){const m=G.me;if(!m)return mv1.apply(this,arguments);k=mmdFix(k);
   if(isMMD(k)&&!mmdOpen())return toast('무명동으로 가는 계단이 아직 보이지 않아요.');
-  if(isMMD(k)&&!isMMD(m.cell)&&!m.mmdWarn){m.mmdWarn=1;save();return openScene({id:'mmd_gate',title:'무명동 입구',red:true,text:'설계도대로 지어진 동이다. 사람이 다니라고 그린 선이 아니다.\n\n무명동은 잔인하고 무서운 묘사가 많아요. 부담스러우면 설정에서 「공포 연출 약하게」를 켜 주세요. 장면 소개가 순화돼서 나와요.\n\n여기서는 둘러보기에 기력 2가 들고, 칸을 옮길 때마다 정신이 2씩 깎여요. 대신 돈과 설계도 조각이 두 배예요. 정신이 30 밑으로 내려가면 길을 잃어요. 지인과 같은 칸에 있으면 정신이 덜 깎여요.',choices:[{l:'들어간다',run:()=>{scene=null;move(k)}},{l:'오늘은 돌아간다',run:()=>{scene=null}}]})}
-  if(isMMD(k)&&isMMD(m.cell)&&m.mind<30&&chance(.5)){const others=MMD_T.map((_,t)=>cellKey(4,t)).filter(x=>x!==k&&x!==m.cell);const to=pick(others);setTimeout(()=>toast(`길을 잃었다. ${CELLS[to].n}(으)로 나왔다.`),300);k=to}
-  const r=mv1.call(this,k);try{if(isMMD(m.cell)&&m.cell===k){if(!m.hidden.includes('mmd1')&&chance(.3))discover('mmd1');const fr=typeof partyFriendsHere==='function'?partyFriendsHere().length:0;give({mind:fr?-1:-2})}}catch(e){}return r}}
+  if(isMMD(k)&&!mmdExists(k))return toast('그 방은 오늘 없다. 벽만 있다.');
+  if(isMMD(k)&&!isMMD(m.cell)&&!m.mmdWarn){m.mmdWarn=1;save();return openScene({id:'mmd_gate',title:'무명동 입구',red:true,text:'설계도대로 지어진 동이다. 사람이 다니라고 그린 선이 아니다. 호실 번호가 날마다 맞지 않는다.\n\n무명동은 잔인하고 무서운 묘사가 많아요. 부담스러우면 설정에서 「공포 연출 약하게」를 켜 주세요. 장면 소개가 순화돼서 나와요.\n\n여기서는 둘러보기에 기력 2가 들고, 다른 층으로 옮길 때 정신 -2, 같은 층 호실끼리는 -1이에요. 대신 돈과 설계도 조각이 두 배, 「문이 하나 더」 있는 방과 번호 없는 방은 세 배예요. 정신이 30 밑으로 내려가면 길을 잃어요. 지인과 같은 칸에 있으면 정신이 덜 깎여요. 방은 날마다 생겼다가 사라져요.',choices:[{l:'들어간다',run:()=>{scene=null;move(k)}},{l:'오늘은 돌아간다',run:()=>{scene=null}}]})}
+  const from=m.cell;if(isMMD(k)&&isMMD(from)&&m.mind<30&&chance(.5)){const others=mmdAllKeys().filter(x=>x!==k&&x!==from);const to=pick(others);setTimeout(()=>toast(`길을 잃었다. ${CELLS[to].n}(으)로 나왔다.`),300);k=to}
+  const r=mv1.call(this,k);try{if(isMMD(m.cell)&&m.cell===k){if(!m.hidden.includes('mmd1')&&chance(.3))discover('mmd1');const same=isMMD(from)&&mmdParse(from).t===mmdParse(k).t;const fr=typeof partyFriendsHere==='function'?partyFriendsHere().length:0;give({mind:-(fr||same?1:2)})}}catch(e){}return r}}
+/* 방이 사라진 날: 그 방에 있던 사람은 복도에서 눈을 뜬다 */
+{const tk3=tick;tick=function(){const r=tk3.apply(this,arguments);try{const m=G.me;if(m&&isMMD(m.cell)){const fixed=mmdFix(m.cell);if(fixed!==m.cell){m.cell=fixed}else if(!mmdExists(m.cell)||!mmdOpen()){const was=CELLS[m.cell]?CELLS[m.cell].n:'방';const t=mmdParse(m.cell).t;const to=mmdOpen()?(mmdFloorKeys(t).filter(k=>mmdState(k)!=='phantom')[0]||homeCell(m)):homeCell(m);m.cell=to;log(`눈을 떠 보니 복도였다. 어젯밤까지 있던 ${was.split(' · ').pop()}이(가) 없다. 벽에 문 자국만 남아 있다.`,'haunt');try{dexAdd('mmd:vanish')}catch(e){}setTimeout(()=>{try{toast('있던 방이 사라졌어요.');render()}catch(e){}},400)}}}catch(e){}return r}}
 
 /* 괴담 장소 셋 */
 const MMD_DESK=['증축 일지 첫 장. 「벽을 하루에 한 칸씩 올린다. 바깥이 하얘지는 속도보다 빨라야 한다.」 잉크가 아직 마르지 않았다.',
@@ -4520,10 +4555,10 @@ const MMD_DESK=['증축 일지 첫 장. 「벽을 하루에 한 칸씩 올린다
  '「다섯 번째 동은 지은 게 아니다. 남은 것들이 스스로 쌓였다.」 연필이 따뜻하다. 방금 누가 이 문장을 썼다. 의자가 아직 흔들린다.',
  '마지막 장은 서명란이다. 이름 칸이 백 개, 아흔아홉 칸이 채워져 있다. 마지막 칸 옆에 연필이 놓여 있다.'];
 function mmdDesk(){if(!ready())return;const m=G.me,dl=daily();if(dl.mmdDesk)return toast('책상은 오늘 더 보여 주지 않는다. 연필만 따뜻하다.');if(!spend(1))return;dl.mmdDesk=1;const i=m.mmdDesk||0;
-  if(i<MMD_DESK.length-1){m.mmdDesk=i+1;const out=mmdGive({clue:1,mind:-5});log(`설계자의 책상에서 ${i+1}번째 장을 읽었다.`,'haunt');return done(`무명동 · 설계자의 책상 ${i+1}/${MMD_DESK.length}`,MMD_DESK[i],out,false)}
+  if(i<MMD_DESK.length-1){m.mmdDesk=i+1;const out=mmdGive({clue:1,mind:-5});log(`설계자의 책상에서 ${i+1}번째 장을 읽었다.`,'haunt');try{dexAdd('mmd:desk')}catch(e){}return done(`무명동 · 설계자의 책상 ${i+1}/${MMD_DESK.length}`,MMD_DESK[i],out,false)}
   if(i>=MMD_DESK.length){return done('무명동 · 설계자의 책상','책상은 비어 있다. 의자는 내 쪽으로 빼져 있다. 누가 앉으라는 듯이.',mmdGive({mind:-3}),false)}
   openScene({id:'mmd_sign',title:'설계자의 책상 · 마지막 장',red:true,text:MMD_DESK[i],choices:[
-   {l:'서명한다',run:()=>{m.mmdDesk=i+1;m.mmdSigned=1;const out=mmdGive({clue:3,mind:-15,corr:1});log('설계도 서명란 마지막 칸에 내 이름을 적었다.','haunt');done('무명동 · 서명','연필을 쥐자 손이 저절로 움직였다. 내 이름이 적혔다. 다 적고 보니 획 하나가 모자랐다.\n그날 밤 망치 소리가 유난히 가까웠다. 내 방 벽 안쪽에서 나는 것 같았다.',out,true)}},
+   {l:'서명한다',run:()=>{m.mmdDesk=i+1;m.mmdSigned=1;const out=mmdGive({clue:3,mind:-15,corr:1});log('설계도 서명란 마지막 칸에 내 이름을 적었다.','haunt');try{dexAdd('mmd:sign')}catch(e){}done('무명동 · 서명','연필을 쥐자 손이 저절로 움직였다. 내 이름이 적혔다. 다 적고 보니 획 하나가 모자랐다.\n그날 밤 망치 소리가 유난히 가까웠다. 내 방 벽 안쪽에서 나는 것 같았다.',out,true)}},
    {l:'연필을 내려놓는다',run:()=>{m.mmdDesk=i+1;const out=mmdGive({mind:-4});log('설계도 서명란에 서명하지 않았다.','haunt');done('무명동 · 서명','연필을 내려놓았다. 연필이 혼자 굴러 마지막 칸 위에 멈췄다. 기다리겠다는 듯이.',out,false)}}]})}
 function mmdMyRoom(){if(!ready())return;const m=G.me,dl=daily();if(dl.mmdRoom)return toast('그 방 문이 안에서 잠겨 있다. 오늘은 열리지 않는다.');if(!spend(1))return;dl.mmdRoom=1;
   const things=(m.room||[]).map(k=>(ITEMS[k]||(typeof TOYS!=='undefined'&&TOYS[k])||{}).n).filter(Boolean);
@@ -4543,20 +4578,24 @@ function mmdShop(){if(!ready())return;const m=G.me,day=dayIdx(T());const r=rng(d
    ...offers.map(o=>h('div',{class:'pl',style:'flex-wrap:wrap;gap:8px'},h('div',{style:'flex:1;min-width:180px'},h('b',null,o.n),h('div',{class:'mute',style:'font-size:12.5px'},'값: '+o.cost)),
      h('button',{class:'sm',disabled:(dl.mmdShop||0)>=1||null,onclick:()=>{const paid=o.pay(m);if(!paid)return toast('그건 지금 낼 수 없어요.');dl.mmdShop=1;let got=[];
        if(o.give)got=mmdGive(o.give);else if(o.id==='night'){const k=pick(Object.keys(ITEMS).filter(x=>x!=='anesth'&&x!=='noname'&&x!=='rclock'));got=give({item:k})}else if(o.id==='toy'&&typeof TOYS!=='undefined'){const k=pick(Object.keys(TOYS).filter(x=>TOYS[x].r==='r'));m.toys=m.toys||{};m.toys[k]=(m.toys[k]||0)+1;got=[`장난감 「${TOYS[k].n}」`]}
-       log(`간판 없는 가게에서 「${o.n}」을(를) 샀다. 값: ${paid}.`,'haunt');closeModal();done('무명동 · 간판 없는 가게',G.opts.soft?'주인이 물건을 내밀었다. 무엇을 냈는지 잘 기억나지 않는다.':'주인이 내 이마에 손을 얹었다. 무언가 빠져나가는 감각. 손을 떼자 주인의 이름표에 글자 하나가 생겨 있었다.',[paid,...got],true)}},(dl.mmdShop||0)>=1?'오늘은 끝':'산다'))),
+       log(`간판 없는 가게에서 「${o.n}」을(를) 샀다. 값: ${paid}.`,'haunt');try{dexAdd('mmd:shop')}catch(e){}closeModal();done('무명동 · 간판 없는 가게',G.opts.soft?'주인이 물건을 내밀었다. 무엇을 냈는지 잘 기억나지 않는다.':'주인이 내 이마에 손을 얹었다. 무언가 빠져나가는 감각. 손을 떼자 주인의 이름표에 글자 하나가 생겨 있었다.',[paid,...got],true)}},(dl.mmdShop||0)>=1?'오늘은 끝':'산다'))),
    h('p',{class:'dim',style:'margin:0;font-size:12px'},'물건은 날마다 바뀌어요. 하루에 하나만 살 수 있어요.')))}
 Object.assign(PLACES,{mmdroom:{n:'내 방과 꼭 같은 방',btn:'내 방과 꼭 같은 방 (기력 1)',act:mmdMyRoom},mmddesk:{n:'설계자의 책상',btn:'설계자의 책상 (기력 1)',act:mmdDesk},mmdshop:{n:'간판 없는 가게',btn:'간판 없는 가게',act:mmdShop}});
 
 /* 단면도: 「성채 / 무명동」 탭 */
-function mmdPanel(){const m=G.me;const here=m&&m.cell;
-  return h('div',{class:'stack mmdpanel',style:'gap:8px'},MMD_T.map((T0,t)=>{const k=cellKey(4,t);const ppl=SAMPLE_IDS.filter(id=>SAMPLES[id].cell===k&&online(SAMPLES[id])).length;const isHere=here===k;
-    return h('div',{class:'mmdcell'+(isHere?' here':'')},h('div',{class:'mmdz',style:'font-family:var(--f-disp)'},T0.zh),h('div',{style:'flex:1;min-width:0'},h('div',{class:'row',style:'gap:6px;justify-content:flex-start;flex-wrap:wrap'},h('b',null,T0.n),h('span',{class:'dim',style:'font-size:11.5px'},TIERS[t].n),isHere?h('span',{class:'tag tube'},'여기'):null,ppl?h('span',{class:'tag'},`${ppl}명`):null,(CELLS[k].p||[]).length?h('span',{class:'tag red'},PLACES[CELLS[k].p[0]].n):null),
-      h('p',{style:'margin:4px 0 2px;font-size:13.5px;line-height:1.65'},mmdRoom(t)),h('p',{class:'dim',style:'margin:0;font-size:12px;color:var(--bad)'},'⚠ '+T0.warn)),
-      isHere?null:h('button',{class:'sm',style:'flex:none;align-self:center',onclick:()=>{if(m)move(k)}},'들어간다'))}),
-   h('p',{class:'dim',style:'margin:0;font-size:12px'},'방은 매일 바뀌어요. 둘러보기 기력 2 · 칸을 옮길 때 정신 -2 · 돈과 설계도 조각 두 배. 정신 30 밑에선 길을 잃어요.'))}
+function mmdPanel(){const m=G.me;const here=m&&m.cell;const L=mmdLayout();
+  return h('div',{class:'stack mmdpanel',style:'gap:8px'},MMD_T.map((T0,t)=>{const keys=mmdFloorKeys(t,true).filter(k=>mmdParse(k).r!==MMD_PH||L.ph===t);const fl=SAMPLE_IDS.filter(id=>{const c=SAMPLES[id].cell;return isMMD(c)&&mmdParse(c).t===t&&online(SAMPLES[id])}).length;const gy=mmdGoneYesterday(t);
+    return h('div',{class:'mmdcell'+(isMMD(here)&&mmdParse(here).t===t?' here':'')},h('div',{class:'mmdz',style:'font-family:var(--f-disp)'},T0.zh),h('div',{style:'flex:1;min-width:0'},
+      h('div',{class:'row',style:'gap:6px;justify-content:flex-start;flex-wrap:wrap'},h('b',null,T0.n),h('span',{class:'dim',style:'font-size:11.5px'},TIERS[t].n),fl?h('span',{class:'tag'},`이 층 ${fl}명`):null),
+      gy.length?h('p',{class:'hand',style:'margin:4px 0 0;font-size:12.5px;color:var(--bad)'},`어제 있던 ${gy.join(', ')}이(가) 없다.`):null,
+      h('div',{class:'mmdrooms'},keys.map(k=>{const st=mmdState(k),gone=!mmdExists(k),{r}=mmdParse(k);const ppl=SAMPLE_IDS.filter(id=>SAMPLES[id].cell===k&&online(SAMPLES[id])).length;const host=L.host[k];
+        return h('button',{class:'mmdroom'+(gone?' gone':'')+(st==='extra'?' extra':'')+(st==='phantom'?' ph':'')+(here===k?' here':''),disabled:gone||here===k||null,title:gone?'':mmdRoomOf(k),onclick:()=>{if(m)move(k)}},
+          h('b',null,mmdLabel(t,r)),h('div',{class:'dim',style:'font-size:11px'},gone?'없음':here===k?'여기':st==='phantom'?'어제 없던 방':st==='extra'?'문이 하나 더':host?PLACES[host].n:ppl?`${ppl}명`:'　'))})),
+      h('p',{class:'dim',style:'margin:6px 0 0;font-size:12px;color:var(--bad)'},'⚠ '+T0.warn)))}),
+   h('p',{class:'dim',style:'margin:0;font-size:12px'},'호실은 날마다 생겼다가 사라져요. 「문이 하나 더」 있는 방과 번호 없는 방은 보상이 세 배지만 더 위험해요. 같은 층 무전은 같은 층 사람끼리 들려요.'))}
 {const vm1=viewMap;viewMap=function(){const out=vm1.apply(this,arguments);try{if(!G.me||!mmdOpen())return out;const arr=[].concat(out);const card=arr.find(x=>x&&x.querySelector&&x.querySelector('.section-map'));if(!card)return out;
   const v=sub.mapv==='mmd'||isMMD(G.me.cell)&&sub.mapv!=='castle'?'mmd':'castle';const tabs=h('div',{class:'wrap',style:'gap:6px'},[['castle','성채'],['mmd','무명동']].map(([k,n])=>h('button',{class:'sm'+(v===k?' pri':''),style:k==='mmd'?'border-color:var(--bad)':'',onclick:()=>{sub.mapv=k;renderView()}},n)));
-  card.insertBefore(tabs,card.firstChild);if(v==='mmd'){const g=card.querySelector('.section-map');if(g)g.replaceWith(mmdPanel());card.querySelectorAll('p.dim').forEach(p=>{if(p.textContent.startsWith('칸을 눌러'))p.remove()});const lb=card.querySelector('.lbl');if(lb)lb.textContent='무명동 · 오늘의 방'}
+  card.insertBefore(tabs,card.firstChild);if(v==='mmd'){const g=card.querySelector('.section-map');if(g)g.replaceWith(mmdPanel());card.querySelectorAll('p.dim').forEach(p=>{if(p.textContent.startsWith('칸을 눌러'))p.remove()});const lb=card.querySelector('.lbl');if(lb)lb.textContent='무명동 · 오늘의 호실'}
   if(isMMD(G.me.cell)){const top=arr[0];const b=top&&top.querySelectorAll?[...top.querySelectorAll('button')].find(x=>x.textContent==='둘러보기 (기력 1)'):null;if(b)b.textContent='둘러보기 (기력 2)'}}catch(e){}return out}}
 /* 처음 열린 날: 라디오 */
 {const tk2=tick;tick=function(){const r=tk2.apply(this,arguments);try{const m=G.me;if(m&&!m.mmdSeen&&mmdOpen()){m.mmdSeen=1;log('자정 라디오가 지직거렸다. 「오늘부터 다섯 동입니다. 다섯 동이었습니다.」','haunt');if(!scene&&!result)result={title:'다섯 동',text:'라디오가 혼자 켜졌다. 지직거리는 소리 사이로 아나운서가 또박또박 말한다.\n「오늘부터 다섯 동입니다. 다섯 동이었습니다.」\n\n단면도 위에 없던 탭이 하나 생겼다. 「무명동」.',lines:['단면도에서 「무명동」 탭을 눌러 보세요'],bad:true};setTimeout(()=>{try{toast('무명동이 열렸어요.');render()}catch(e){}},500)}}catch(e){}return r}}
@@ -4567,6 +4606,63 @@ if(typeof adminTools==='function'&&typeof setFlag==='function'){const a1=adminTo
     mk('mmd_open','무명동 지금 열기','조각이 600개가 안 돼도 엽니다.',mmdForce),mk('mmd_shut','무명동 닫아 두기','조각이 다 모여도 열리지 않게 막습니다. 버그가 있을 때 쓰세요.',mmdShut)))}catch(e){}return el}}
 
 if(typeof partyExplore==='function'){const pe0=partyExplore;partyExplore=function(){if(G.me&&isMMD(G.me.cell))return mmdExplore();return pe0.apply(this,arguments)}}
+
+/* ---------- 무명동: 「공포 연출 약하게」용 결과 문장, 괴담 도감, 둘러보기 문구 보강 ---------- */
+const MMD_SOFT={
+ 'shirt.0.ok':'셔츠를 걷자 안은 비어 있었다. 가슴 주머니에 설계도 조각이 접혀 있다. 등 뒤에서 단추 채우는 소리가 났다.',
+ 'shirt.0.no':'셔츠 소매가 먼저 내 손목을 감았다. 겨우 뿌리쳤다. 손목에 단추 모양 자국이 남았다.',
+ 'shirt.1.r':'등 뒤에서 단추 채우는 소리가 끝까지 따라왔다.',
+ 'jaw.0.ok':'손바닥에 고인 빗물에 동전 몇 개와 젖은 쪽지가 섞여 내려왔다. 쪽지엔 「다음은 너」.',
+ 'jaw.0.no':'빗물이 이상하게 미지근하고 끈적했다. 손이 따끔거린다. 속이 메스껍다.',
+ 'jaw.1.r':'고개를 들지 않았다. 위에서 무언가 삼키는 소리가 났다.',
+ 'table.0.ok':'먹는 척만 했다. 밥알 사이에서 작은 열쇠가 나왔다. 어디선가 박수 소리가 났다.',
+ 'table.0.no':'삼켜 버렸다. 목에 무언가 걸린 듯 하루 종일 말이 잘 나오지 않는다.',
+ 'table.1.ok':'상이 엎어지며 바닥 판자가 들렸다. 그 아래 누가 숨겨 둔 돈다발이 있다.',
+ 'table.1.no':'엎어진 밥알이 바닥에서 꿈틀거리는 것처럼 보였다. 서둘러 방을 나왔다.',
+ 'quilt.0.ok':'이불 아래엔 아무도 없었다. 사람 모양으로 패인 자국과, 그 안의 설계도 조각.',
+ 'quilt.0.no':'이불 아래 누운 건 나였다. 정신을 차리니 복도 끝이었다.',
+ 'quilt.1.r':'지나치는 동안 숨소리가 내 숨에 맞춰졌다. 숨을 멈추자 이불도 멈췄다.',
+ 'hall.0.ok':'소화기 안에서 하얀 가루와 함께 동전이 쏟아졌다. 손바닥이 하얗게 물들었다.',
+ 'hall.0.no':'핀을 뽑자 벽의 손자국들이 일제히 내 쪽을 향했다. 등에 누가 손을 얹은 것 같다.',
+ 'hall.1.r':'올라올 때 마흔두 칸이었다. 내려갈 때 마흔세 칸이었다.',
+ 'ceil.0.ok':'「틀렸어.」 그것은 아쉬운 듯 계단 위로 사라졌다. 떨어진 자리에 설계도 조각이 있다.',
+ 'ceil.0.no':'그것이 내 이름을 끝까지 말했다. 이름 한 글자가 잘 떠오르지 않는다.',
+ 'ceil.1.r':'지나갈 때 이마에 무언가 뚝 떨어졌다.',
+ 'dentist.0.r':'의자에 앉았다. 정신을 차리니 입안이 얼얼하고, 손에 돈이 쥐여 있었다.',
+ 'dentist.1.ok':'문이 닫히기 직전에 빠져나왔다.',
+ 'dentist.1.no':'주인이 내 입을 한 번 들여다보고 「다음에」라고 했다. 이가 하나 흔들린다.',
+ 'feet.0.ok':'차례가 오기 직전, 앞사람이 내 손에 무언가를 쥐여 주고 사라졌다. 거꾸로 감기는 시계였다.',
+ 'feet.0.no':'신발이 벗겨졌다. 누가 내 발을 들어 보고는 내려놓았다. 발끝이 욱신거린다.',
+ 'feet.1.r':'지우고 돌아서는데 분필 긁는 소리가 다시 났다. 두 켤레가 그려져 있었다.',
+ 'teeth.0.ok':'자갈 사이에서 녹슨 동전과 설계도 조각을 건졌다.',
+ 'teeth.0.no':'손을 넣자 바닥이 일제히 다물었다. 손이 욱신거린다.',
+ 'teeth.1.r':'돌아가는 내내 발밑에서 무언가 갈리는 소리가 따라왔다.',
+ 'fog.0.r':'대답했다. 김이 입으로 밀려 들어왔다. 기침을 하고 나니 내 이름 한 글자가 잘 떠오르지 않는다.',
+ 'fog.1.ok':'벽돌마다 날짜가 적혀 있다. 하나를 빼내자 젖은 신문 조각. 날짜가 라디오의 오늘보다 한참 뒤다.',
+ 'fog.1.no':'김을 들이마셨다. 잠깐, 내가 누군지 생각나지 않았다.',
+ 'hole.0.ok':'구멍 안쪽은 따뜻했다. 설계도 원본 조각 뭉치를 꺼냈다. 구멍이 천천히 닫혔다.',
+ 'hole.0.no':'구멍이 손목까지 끌어당겼다. 겨우 빼낸 손이 얼얼하다.',
+ 'hole.1.r':'구멍이 내 이름을 따라 했다. 한 글자 틀리게.',
+ 'hole.2.r':'문을 닫고 돌아보니 문에 번호가 생겨 있었다. 내 방 번호였다.',
+ 'obit.0.ok':'부고를 찢자 뒷면에 설계도가 그려져 있었다.',
+ 'obit.0.no':'종이에 손가락을 베었다. 이름 한 글자가 잘 떠오르지 않는다.',
+ 'obit.1.r':'주머니가 하루 종일 미지근했다. 꺼내 보니 이름 없는 문패였다.',
+ 'myroom.0.ok':'누워 있는 건 나였다. 그것이 이름 없는 문패를 건네고 다시 잠들었다.',
+ 'myroom.0.no':'이불이 걷히기 전에 손이 내 손목을 잡았다. 손가락을 하나씩 세어 보고는 놓아주었다. 손끝이 아프다.',
+ 'myroom.1.ok':'똑같은 물건을 집어 나왔다. 돌아와 보니 내 방의 것도 그대로 있다. 둘이 되었다.',
+ 'myroom.1.no':'물건을 집는 순간 침대 쪽에서 「그거 내 거야」 하는 내 목소리가 났다.',
+ 'myroom.2.r':'문을 닫았다. 안에서 누가 내 이름으로 대답했다.'};
+const MMD_DEXL=[['shirt','줄에 걸린 셔츠'],['jaw','하늘 대신'],['table','차려진 밥상'],['quilt','숨 쉬는 이불'],['hall','끝없는 복도'],['ceil','천장의 계단'],['dentist','치과 같은 가게'],['feet','셔터 아래 맨발들'],['teeth','이가 깔린 수로'],['fog','벽돌 틈의 김'],['hole','번호 없는 방'],['obit','어제 없던 방'],['myroom','내 방과 꼭 같은 방'],['desk','설계자의 책상'],['sign','서명란'],['shop','간판 없는 가게'],['vanish','사라진 방']];
+{const da0=dexAll;dexAll=function(){return[...da0.apply(this,arguments),...MMD_DEXL.map(([k,n])=>['mmd:'+k,'무명동 · '+n])]}}
+MMD_AMB.push('복도 끝 거울에 내가 비친다. 거울 속 나는 한 걸음 늦게 멈춘다.','천장에서 물이 한 방울 떨어졌다. 짰다. 바닷물이다.','문틈으로 누가 「몇 동 사세요?」 하고 묻다가 말았다.','벽에 붙은 실종 전단의 얼굴이 하나같이 눈을 감고 있다.','계단 한 칸이 물렁했다. 밟을 때 무언가 짓눌리는 소리가 났다.','누가 내 뒤에서 내 걸음 수를 소리 내어 센다. 하나 더 많이.','라디오도 없는데 어제 날씨 예보가 들린다.','바닥에 떨어진 단추를 주웠다. 따뜻했다.','방금 지나온 문에 번호가 지워져 있다.','멀리서 망치 소리가 난다. 낮인데.');
+
+/* ---------- 같은 문구가 연달아 나오지 않게: 최근에 나온 줄은 한동안 피한다 (기기마다 기억) ---------- */
+var PK_REC=null,PK_T=null;
+function pickKey(a){const f=x=>typeof x==='string'?x:x&&typeof x==='object'?(x.id||x.n||x.t||x.l||''):'';const k0=f(a[0]),k1=f(a[a.length-1]);if(!k0)return null;return a.length+':'+String(k0).slice(0,18)+'|'+String(k1).slice(-10)}
+function pickFresh(a){if(!a||!a.length)return undefined;const rnd=()=>a[Math.floor(Math.random()*a.length)];if(a.length<3)return rnd();const key=pickKey(a);if(!key)return rnd();
+  if(!PK_REC){try{PK_REC=JSON.parse(localStorage.getItem('bk_pick')||'{}')}catch(e){PK_REC={}}}
+  const rec=PK_REC[key]||[];const win=Math.min(a.length-1,Math.max(1,Math.floor(a.length*.6)));const avoid=new Set(rec.slice(-win));const cand=[...a.keys()].filter(i=>!avoid.has(i));const i=cand.length?cand[Math.floor(Math.random()*cand.length)]:Math.floor(Math.random()*a.length);
+  rec.push(i);PK_REC[key]=rec.slice(-24);const ks=Object.keys(PK_REC);if(ks.length>400)delete PK_REC[ks[0]];clearTimeout(PK_T);PK_T=setTimeout(()=>{try{localStorage.setItem('bk_pick',JSON.stringify(PK_REC))}catch(e){}},800);return a[i]}
 
 /* ---------- 시작 ---------- */
 async function boot(){
