@@ -1719,7 +1719,7 @@ function renderLeft(){const L=$('left'),m=G.me;
       fx.length?h('div',{class:'dim',style:'font-size:11.5px'},'효과를 누르면 무슨 효과인지 볼 수 있어요.'):null,
       (m.marks||[]).length?h('div',{class:'mute',style:'font-size:12.5px'},'흔적 · '+m.marks.join(', ')):null),
     h('div',{class:'card stack'},h('div',{class:'row'},h('span',{class:'lbl'},'생업'),h('span',{class:'mute',style:'font-size:12.5px'},m.job||'없음')),
-      m.work?h('div',{class:'banner'},`${m.work.job} 중 · `,h('b',{class:'num'},dur(m.work.until-T())),' 뒤 퇴근'):h('button',{disabled:!m.job,onclick:startWork},m.job?`출근 (${fast()?'1분':'4시간'})`:'생업 없음 · 의뢰판의 일용직'),
+      m.work?h('div',{class:'banner'},`${m.work.job} 중 · `,h('b',{class:'num'},dur(m.work.until-T())),' 뒤 퇴근 ',h('button',{class:'sm ghost',onclick:earlyLeave},'조기 퇴근')):h('button',{disabled:!m.job,onclick:startWork},m.job?`출근 (${fast()?'1분':'4시간'})`:'생업 없음 · 의뢰판의 일용직'),
       m.nap?h('div',{class:'banner'},'낮잠 중 · ',h('b',{class:'num'},dur(m.nap.until-T())),' 뒤에 깨요 ',h('button',{class:'sm ghost',onclick:wake},'일찍 깨기')):m.cell===homeCell(m)?h('p',{class:'mute',style:'margin:0;font-size:12.5px'},'집에 있으면 정신이 천천히 돌아오고, 낮잠을 잘 수 있어요.'):null,
       (m.items.anesth>0)?h('button',{class:'sm',onclick:()=>{m.items.anesth--;give({hp:15});toast('마취제를 썼다. 체력 +15');render()}},`마취제 쓰기 (${m.items.anesth})`):null),
     h('div',{class:'card stack'},h('div',{class:'row'},h('span',{class:'lbl'},'능력치'),h('button',{class:'sm',onclick:()=>openCard('me')},'주민증')),statsEl(m.stats,m.sxp),h('p',{class:'dim',style:'margin:0;font-size:12px'},'최대 100. 판정에 쓰면 오르고(성공 +3, 실패 +2), 출근하면 생업 능력치가 올라요. 판정 = 능력치 + 20면 주사위 두 개, 정신 30 미만이면 -6.')),
@@ -3101,6 +3101,21 @@ function noticeEdit(n){const ta=h('textarea',{maxlength:4000,rows:10});ta.value=
     h('button',{class:'pri',onclick:async e=>{const v=ta.value.trim();if(!v)return toast('내용을 적어 주세요.');e.currentTarget.disabled=true;
       const{data,error}=await updWithEdited('notices',n.id,{text:v});if(error||!data||!data.length){toast('고치지 못했어요.');e.currentTarget.disabled=false;return}
       const i=NOTICES.findIndex(x=>x.id===n.id);if(i>=0)NOTICES[i]=data[0];closeModal();toast('공지를 고쳤어요.');render()}},'고친 공지 올리기')))}
+
+/* ---------- 조기 퇴근: 일한 만큼만 받는다 ---------- */
+const EARLY_LINES={red:'향주 장부의 내 이름 옆에 작은 점이 하나 찍혔다. 조퇴한 날마다 하나씩 늘어난다고 들었다.',sam:'종루 출입 일지에 「조퇴」라고 적고 나왔다. 그 아래 칸에 누가 미리 같은 글씨로 내 이름을 적어 두었다.',free:'일당 봉투가 얇다. 그래도 오늘은 해가 지기 전에 집에 간다.'};
+const EARLY_GHOST=['다음 날 같이 일하는 사람이 말했다. 「어제 끝까지 있다 갔잖아. 문 닫을 때까지.」 퇴근 장부에는 내 글씨로 정시 퇴근이 찍혀 있다. 일당도 다 들어와 있었다.',
+ '집에 와서 신발을 벗는데 밑창이 젖어 있다. 오늘은 비가 오지 않았다. 일당은 정시 퇴근한 만큼 들어와 있었다. 누가 남은 시간을 채우고 간 걸까.'];
+function earlyLeave(e){const m=G.me,w=m&&m.work;if(!w)return;if(scene)return toast('지금 장면부터 마무리해 주세요.');
+  const bt=e&&e.currentTarget;if(bt&&!bt.dataset.arm){bt.dataset.arm='1';bt.textContent='한 번 더 누르면 퇴근';setTimeout(()=>{if(bt.isConnected){delete bt.dataset.arm;bt.textContent='조기 퇴근'}},4000);return}
+  const total=fast()?60e3:4*HOUR,start=w.until-total,ratio=Math.max(0,Math.min(1,(T()-start)/total));const full=PAY[w.job]||40;m.work=null;
+  const f=m.fugitive?'free':m.fac;let pay,text,lines=[],sg='';
+  if(ratio<.25){pay=0;text='출근 도장만 찍고 나왔다. 아무도 붙잡지 않았다. 일당도 없었다.';log(`${w.job}에서 일찍 나왔다. 한 시간도 채우지 못해 일당은 없다.`,'work')}
+  else if(chance(.1)){pay=full;text=pick(EARLY_GHOST);lines.push(...give({mind:-8}));sg=gainStat(JOBSTAT[w.job]||'str',4);log(`${w.job}에서 조퇴했다. 그런데 장부에는 정시 퇴근이 찍혀 있다.`,'haunt')}
+  else{pay=Math.floor(full*ratio);text=EARLY_LINES[f]||EARLY_LINES.free;sg=gainStat(JOBSTAT[w.job]||'str',Math.max(1,Math.round(4*ratio)));log(`${w.job}에서 조퇴했다. $${pay}.`,'work')}
+  m.money+=pay;lines.unshift(`$+${pay} (일당 $${full} 중 ${Math.round(ratio*100)}%)`);if(sg)lines.push(sg);
+  if(pay<full&&(f==='red'||(f==='sam'&&w.job==='야간 순찰')))lines.push(f==='red'?'공적 없음':'순찰 횟수 없음');
+  done('조기 퇴근',text,lines)}
 
 /* ---------- 시작 ---------- */
 async function boot(){
