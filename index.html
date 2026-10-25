@@ -2679,7 +2679,7 @@ SCENES.push(
  {id:'report',st:1,neg:true,need:()=>G.me.fac==='sam',t:['{a}이(가) {b}이(가) 수칙을 어긴 걸 순찰 일지에 적었다. 이름 옆에 별표까지 쳤다.'],rw:{rep:1,mind:-2}},
  {id:'ignore',st:1,neg:true,t:['{b}이(가) 손을 흔들었는데 {a}은(는) 못 본 척 계단을 내려갔다.'],rw:{mind:-1}});
 {const NL={tea:'밀크티 같이 마시기',umbrella:'우산 같이 쓰기',mahjong:'돈 안 걸고 마작',laundry2:'빨래 같이 널기',rules:'수칙 같이 외우기',number:'삐삐 번호 적어 주기',fish:'배수로에서 같이 낚시',walkhome:'집까지 데려다주기',ramen:'라면 나눠 먹기',note:'문틈 쪽지',fortune2:'같이 점 보기',hide:'도망자 숨겨 주기',teeth:'이 세어 주기',lantern2:'귀문 등불 같이 걸기',build3:'증축 시간 같이 버티기',promise:'실종 전단 약속',stealnoodle:'고명 뺏어 먹기',report:'순찰 일지에 적기',ignore:'못 본 척하기'};
- const s0=sceneLabel;sceneLabel=sc=>s0(sc)||NL[sc.id]||sc.id}
+ const s0=sceneLabel;sceneLabel=sc=>s0(sc)||NL[sc.id]}
 
 /* ---------- 나쁜 장면 더 ---------- */
 SCENES.push(
