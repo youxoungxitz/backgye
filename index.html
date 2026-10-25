@@ -4259,7 +4259,7 @@ async function loadTalks(){const m=G.me;if(!m||!sb)return;try{const{data,error}=
 function talkUpsert(x){if(!x||!G.me||(x.from_char!==G.me.id&&x.to_char!==G.me.id))return;const i=TALKS.findIndex(y=>y.id===x.id);if(i>=0)TALKS[i]=x;else TALKS.unshift(x);try{pagerLabel()}catch(e){}}
 function talkPick(pid){const m=G.me,p=SAMPLES[pid];if(!m||!p)return;if(!ready())return;const tier=talkTier(pid);const dl=daily();dl.talk=dl.talk||0;
   if(dl.talk>=TALK_DAY)return toast(`오늘은 이야기를 ${TALK_DAY}번 걸었어요. 내일 또 걸 수 있어요.`);
-  if(TALKS.some(x=>x.from_char===m.id&&x.to_char===pid&&talkLive(x)))return toast('먼저 건 이야기에 아직 대답이 없어요.');
+  if(TALKS.some(x=>!String(x.topic).startsWith('act:')&&x.from_char===m.id&&x.to_char===pid&&talkLive(x)))return toast('먼저 건 이야기에 아직 대답이 없어요.');
   const pool=TALK_Q[tier].slice();const cards=[];while(cards.length<3&&pool.length)cards.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
   if(chance(.15))cards[Math.floor(Math.random()*cards.length)]=pick(TALK_ODD);
   const T0=TALK_TIER[tier];let chosen=null;const ask=h('input',{maxlength:120,placeholder:'덧붙일 한마디 (선택, 120자)'});const list=h('div',{class:'stack',style:'gap:6px'});
@@ -4293,7 +4293,7 @@ function talkResultOpen(x){const m=G.me;m.talkSeen=m.talkSeen||{};const first=!m
   if(first&&x.tier===0&&!(G.rel&&G.rel[x.to_char]&&G.rel[x.to_char].friend))setTimeout(()=>toast(`${to}에게 지인 신청을 보내 볼 수도 있어요.`),900)}
 /* 시트에 버튼 */
 function talkEl(pid){const m=G.me,p=SAMPLES[pid];if(!m||!p||p.isNpc||(typeof sameOwner==='function'&&sameOwner(pid)))return null;const tier=talkTier(pid),T0=TALK_TIER[tier];
-  const inc=TALKS.filter(x=>x.from_char===pid&&x.to_char===m.id&&talkLive(x));const out=TALKS.find(x=>x.from_char===m.id&&x.to_char===pid&&talkLive(x));const left=TALK_DAY-(daily().talk||0);
+  const inc=TALKS.filter(x=>!String(x.topic).startsWith('act:')&&x.from_char===pid&&x.to_char===m.id&&talkLive(x));const out=TALKS.find(x=>!String(x.topic).startsWith('act:')&&x.from_char===m.id&&x.to_char===pid&&talkLive(x));const left=TALK_DAY-(daily().talk||0);
   return h('div',{class:'stack talkbox',style:'gap:6px'},h('span',{class:'lbl'},`이야기 · ${T0.who}`),
     ...inc.map(x=>h('div',{class:'banner',style:'color:var(--ink);display:flex;gap:8px;align-items:center;flex-wrap:wrap'},h('span',{style:'flex:1;min-width:0'},`「${x.q}」`),h('button',{class:'sm pri',onclick:()=>{closeModal();talkAnswerOpen(x)}},'대답하기'))),
     out?h('p',{class:'dim',style:'margin:0;font-size:12.5px'},`대답 기다리는 중: 「${out.q}」`):null,
@@ -4303,14 +4303,14 @@ function talkEl(pid){const m=G.me,p=SAMPLES[pid];if(!m||!p||p.isNpc||(typeof sam
 if(typeof loadInboxExtra==='function'&&typeof inboxItems==='function'){
  {const li=loadInboxExtra;loadInboxExtra=async function(){await loadTalks();return li.apply(this,arguments)}}
  {const ib=inboxItems;inboxItems=function(){const out=ib.apply(this,arguments);const m=G.me;if(!m)return out;const seen=m.talkSeen||{};
-   for(const x of TALKS){const T0=TALK_TIER[x.tier]||TALK_TIER[0];
+   for(const x of TALKS){if(String(x.topic).startsWith('act:'))continue;const T0=TALK_TIER[x.tier]||TALK_TIER[0];
      if(x.to_char===m.id&&talkLive(x))out.push({k:'말 걸어옴',t:Date.parse(x.created_at),title:`${talkName(x.from_char)} · ${T0.n}`,body:'「'+x.q+'」',unread:true,go:()=>{closeModal();talkAnswerOpen(x)}});
      else if(x.from_char===m.id&&(x.status==='done'||x.status==='dodged'))out.push({k:'대답 옴',t:Date.parse(x.answered_at||x.created_at),title:`${talkName(x.to_char)}이(가) ${x.status==='done'?'대답했어요':'얼버무렸어요'} · ${T0.n}`,body:x.answer||'',unread:!seen[x.id],go:()=>talkResultOpen(x)})}
    return out.sort((a,b)=>b.t-a.t).slice(0,60)}}
  INBOX_C['말 걸어옴']='var(--amber,#FFC247)';
 }
 if(typeof subscribe==='function'){const s1=subscribe;subscribe=function(){const r=s1.apply(this,arguments);try{sb.channel('baekgye-talk').on('postgres_changes',{event:'*',schema:'public',table:'talks'},pl=>{const x=pl.new;if(!x||!x.id)return;const fresh=!TALKS.some(y=>y.id===x.id&&y.status===x.status);talkUpsert(x);
-  if(fresh&&G.me){if(x.to_char===G.me.id&&x.status==='open')toast(`${talkName(x.from_char)}이(가) 말을 걸었어요. 삐삐함을 보세요.`);else if(x.from_char===G.me.id&&x.status==='done')toast(`${talkName(x.to_char)}이(가) 대답했어요.`)}}).subscribe()}catch(e){}return r}}
+  if(fresh&&G.me){if(x.to_char===G.me.id&&x.status==='open')toast(`${talkName(x.from_char)}이(가) ${String(x.topic).startsWith('act:')?'같이 하자고 청했어요':'말을 걸었어요'}. 삐삐함을 보세요.`);else if(x.from_char===G.me.id&&x.status==='done')toast(`${talkName(x.to_char)}이(가) 대답했어요.`)}}).subscribe()}catch(e){}return r}}
 
 /* ---------- 효과 추가: 관계·생활 버프, 날씨·시간, 남들 눈에 보이는 무전 디버프, 이름 흐림, 빚 독촉, 발 묶임, 방 장난감 효과 ---------- */
 Object.assign(FXDEF,{
@@ -4663,6 +4663,54 @@ function pickFresh(a){if(!a||!a.length)return undefined;const rnd=()=>a[Math.flo
   if(!PK_REC){try{PK_REC=JSON.parse(localStorage.getItem('bk_pick')||'{}')}catch(e){PK_REC={}}}
   const rec=PK_REC[key]||[];const win=Math.min(a.length-1,Math.max(1,Math.floor(a.length*.6)));const avoid=new Set(rec.slice(-win));const cand=[...a.keys()].filter(i=>!avoid.has(i));const i=cand.length?cand[Math.floor(Math.random()*cand.length)]:Math.floor(Math.random()*a.length);
   rec.push(i);PK_REC[key]=rec.slice(-24);const ks=Object.keys(PK_REC);if(ks.length>400)delete PK_REC[ks[0]];clearTimeout(PK_T);PK_T=setTimeout(()=>{try{localStorage.setItem('bk_pick',JSON.stringify(PK_REC))}catch(e){}},800);return a[i]}
+
+/* ---------- 같은 칸 상호작용: 모르는 사람에게도 청할 수 있고, 상대가 받아야 이뤄진다 (talks 표를 같이 쓴다) ---------- */
+const ACT_TTL=30*60e3,ACT_DAY=6;
+const ACTS=[
+ {id:'light',n:'불 빌리기',ask:'성냥 있어요? 불 좀 빌려도 될까요.',d:'둘 다 정신 +3',acc:'불을 붙여 주었다. 성냥불 너머로 처음 보는 얼굴이 잠깐 환해졌다.',got:'상대가 불을 붙여 주었다. 성냥불 너머로 처음 보는 얼굴이 잠깐 환해졌다.',me:{mind:3},you:{mind:3}},
+ {id:'share',n:'먹을 것 나눠 먹기',ask:'만두를 너무 많이 샀어요. 같이 드실래요?',d:'내가 $5를 내고, 둘 다 체력 +5 · 정신 +2',cost:5,acc:'김이 나는 만두를 반씩 나눠 먹었다. 국물이 손목으로 흘렀다. 둘 다 웃었다.',got:'만두를 반씩 나눠 먹었다. 상대가 마지막 하나를 내 쪽으로 밀어 주었다.',me:{hp:5,mind:2},you:{hp:5,mind:2}},
+ {id:'watch',n:'망 봐 달라고 하기',ask:'잠깐 망 좀 봐 주실래요? 계단 쪽에서 소리가 나서요.',d:'나는 「지켜보는 사람」(증축 피해 한 번 막음), 상대는 정신 +2',acc:'계단 쪽을 같이 지켜봐 주었다. 아무것도 올라오지 않았다. 아마도.',got:'상대가 계단 쪽을 지켜봐 주었다. 등 뒤가 조금 덜 서늘하다.',me:{fx:'guarded'},you:{mind:2}},
+ {id:'way',n:'길 묻기',ask:'여기서 어떻게 내려가요? 계단이 어제랑 달라서요.',d:'나는 오늘의 소문을 듣고, 상대는 평판 +1',acc:'길을 알려 주었다. 가르쳐 준 계단 수가 맞는지는 모르겠다.',got:'길을 알려 주었다. 그리고 지나가는 말로 소문 하나를 흘렸다.',me:{},you:{rep:1},rumor:1},
+ {id:'walk',n:'같이 둘러보자고 하기',ask:'혼자 다니기 좀 그런데, 같이 둘러보실래요?',d:'받아 주면 30분 동안 지인이 아니어도 「같이 둘러보기」를 할 수 있어요',acc:'같이 다니기로 했다. 발소리가 둘이라 조금 덜 무섭다.',got:'같이 다니기로 했다. 30분 동안 「같이 둘러보기」를 할 수 있어요.',me:{},you:{},walk:1},
+ {id:'name',n:'통성명하기',ask:'자주 마주치네요. 이름이라도 알고 지낼까요?',d:'받아 주면 서로 지인 신청을 보내기 쉬워져요',acc:'서로 이름을 말했다. 한 번 더 확인했다. 이름은 여기서 쉽게 흐려지니까.',got:'서로 이름을 말했다. 지인 신청을 보내 보세요.',me:{mind:1},you:{mind:1},name:1}];
+const actOf=x=>ACTS.find(a=>'act:'+a.id===x.topic);
+const isActRow=x=>String(x&&x.topic||'').startsWith('act:');
+const actLive=x=>x.status==='open'&&Date.now()-Date.parse(x.created_at)<ACT_TTL;
+function actSameCell(pid){const m=G.me,p=SAMPLES[pid];return!!(m&&p&&p.cell&&(typeof chCell==='function'?chCell(p.cell)===chCell(m.cell):p.cell===m.cell)&&online(p))}
+async function actSend(pid,a){const m=G.me,p=SAMPLES[pid];if(!ready())return;if(!actSameCell(pid))return toast('같은 칸에 있어야 청할 수 있어요.');const dl=daily();dl.act=dl.act||0;if(dl.act>=ACT_DAY)return toast(`오늘은 ${ACT_DAY}번 청했어요. 내일 또 해요.`);
+  if(TALKS.some(x=>isActRow(x)&&x.from_char===m.id&&x.to_char===pid&&actLive(x)))return toast('먼저 청한 것에 아직 대답이 없어요.');if(a.cost&&m.money<a.cost)return toast(`돈이 모자라요. $${a.cost}`);
+  const{data,error}=await sb.from('talks').insert({from_char:m.id,to_char:pid,tier:0,topic:'act:'+a.id,q:a.ask}).select().single();if(error)return toast('청하지 못했어요. 운영자에게 14_talks.sql 실행을 부탁해 주세요.');
+  if(a.cost){m.money-=a.cost}dl.act++;talkUpsert(data);log(`${p.name}에게 청했다. 「${a.ask}」`,'life');save();closeModal();render();toast(`${p.name}에게 청했어요. 30분 안에 받아 주면 이뤄져요.`)}
+function actOpen(x){const a=actOf(x);if(!a)return;const from=talkName(x.from_char);
+  openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},`${from} · ${a.n}`),h('button',{class:'ghost',onclick:closeModal},'닫기')),
+   h('blockquote',{class:'hand',style:'margin:0'},'「'+x.q+'」'),h('p',{class:'mute',style:'margin:0;font-size:13px'},'같은 칸에 있는 사람이 청했어요. '+a.d+'.'),
+   h('div',{class:'wrap'},h('button',{class:'pri',onclick:()=>actAnswer(x,true)},'받는다'),h('button',{class:'ghost sm',onclick:()=>actAnswer(x,false)},'정중히 거절한다'))))}
+async function actAnswer(x,yes){const a=actOf(x);const upd={status:yes?'done':'dodged',answer:'',answered_at:new Date().toISOString()};const{error}=await sb.from('talks').update(upd).eq('id',x.id);if(error)return toast('대답하지 못했어요.');Object.assign(x,upd);talkUpsert(x);closeModal();
+  const from=talkName(x.from_char);if(!yes){log(`${from}의 청을 거절했다.`,'life');save();return done(a.n,`「${x.q}」\n\n고개를 저었다. ${from}은(는) 알겠다는 듯 물러났다.`,[])}
+  const out=give(a.you);if(a.name){try{relOf(x.from_char).name=1}catch(e){}}if(a.walk){G.me.walkWith={id:x.from_char,until:Date.now()+ACT_TTL}}
+  log(`${from}의 청을 받았다. 「${a.n}」`,'life');save();done(a.n,`${from}: 「${x.q}」\n\n${a.acc}`,out,false);if(a.name)setTimeout(()=>toast(`${from}에게 지인 신청을 보내 볼 수 있어요.`),900)}
+function actResult(x){const m=G.me,a=actOf(x);m.talkSeen=m.talkSeen||{};const first=!m.talkSeen[x.id];m.talkSeen[x.id]=1;const to=talkName(x.to_char);closeModal();
+  if(x.status==='dodged'){if(first&&a.cost){m.money+=a.cost}save();return done(a.n,`${to}은(는) 정중히 고개를 저었다.${a.cost?` 만두값 $${a.cost}는 돌려받았다.`:''}`,[])}
+  const out=first?give(a.me):[];if(first&&a.rumor&&typeof todayRumor==='function')out.push('소문: '+todayRumor());if(first&&a.walk)m.walkWith={id:x.to_char,until:Date.now()+ACT_TTL};save();
+  done(a.n,`나: 「${x.q}」\n\n${a.got}${a.rumor&&typeof todayRumor==='function'?'\n\n「'+todayRumor()+'」':''}`,out,false)}
+/* 같이 둘러보기: 받아 준 사람과는 30분 동안 지인이 아니어도 */
+{const pf0=partyFriendsHere;partyFriendsHere=function(){const r=pf0.apply(this,arguments);try{const w=G.me&&G.me.walkWith;if(w&&w.until>Date.now()&&actSameCell(w.id)&&!r.includes(w.id))r.push(w.id)}catch(e){}return r}}
+/* 시트: 같은 칸에 있으면 청할 거리 */
+function actEl(pid){const m=G.me,p=SAMPLES[pid];if(!m||!p||p.isNpc||(typeof sameOwner==='function'&&sameOwner(pid)))return null;const same=actSameCell(pid);
+  const inc=TALKS.filter(x=>isActRow(x)&&x.from_char===pid&&x.to_char===m.id&&actLive(x));const out=TALKS.find(x=>isActRow(x)&&x.from_char===m.id&&x.to_char===pid&&actLive(x));const left=ACT_DAY-(daily().act||0);
+  return h('div',{class:'stack talkbox',style:'gap:6px'},h('span',{class:'lbl'},'같은 칸에서'),
+   ...inc.map(x=>h('div',{class:'banner',style:'color:var(--ink);display:flex;gap:8px;align-items:center;flex-wrap:wrap'},h('span',{style:'flex:1;min-width:0'},`${actOf(x).n} · 「${x.q}」`),h('button',{class:'sm pri',onclick:()=>{closeModal();actOpen(x)}},'대답하기'))),
+   out?h('p',{class:'dim',style:'margin:0;font-size:12.5px'},`대답 기다리는 중: ${actOf(out).n}`):null,
+   same?h('div',{class:'wrap',style:'gap:6px'},ACTS.map(a=>h('button',{class:'sm',title:a.d,disabled:(!!out||left<=0)||null,onclick:()=>actSend(pid,a)},a.n+(a.cost?` ($${a.cost})`:'')))):h('p',{class:'dim',style:'margin:0;font-size:12.5px'},'같은 칸에 있을 때 불 빌리기, 먹을 것 나눠 먹기, 같이 둘러보기 같은 걸 청할 수 있어요.'),
+   same?h('p',{class:'dim',style:'margin:0;font-size:12px'},`지인이 아니어도 돼요. 상대가 30분 안에 받아 줘야 이뤄져요. 오늘 ${Math.max(0,left)}번 남음.`):null)}
+{const os4=openSheet;openSheet=function(id){const r=os4.apply(this,arguments);try{if(id!=='me'&&sb){const el=actEl(id);const sh=document.querySelector('#modalRoot .sheet');if(el&&sh){const tb=sh.querySelector('.talkbox');if(tb)tb.before(el);else{const dl=sh.querySelector('dl');if(dl)dl.after(el);else sh.append(el)}}}}catch(e){}return r}}
+/* 이야기 나누기 목록에서는 빼고, 삐삐함엔 따로 */
+if(typeof inboxItems==='function'){const ib2=inboxItems;inboxItems=function(){const out=ib2.apply(this,arguments);const m=G.me;if(!m)return out;const seen=m.talkSeen||{};
+  const clean=out;
+  for(const x of TALKS){if(!isActRow(x))continue;const a=actOf(x);if(!a)continue;
+    if(x.to_char===m.id&&actLive(x))clean.push({k:'같이 하자',_act:1,t:Date.parse(x.created_at),title:`${talkName(x.from_char)} · ${a.n}`,body:'「'+x.q+'」',unread:true,go:()=>{closeModal();actOpen(x)}});
+    else if(x.from_char===m.id&&(x.status==='done'||x.status==='dodged'))clean.push({k:'대답 옴',_act:1,t:Date.parse(x.answered_at||x.created_at),title:`${talkName(x.to_char)}이(가) ${x.status==='done'?'받아 줬어요':'거절했어요'} · ${a.n}`,body:'',unread:!seen[x.id],go:()=>actResult(x)})}
+  return clean.sort((a,b)=>b.t-a.t).slice(0,60)};if(typeof INBOX_C!=='undefined')INBOX_C['같이 하자']='var(--tube)'}
 
 /* ---------- 시작 ---------- */
 async function boot(){
