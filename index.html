@@ -3161,6 +3161,24 @@ function loanScene(){return{id:'loan',title:'홍등루',red:true,text:'초록 �
   h('div',{class:'wrap'},h('button',{class:'sm',disabled:!m.money||null,onclick:()=>payDebt(50)},'빚 $50 갚기'),h('button',{class:'sm',disabled:!m.money||null,onclick:()=>payDebt(m.money)},'있는 만큼 갚기')),
   h('p',{class:'dim',style:'margin:0;font-size:12px'},'객이 아니라서 갚아도 신용은 쌓이지 않아요.')))}catch(e){}return el}}
 
+/* ---------- 지인 신청 받는지 시트·주민증에 표시 ---------- */
+const FOPEN={yes:['지인 신청 환영','good'],ask:['먼저 말 걸어 주세요','amb'],no:['지금은 지인 신청 안 받아요','red']};
+if(!SHEETK.includes('fopen'))SHEETK.push('fopen');
+{const pf0=personFromRow;personFromRow=function(r){const p=pf0.apply(this,arguments);try{p.fopen=(r.sheet||{}).fopen||''}catch(e){}return p}}
+function fopenTag(p){const f=p&&FOPEN[p.fopen];return f?h('span',{class:'tag '+f[1],style:'font-size:11.5px'},f[0]):''}
+{const o0=openForm;openForm=function(edit){const r=o0.apply(this,arguments);try{const form=document.querySelector('#modalRoot form');const memo=document.getElementById('f-memo');if(!form||!memo)return r;
+  const s=h('select',{id:'f-fopen'},[['','표시 안 함'],['yes','지인 신청 환영'],['ask','먼저 말 걸어 주세요 (1:1이나 채팅으로)'],['no','지금은 지인 신청 안 받아요']].map(([v,l])=>h('option',{value:v},l)));s.value=edit&&G.me?G.me.fopen||'':'';
+  const fld=h('label',{class:'field full'},h('span',null,'지인 신청'),s,h('small',{class:'dim',style:'font-size:11.5px'},'시트와 주민증에 표시돼요. 「안 받아요」로 두면 다른 사람의 지인 신청 버튼이 잠겨요. 언제든 시트 고치기에서 바꿀 수 있어요.'));
+  const anchor=memo.closest('.field')||memo;anchor.parentNode.insertBefore(fld,anchor);
+  form.addEventListener('submit',()=>{setTimeout(()=>{if(!form.isConnected&&G.me){G.me.fopen=s.value;save()}},0)})}catch(e){}return r}}
+{const os0=openSheet;openSheet=function(id){const r=os0.apply(this,arguments);try{const p=id==='me'?G.me:SAMPLES[id];const t=fopenTag(p);const h2=document.querySelector('#modalRoot .sheet h2.disp');if(t&&h2)h2.insertAdjacentElement('afterend',h('div',{style:'margin-top:4px'},t))}catch(e){}return r}}
+{const id1=idCard;idCard=function(p,isMe){const el=id1(p,isMe);try{const f=FOPEN[p.fopen];const dl=el.querySelector('dl');if(f&&dl)dl.append(h('dt',null,'지인 신청'),h('dd',{style:`color:${p.fopen==='no'?'#8E2F2A':p.fopen==='yes'?'#2F6B4F':'#7A5A1C'}`},f[0]))}catch(e){}return el}}
+{const rp0=relPanel;relPanel=function(id,r){const el=rp0.apply(this,arguments);try{const p=SAMPLES[id];if(p&&r&&!r.friend&&p.fopen){const bt=[...el.querySelectorAll('button')].find(b=>b.textContent==='지인 신청');
+  if(p.fopen==='no'&&bt){bt.disabled=true;bt.textContent='지금은 지인 신청을 받지 않아요'}
+  const note=p.fopen==='no'?'이 캐릭터의 오너가 지금은 지인 신청을 받지 않는다고 표시했어요.':p.fopen==='ask'?'이 캐릭터의 오너가 신청 전에 먼저 말을 걸어 달라고 했어요. 1:1이나 채팅으로 인사부터 해 보세요.':'이 캐릭터의 오너가 지인 신청을 환영한대요.';
+  el.append(h('p',{class:'dim',style:'margin:0;font-size:12.5px'},note))}}catch(e){}return el}}
+{const bf0=befriend;befriend=function(pid){const p=SAMPLES[pid];if(p&&p.fopen==='no')return toast('지금은 지인 신청을 받지 않는 캐릭터예요.');return bf0.apply(this,arguments)}}
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
