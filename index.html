@@ -5041,6 +5041,23 @@ function decoEl(){const m=G.me,d=m.deco||{};const sw=(L,k)=>h('div',{class:'wrap
       h('p',{class:'dim',style:'margin:0;font-size:11.5px'},'돈은 들지 않아요. 놀러 온 사람에게도 바뀐 방이 보여요.')))}
 if(typeof openRoom==='function'){const or6=openRoom;openRoom=function(){const r=or6.apply(this,arguments);try{const st=document.querySelector('#modalRoot .stack');const fig=st&&st.querySelector('.roomfig');if(fig&&!st.querySelector('.decobox')){const el=decoEl();fig.after(el);if(DECO_OPEN)el.open=true;el.addEventListener('toggle',()=>{DECO_OPEN=el.open})}}catch(e){}return r}}
 
+/* ---------- 계정 탈퇴: 계정 · 캐릭터 · 딸린 기록을 모두 지운다 ---------- */
+async function acctDelete(){if(typeof sb==='undefined'||!sb||!AUTH)return;
+  const inp=h('input',{placeholder:'탈퇴',maxlength:4,autocomplete:'off'});const go=h('button',{class:'pri',disabled:true},'계정 지우기');
+  inp.addEventListener('input',()=>{go.disabled=inp.value.trim()!=='탈퇴'||null});
+  go.onclick=async()=>{if(inp.value.trim()!=='탈퇴')return;go.disabled=true;go.textContent='지우는 중…';
+    try{const{data:files}=await sb.storage.from('avatars').list(AUTH.id,{limit:100});if(files&&files.length)await sb.storage.from('avatars').remove(files.map(f=>`${AUTH.id}/${f.name}`))}catch(e){}
+    const{error}=await sb.rpc('delete_my_account');
+    if(error){go.disabled=false;go.textContent='계정 지우기';return toast(/function|schema|not find/i.test(error.message||'')?'운영자에게 16_delete_account.sql 실행을 부탁해 주세요.':'지우지 못했어요. 잠시 뒤에 다시 해 주세요.')}
+    try{G.me=null}catch(e){}try{localStorage.clear()}catch(e){}try{await sb.auth.signOut()}catch(e){}
+    closeModal();document.body.append(h('div',{style:'position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 16px;text-align:center;line-height:1.8'},h('p',{class:'disp',style:'font-size:22px'},'퇴거 처리되었습니다.'),h('p',{class:'mute'},'「문패를 떼어 갑니다. 그동안 고마웠어요.」'),h('p',{class:'dim',style:'font-size:12.5px'},'계정과 캐릭터, 캐릭터에 딸린 기록이 모두 지워졌어요.')));setTimeout(()=>location.reload(),4000)};
+  openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'계정 탈퇴'),h('button',{class:'ghost',onclick:closeModal},'닫기')),
+    h('p',{style:'margin:0;line-height:1.75'},'탈퇴하면 아래 내용이 모두 지워지고 되돌릴 수 없어요.'),
+    h('ul',{class:'mute',style:'margin:0;padding-left:18px;line-height:1.8;font-size:13.5px'},h('li',null,'이 계정과 계정에 있는 모든 캐릭터(부캐 포함)'),h('li',null,'캐릭터의 진행 상황, 돈, 물건, 방, 도감'),h('li',null,'지인 관계, 관계 기록, 1:1 대화, 삐삐, 이야기, 마음'),h('li',null,'무전, 게시판 글과 댓글, 벽 낙서'),h('li',null,'올린 아이콘과 전신 이미지')),
+    h('p',{class:'dim',style:'margin:0;font-size:12.5px'},'익명 건의함에 보낸 글은 누가 썼는지 남지 않아서 그대로 남아요. 다시 들어오려면 새로 가입하고 초대 코드를 받아야 해요.'),
+    h('label',{class:'stack',style:'gap:4px'},h('span',{style:'font-size:13px'},'확인을 위해 「탈퇴」라고 적어 주세요.'),inp),h('div',{class:'wrap'},go,h('button',{class:'ghost sm',onclick:closeModal},'그만두기'))))}
+if(typeof openSettings==='function'){const os10=openSettings;openSettings=function(){const r=os10.apply(this,arguments);try{if(typeof sb!=='undefined'&&sb&&AUTH&&!(typeof isAdminUser==='function'&&isAdminUser())){const lo=[...document.querySelectorAll('#modalRoot button')].find(b=>b.textContent==='로그아웃');if(lo&&!document.querySelector('.acctdel'))lo.after(h('button',{class:'sm ghost acctdel',style:'color:var(--bad)',onclick:()=>{closeModal();acctDelete()}},'계정 탈퇴'))}}catch(e){}return r};try{$('btnSettings').onclick=openSettings}catch(e){}}
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
