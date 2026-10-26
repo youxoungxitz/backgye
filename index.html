@@ -4946,6 +4946,26 @@ function stepCard(){const i=stepCur();if(i<0)return null;const m=G.me,s=stepInit
     h('b',null,'할 일'),h('p',{class:'mute',style:'margin:0;line-height:1.7'},'첫 주 할 일을 마치면 둘째, 셋째 단계가 이어져요. 하나씩 해 보며 성채의 기능을 익혀 보세요.'),
     h('b',null,'공포 연출 약하게'),h('p',{class:'mute',style:'margin:0;line-height:1.7'},'설정에서 켜면 잔인하고 무서운 장면 소개가 순화돼서 나와요. 정식 출시 뒤에도 계속 있어요.'));st.append(box)}}catch(e){}return r};try{$('btnHelp').onclick=openHelp}catch(e){}}
 
+/* ---------- 전송량 줄이기: 자리 비움·숨은 탭이면 서버를 덜 부른다 ---------- */
+var EG_INPUT=Date.now(),EG_HIDDEN_AT=0,EG_RT_OFF=false;
+const EG_IDLE=10*60e3,EG_RT_AWAY=3*60e3;
+['pointerdown','keydown','wheel','touchstart'].forEach(e=>window.addEventListener(e,()=>{const was=egAway();EG_INPUT=Date.now();if(was)egBack()},{passive:true,capture:true}));
+function egIdle(){return Date.now()-EG_INPUT>EG_IDLE}
+function egAway(){return document.hidden||egIdle()}
+/* 명부: 숨은 탭·자리 비움이면 건너뛰고, 전체 새로고침은 30분마다 */
+var EG_FULL=0;
+if(typeof loadOthers==='function'){const lo9=loadOthers;loadOthers=async function(force){if(!force&&G.me&&egAway()&&typeof SAMPLE_IDS!=='undefined'&&SAMPLE_IDS.length)return;
+  let fake=null;try{if(!force&&EG_FULL&&Date.now()-EG_FULL<30*60e3){LO_FULL=Date.now();fake=LO_FULL}}catch(e){}
+  const r=await lo9.apply(this,arguments);try{if(force||fake===null||LO_FULL!==fake)EG_FULL=LO_FULL||Date.now()}catch(e){}return r}}
+/* 판 번호 확인도 자리 비움이면 쉰다 */
+if(typeof syncCheck==='function'){const sc9=syncCheck;syncCheck=async function(){if(egIdle())return;return sc9.apply(this,arguments)}}
+/* 실시간 연결: 3분 넘게 숨겨 두면 끊고, 돌아오면 다시 잇고 새로 받는다 */
+function egRtOff(){if(EG_RT_OFF||!sb||!G.me)return;try{sb.removeAllChannels();EG_RT_OFF=true}catch(e){}}
+async function egBack(){if(!G.me||!sb)return;try{if(EG_RT_OFF){EG_RT_OFF=false;subscribe();CHAT={};if(typeof loadTalks==='function')loadTalks();if(typeof loadDMs==='function')loadDMs()}
+  EG_INPUT=Date.now();await loadOthers();if(typeof syncCheck==='function')syncCheck();render()}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.hidden){EG_HIDDEN_AT=Date.now()}else{const away=EG_HIDDEN_AT&&Date.now()-EG_HIDDEN_AT>60e3;EG_HIDDEN_AT=0;if(away||EG_RT_OFF)egBack()}});
+setInterval(()=>{if(document.hidden&&EG_HIDDEN_AT&&Date.now()-EG_HIDDEN_AT>EG_RT_AWAY)egRtOff();else if(!document.hidden&&Date.now()-EG_INPUT>EG_IDLE*3)egRtOff()},30e3);
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
