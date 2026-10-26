@@ -5315,6 +5315,25 @@ if(typeof usePlate==='function'){const up9=usePlate;usePlate=function(){const m=
 /* ---------- 무명동: 같이 둘러보기도 기력 2로 표기 ---------- */
 if(typeof renderView==='function'){const rv9=renderView;renderView=function(){const r=rv9.apply(this,arguments);try{const m=G.me;if(m&&typeof isMMD==='function'&&isMMD(m.cell))document.querySelectorAll('#view button').forEach(b=>{if(/둘러보기 \(기력 1\)$/.test(b.textContent))b.textContent=b.textContent.replace('(기력 1)','(기력 2)')})}catch(e){}return r}}
 
+/* ---------- 사람들 탭: 지인만 보기 · 정렬 ---------- */
+var PS_SORT=[['active','최근 접속'],['new','입주일 최신'],['old','입주일 오래된'],['close','친밀도'],['near','가까운 곳']];
+function psDist(a,b){if(!a||!b)return 99;const A=String(a).split('-').map(Number),B=String(b).split('-').map(Number);if(A.length===3||B.length===3){if(A.length===3&&B.length===3)return A[1]===B[1]?(A[2]===B[2]?0:1):2+Math.abs(A[1]-B[1]);return 30}return Math.abs(A[0]-B[0])+Math.abs(A[1]-B[1])}
+function psScore(id){const s=SAMPLES[id],r=typeof relOf==='function'?relOf(id):null;return r&&r.friend?1000+(r.scenes||0):(r&&r.req?1:0)}
+function psList(ids){const m=G.me,f=sub.pf||'all',k=sub.ps||'active';let l=ids.slice();
+  if(f==='friend')l=l.filter(id=>{const r=typeof relOf==='function'?relOf(id):null;return r&&r.friend});
+  const S=id=>SAMPLES[id]||{};
+  if(k==='new')l.sort((a,b)=>(S(b).created||0)-(S(a).created||0));else if(k==='old')l.sort((a,b)=>(S(a).created||0)-(S(b).created||0));
+  else if(k==='close')l.sort((a,b)=>psScore(b)-psScore(a));else if(k==='near'&&m)l.sort((a,b)=>psDist(m.cell,S(a).cell)-psDist(m.cell,S(b).cell)||((S(b).active||0)-(S(a).active||0)));
+  else l.sort((a,b)=>(S(b).active||0)-(S(a).active||0));return l}
+if(typeof viewPeople==='function'){const vp9=viewPeople;viewPeople=function(){const orig=SAMPLE_IDS.slice();let out;try{const l=psList(orig);SAMPLE_IDS.splice(0,SAMPLE_IDS.length,...l);out=vp9.apply(this,arguments)}finally{SAMPLE_IDS.splice(0,SAMPLE_IDS.length,...orig)}
+  try{const f=sub.pf||'all',k=sub.ps||'active';const nf=orig.filter(id=>{const r=typeof relOf==='function'?relOf(id):null;return r&&r.friend}).length;
+    const bar=h('div',{class:'wrap',style:'gap:6px;align-items:center'},
+      ...[['all','전체'],['friend',`지인만 ${nf}`]].map(([v,n])=>h('button',{class:'sm'+(f===v?' pri':''),onclick:()=>{sub.pf=v;renderView()}},n)),
+      h('span',{class:'dim',style:'font-size:12px;margin-left:6px'},'정렬'),
+      (()=>{const s=h('select',{style:'width:auto;padding:4px 8px',onchange:e=>{sub.ps=e.target.value;renderView()}},PS_SORT.map(([v,n])=>h('option',{value:v},n)));s.value=k;return s})());
+    if(Array.isArray(out)){const i=out.findIndex(el=>el&&(el.id==='peopleQ'||(el.querySelector&&el.querySelector('#peopleQ'))));if(i>=0)out.splice(i+1,0,bar);else out.push(bar)}
+    if(f==='friend'&&!nf&&Array.isArray(out))out.push(h('p',{class:'mute',style:'font-size:13px'},'아직 지인이 없어요. 지인 코드로 신청하거나, 같은 칸에서 「통성명하기」를 청해 보세요.'))}catch(e){}return out}}
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
