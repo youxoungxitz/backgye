@@ -5008,6 +5008,39 @@ if(typeof uploadImage==='function'){uploadImage=async function(dataUrl,kind){con
   const{error}=await sb.storage.from('avatars').upload(path,blob,{upsert:true,contentType:ty});if(error){console.error(error);toast('이미지를 올리지 못했어요: '+(error.message||error.statusCode||''));return null}
   return sb.storage.from('avatars').getPublicUrl(path).data.publicUrl+'?v='+Date.now()}}
 
+/* ---------- 방 꾸미기: 벽지 · 바닥 · 전구 색. 놀러 온 사람도 같은 방을 본다 ---------- */
+var DECO_OPEN=false;
+var DECO_W=[['','원래 벽'],['cream','바랜 크림',['#D8CCAA','#BFB08A']],['mint','연두 꽃무늬',['#9FB38A','#869A72']],['sky','하늘색 페인트',['#8FAFC0','#7896A8']],['rose','분홍 벽지',['#C9969A','#B07E84']],['green','짙은 녹색',['#2F4A3E','#263C33']],['navy','남색',['#2A3450','#222A42']],['paper','신문지 도배',['#BDB6A4','#8E877A']]];
+var DECO_F=[['','원래 바닥'],['oak','니스칠 마루',['#8A5A2E','#744A24']],['pine','밝은 마루',['#C99A4A','#B5853A']],['vinyl','노란 장판',['#C8A860','#B8964E']],['teal','청록 타일',['#3E6E66','#335C55']],['check','흑백 타일',['#D8D0BC','#3A3A36']],['brick','붉은 타일',['#8E3A2E','#76302A']]];
+var DECO_L=[['','백열등','255,200,120'],['tube','형광등','125,242,207'],['red','붉은 등','255,61,51'],['candle','촛불','255,150,60'],['blue','푸른 등','120,160,255']];
+/* 동마다 원래 벽·바닥 색과 경계 */
+var DECO_SRC={red:{wy:44,w:['#5A1414','#6B1A18','#3A0D0C'],f:['#2B1A12','#3A2418']},sam:{wy:44,w:['#2C3A3A','#243030','#3E5050'],f:['#3A4038','#2E332D']},
+  flat:{wy:42,w:['#C9BE96','#A89A70'],f:['#C99A4A','#B5853A']},cage:{wy:46,w:['#3A3A34','#34342E'],f:['#2A2A26','#4A4A42']}};
+const decoOf=(L,id)=>L.find(x=>x[0]===(id||''))||L[0];
+const hexRGB=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+function decoRecolor(g,kind,d){const S=DECO_SRC[kind];if(!S||!d)return;const W=decoOf(DECO_W,d.w)[2],F=decoOf(DECO_F,d.f)[2];if(!W&&!F)return;
+  const img=g.getImageData(0,0,RA_W,RA_H),a=img.data;const mk=(src,dst)=>src.map((c,i)=>[hexRGB(c),hexRGB(dst[Math.min(i,dst.length-1)])]);
+  const wm=W?mk(S.w,W):null,fm=F?mk(S.f,F):null;
+  for(let y=0;y<RA_H;y++){const M=y<S.wy?wm:fm;if(!M)continue;for(let x=0;x<RA_W;x++){const o=(y*RA_W+x)*4;for(const[s,t]of M)if(a[o]===s[0]&&a[o+1]===s[1]&&a[o+2]===s[2]){a[o]=t[0];a[o+1]=t[1];a[o+2]=t[2];break}}}
+  g.putImageData(img,0,0)}
+if(typeof raDraw==='function'){const rd0=raDraw;raDraw=function(g,kind,p,night,haunt){const d=p&&p.deco;if(!d||(!d.w&&!d.f&&!d.l))return rd0.apply(this,arguments);
+  const L=decoOf(DECO_L,d.l)[2];let done=false;const real=g.createRadialGradient.bind(g);
+  g.createRadialGradient=function(){decoRecolor(g,kind,d);done=true;const gr=real.apply(g,arguments);gr.addColorStop(0,`rgba(${L},.10)`);gr.addColorStop(.3,'rgba(6,8,12,.35)');gr.addColorStop(1,'rgba(4,6,10,.84)');gr.addColorStop=()=>{};return gr};
+  try{rd0.apply(this,arguments)}finally{delete g.createRadialGradient}
+  if(!done)decoRecolor(g,kind,d);
+  if(!night&&d.l){g.fillStyle=`rgba(${L},.08)`;g.fillRect(0,0,RA_W,RA_H)}}}
+/* 다른 사람에게도 보이게 시트에 싣는다 */
+if(typeof SHEETK!=='undefined'&&!SHEETK.includes('deco'))SHEETK.push('deco');
+if(typeof personFromRow==='function'){const pf6=personFromRow;personFromRow=function(r){const p=pf6.apply(this,arguments);try{const s=(r&&r.sheet)||{};p.deco=s.deco&&typeof s.deco==='object'?s.deco:null}catch(e){}return p}}
+function decoSet(k,v){const m=G.me;if(!m)return;m.deco=Object.assign({},m.deco||{},{[k]:v});const nm=(k==='w'?decoOf(DECO_W,v):k==='f'?decoOf(DECO_F,v):decoOf(DECO_L,v))[1];
+  log(`방을 손봤다. ${k==='w'?'벽':k==='f'?'바닥':'전구'}: ${nm}`,'life');save();closeModal();openRoom();render()}
+function decoEl(){const m=G.me,d=m.deco||{};const sw=(L,k)=>h('div',{class:'wrap',style:'gap:4px'},L.map(([id,n,c])=>{const on=(d[k]||'')===id;const col=Array.isArray(c)?c[0]:c?`rgb(${c})`:null;
+    return h('button',{type:'button',class:'sm'+(on?' pri':''),onclick:()=>{if(!on)decoSet(k,id)}},col?h('span',{style:`display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;border:1px solid var(--line);background:${col}`}):null,n)}));
+  return h('details',{class:'stack decobox',style:'gap:6px'},h('summary',{style:'cursor:pointer;font-weight:600'},'방 꾸미기 · 벽지, 바닥, 전구'),
+    h('div',{class:'stack',style:'gap:8px;margin-top:8px'},h('span',{class:'lbl'},'벽지'),sw(DECO_W,'w'),h('span',{class:'lbl'},'바닥'),sw(DECO_F,'f'),h('span',{class:'lbl'},'전구 색 · 밤에 잘 보여요'),sw(DECO_L,'l'),
+      h('p',{class:'dim',style:'margin:0;font-size:11.5px'},'돈은 들지 않아요. 놀러 온 사람에게도 바뀐 방이 보여요.')))}
+if(typeof openRoom==='function'){const or6=openRoom;openRoom=function(){const r=or6.apply(this,arguments);try{const st=document.querySelector('#modalRoot .stack');const fig=st&&st.querySelector('.roomfig');if(fig&&!st.querySelector('.decobox')){const el=decoEl();fig.after(el);if(DECO_OPEN)el.open=true;el.addEventListener('toggle',()=>{DECO_OPEN=el.open})}}catch(e){}return r}}
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
