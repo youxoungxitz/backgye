@@ -5275,6 +5275,40 @@ function moneyPatch(pid,el){try{if(!el||el.querySelector('.mgive'))return;const 
   after.after(h('span',{class:'lbl mgive'},'돈 건네기 · 하루 한 번, $'+MONEY_MAX+'까지'),used?h('p',{class:'dim',style:'margin:0;font-size:12.5px'},'오늘은 이미 돈을 건넸어요. 내일 또 할 수 있어요.'):h('div',{class:'bond-wrap'},h('span',null,'$'),amt,note,h('button',{class:'sm',onclick:()=>moneyGive(pid,amt.value,note.value)},'봉투를 건넨다')))}catch(e){}}
 if(typeof bondSection==='function'){const bs8=bondSection;bondSection=function(pid){const el=bs8.apply(this,arguments);try{moneyPatch(pid,el);const d=BOND_REDRAW;if(typeof d==='function'){BOND_REDRAW=function(){const r=d.apply(this,arguments);moneyPatch(pid,el);return r}}}catch(e){}return el}}
 
+/* ---------- 방주 전용 칭호 ---------- */
+(function(){if(typeof TTL==='undefined')return;TTL_CAT.admin='방주 전용';
+ const isA=()=>typeof isAdminUser==='function'&&isAdminUser();
+ TTL.push(['a_ledger','모든 장부의 마지막 장','admin','방주만',isA],['a_lantern','홍등을 켜고 끄는 손','admin','방주만',isA],['a_key','百階의 열쇠를 쥔 자','admin','방주만',isA],['a_debt','모든 빚이 닿는 곳','admin','방주만',isA],['a_door','아흔아홉 문의 문지기','admin','방주만',isA]);
+ /* 방주 칭호는 붉게 빛난다 */
+ const te0=ttlEl;ttlEl=function(id,small){const el=te0.apply(this,arguments);try{if(el&&String(id).startsWith('a_')){el.style.color='var(--lantern)';el.style.textShadow='0 0 6px rgba(255,61,51,.55)';el.style.letterSpacing='.04em'}}catch(e){}return el};
+ /* 칭호 수첩: 방주가 아니면 방주 칸은 보이지 않는다 */
+ const ot0=openTitles;openTitles=function(){const r=ot0.apply(this,arguments);try{if(!isA()){const lb=[...document.querySelectorAll('#modalRoot .lbl')].find(x=>x.textContent==='방주 전용');if(lb&&lb.parentElement)lb.parentElement.remove();const p=document.querySelector('#modalRoot p.mute');if(p)p.textContent=p.textContent.replace(/\/ \d+/,'/ '+TTL.filter(t=>t[2]!=='admin').length)}}catch(e){}return r};
+ /* 주민증 칭호 칸도 붉게 */
+ if(typeof idCard==='function'){const ic0=idCard;idCard=function(p){const el=ic0.apply(this,arguments);try{if(p&&String(p.title||'').startsWith('a_')){const dt=[...el.querySelectorAll('dt')].find(x=>x.textContent==='칭호');if(dt&&dt.nextElementSibling)dt.nextElementSibling.style.color='#B0262A'}}catch(e){}return el}}})();
+
+/* ---------- 괴이화 5단계: 4단계는 말이 바뀌고, 5단계는 무엇을 보내도 저쪽 말이 나간다 ---------- */
+const CORR_MAX=5;
+const CORR_D=['','무전 글자 사이에 □가 섞인다','□가 더 섞이고, 정신이 절반만 회복된다','말끝에 내가 쓰지 않은 말이 붙고, 다른 사람 눈에 내 이름이 흐려진다','말의 낱말이 다른 낱말로 바뀐다. 정신이 3분의 1만 회복된다','무엇을 보내도 내 말이 나가지 않는다. 저쪽의 말이 나간다. 일지에 내가 하지 않은 일이 적힌다'];
+FXDEF.corrupt={get n(){return'괴이화 '+Math.max(1,Math.min(CORR_MAX,(G.me&&G.me.corrLv)||1))+'단계'},bad:true,min:720,
+ get d(){const lv=(G.me&&G.me.corrLv)||1;return CORR_D[Math.min(CORR_MAX,lv)]+'. 12시간 동안 아무 일 없으면 한 단계씩 가라앉는다. 깊은 사이와 속 이야기를 나누면 한 단계 내려간다'}};
+const CORR_UP45=['','','','','목소리가 내 목에서 나오는데, 내 목소리가 아니다. 낱말이 입 밖으로 나오는 사이에 바뀐다.','입을 열었다. 아무 말도 하지 않았는데 말이 나갔다. 다른 사람이 대답했다. 나한테가 아니라, 내 입을 빌려 쓴 누군가에게.'];
+var CORR_WORD=['계단','문','□□','이름','아흔아홉','여기','나야','13층','열어','망치','손톱','우리'];
+var CORR5=['문 열어 줘. 나야.','여기 계단 하나 더 있어.','내 이름 불러 줘. 아무도 안 불러 줘.','아흔아홉. 백. 백하나.','망치 소리 들려? 나한테만 들려?','지금 네 뒤에 있는 거 나 아니야.','□□□□□□□□□□','4번 테이블 비워 둬. 곧 와.','집에 가고 싶어. 집이 어디였지.','설계도에 내 자리가 있대.','손톱 돌려줘.','오늘 밤에 몇 층에 있을 거야?','나 여기 살아. 원래부터.','이 말 내가 한 거 아니야.','쿵. 쿵. 쿵.','같이 세자. 하나, 둘, 셋, 넷, 넷, 넷, 넷.','네가 보낸 말은 내가 먹었어.','창문 열지 마. 거기 창문 없어.','누가 내 입으로 말하고 있어.','괜찮아. 다 괜찮아. 다 괜찮아. 다 괜찮','□□ 여기 □□ 있어 □□','어제 그 사람 아직 계단에 있어.','나 대신 대답해 줘.','밥 먹었어? 식기 전에.','빈 방 하나 생겼대. 네 이름으로.','듣고 있지? 대답하지 마.'];
+function corruptUp(why){const m=G.me;if(!m)return;const before=hasFx('corrupt')?(m.corrLv||1):0;if(before>=CORR_MAX){addFx('corrupt');return}m.corrLv=Math.min(CORR_MAX,before+1);addFx('corrupt');if(m.corrLv>=3)m.blur=T()+ms(FXDEF.corrupt.min);
+  const line=m.corrLv>=4?CORR_UP45[m.corrLv]:pick(CORR_UP);log(`${why?why+' ':''}${line} (괴이화 ${m.corrLv}단계)`,'haunt');setTimeout(()=>toast(`괴이화 ${m.corrLv}단계`+(m.corrLv===CORR_MAX?' · 이제 내 말이 나가지 않는다':'')),900);save()}
+function corruptText(v){const m=G.me;if(!m||!hasFx('corrupt')||!v)return v;const lv=Math.min(CORR_MAX,m.corrLv||1);
+  if(lv>=5)return pick(CORR5);
+  let src=v;if(lv>=4){let inAct=false;src=v.split(/(\s+)/).map(w=>{const st=(w.match(/\*/g)||[]).length;if(st){if(st%2)inAct=!inAct;return w}if(inAct||/^\s+$/.test(w)||!w)return w;return chance(.4)?pick(CORR_WORD):w}).join('')}
+  const p=[0,.1,.2,.35,.3][lv];let inAct=false,out='',hit=0;
+  for(const ch of src){if(ch==='*'){inAct=!inAct;out+=ch;continue}if(!inAct&&!/[\s.,!?~…「」]/.test(ch)&&chance(p)){out+='□';hit++}else out+=ch}
+  if(!hit){const i=[...src].findIndex(c=>/[가-힣A-Za-z0-9]/.test(c));if(i>=0){const a=[...src];a[i]='□';out=a.join('')}}
+  if(lv>=4||(lv>=3&&chance(.3)))out+=' '+pick(CORR_LINE);return out.slice(0,240)}
+/* 4단계부터 정신 회복이 더 줄어든다 (2단계의 절반에 더해) */
+{const g5=give;give=function(rw){try{if(rw&&rw.mind>0&&G.me&&hasFx('corrupt')&&(G.me.corrLv||1)>=4)rw=Object.assign({},rw,{mind:Math.max(1,Math.round(rw.mind*2/3))})}catch(e){}return g5.call(this,rw)}}
+/* 5단계: 가끔 일지에 내가 하지 않은 일이 적힌다 */
+var CORR5_LOG=['나는 13층 계단참에서 누군가와 오래 이야기했다. 무슨 이야기였는지는 적혀 있지 않다.','나는 내 방 문패를 떼어 다른 집 문에 걸었다.','나는 국숫집 4번 테이블에 앉아 두 그릇을 시켰다.','나는 무명동 302호 문을 두드렸다. 안에서 내가 대답했다.','나는 일기장 마지막 장에 내 이름을 아흔아홉 번 적었다.'];
+setInterval(()=>{try{const m=G.me;if(!m||document.hidden||!hasFx('corrupt')||(m.corrLv||0)<5)return;if(Date.now()-(m.corr5At||0)<45*60e3||!chance(.4))return;m.corr5At=Date.now();G.log.unshift({t:T()-ri(5,90)*MIN,text:pick(CORR5_LOG),k:'haunt'});save();try{renderLeft()}catch(e){}}catch(e){}},60e3);
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
