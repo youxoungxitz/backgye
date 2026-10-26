@@ -4966,6 +4966,39 @@ async function egBack(){if(!G.me||!sb)return;try{if(EG_RT_OFF){EG_RT_OFF=false;s
 document.addEventListener('visibilitychange',()=>{if(document.hidden){EG_HIDDEN_AT=Date.now()}else{const away=EG_HIDDEN_AT&&Date.now()-EG_HIDDEN_AT>60e3;EG_HIDDEN_AT=0;if(away||EG_RT_OFF)egBack()}});
 setInterval(()=>{if(document.hidden&&EG_HIDDEN_AT&&Date.now()-EG_HIDDEN_AT>EG_RT_AWAY)egRtOff();else if(!document.hidden&&Date.now()-EG_INPUT>EG_IDLE*3)egRtOff()},30e3);
 
+/* ---------- 낮 모드 (밝은 화면): 기기마다 따로 기억한다 ---------- */
+var THEME_K='bk_theme';
+function themeGet(){try{return localStorage.getItem(THEME_K)||'night'}catch(e){return'night'}}
+function themeApply(v){v=v||themeGet();const day=v==='day'||(v==='auto'&&window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches);document.documentElement.dataset.theme=day?'day':'night'}
+function themeSet(v){try{localStorage.setItem(THEME_K,v)}catch(e){}themeApply(v)}
+(function(){const st=document.createElement('style');st.id='themeDay';st.textContent=`
+:root[data-theme="day"]{color-scheme:light;
+  --bg:#ECE4D3;--wall:#E4DBC7;--panel:#F7F1E4;--sunk:#DED4BF;--line:#C4B89F;
+  --ink:#1E2320;--mute:#4F5751;--dim:#767B73;
+  --lantern:#C22A20;--lantern-ink:#FFF7F0;--tube:#0A7560;--amber:#9A6200;--pink:#B02D69;
+  --tileA:#3F8F77;--tileB:#BDB298;--tileC:#8E2F2A;
+  --hp:#C4352B;--mind:#4652C4;--en:#9A6200;--good:#1E8055;--bad:#BE3527}
+:root[data-theme="day"] body{background:var(--bg)}
+:root[data-theme="day"] body::before,:root[data-theme="day"] body::after{opacity:.25}
+:root[data-theme="day"] *{text-shadow:none!important}
+:root[data-theme="day"] .card,:root[data-theme="day"] .sheet,:root[data-theme="day"] .modal{box-shadow:0 1px 3px rgba(60,45,20,.12)!important}
+:root[data-theme="day"] .neon,:root[data-theme="day"] .section-map .hd .zh,:root[data-theme="day"] .tabs button[aria-selected="true"] .zh{color:var(--c,var(--lantern))}
+:root[data-theme="day"] .section-map .hd .zh{box-shadow:none;background:rgba(255,255,255,.5)}
+:root[data-theme="day"] button{background:#FBF7EE;border-color:#B6A98C}
+:root[data-theme="day"] button.ghost,:root[data-theme="day"] .tabs button{background:transparent;border-color:transparent}
+:root[data-theme="day"] .tabs button[aria-selected="true"]{border-bottom-color:var(--c,var(--lantern))}
+:root[data-theme="day"] button.pri{background:rgba(194,42,32,.08);color:var(--lantern);box-shadow:none}
+:root[data-theme="day"] button.pri:hover:not(:disabled){box-shadow:none;border-color:#8E1A12}
+:root[data-theme="day"] .toast{background:#FFF8F2;color:var(--ink);box-shadow:0 2px 10px rgba(60,45,20,.2)}
+:root[data-theme="day"] body.build{background:#D8CCB3}
+:root[data-theme="day"] .sign{box-shadow:none}
+:root[data-theme="day"] .feed .it.alien span:last-child{color:#8A3A30}
+`;document.head.append(st);themeApply();try{matchMedia('(prefers-color-scheme: light)').addEventListener('change',()=>{if(themeGet()==='auto')themeApply()})}catch(e){}})();
+if(typeof openSettings==='function'){const os9=openSettings;openSettings=function(){const r=os9.apply(this,arguments);try{const st=document.querySelector('#modalRoot .stack');if(st&&!st.querySelector('.themerow')){const cur=themeGet();const box=h('div',{class:'wrap',style:'gap:4px'});
+  const draw=()=>box.replaceChildren(...[['night','밤'],['day','낮'],['auto','기기 설정 따라']].map(([k,n])=>h('button',{type:'button',class:'sm'+(themeGet()===k?' pri':''),onclick:()=>{themeSet(k);draw()}},n)));draw();
+  const row=h('div',{class:'row themerow',style:'gap:8px;flex-wrap:wrap'},h('span',null,'화면 밝기',h('div',{class:'mute',style:'font-size:12px'},'낮은 밝은 종이색 화면이에요. 이 기기에만 적용돼요.')),box);
+  const first=st.querySelector('label');if(first)first.before(row);else st.append(row)}}catch(e){}return r};try{$('btnSettings').onclick=openSettings}catch(e){}}
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
