@@ -5248,6 +5248,11 @@ if(typeof renderChat==='function'){const rc9=renderChat;renderChat=function(){co
 /* 삐삐함 알림 */
 if(typeof inboxItems==='function'){const ib9=inboxItems;inboxItems=function(){const out=ib9.apply(this,arguments);try{const m=G.me;if(!m||!m.titles)return out;m.ttlSeen=m.ttlSeen||{};for(const[id,t]of Object.entries(m.titles)){const d=ttlOf(id);if(!d||Date.now()-t>7*86400e3)continue;out.push({k:'칭호',t,title:`칭호를 얻었어요 · 「${d[1]}」`,body:d[3],unread:!m.ttlSeen[id],go:()=>{m.ttlSeen[id]=1;save();closeModal();openTitles()}})}out.sort((a,b)=>b.t-a.t)}catch(e){}return out};if(typeof INBOX_C!=='undefined')INBOX_C['칭호']='var(--amber,#FFC247)'}
 
+/* ---------- 칭호: 주민증에서 달기 · 단 칭호를 주민증 칭호 칸에 ---------- */
+if(typeof idCard==='function'){const ic9=idCard;idCard=function(p,isMe){const el=ic9.apply(this,arguments);try{const t=p&&p.title&&ttlOf(p.title);if(t){const dts=[...el.querySelectorAll('dt')];const dt=dts.find(x=>x.textContent==='칭호');if(dt&&dt.nextElementSibling)dt.nextElementSibling.textContent=t[1];else{const dl=el.querySelector('dl');if(dl)dl.append(h('dt',null,'칭호'),h('dd',{style:'color:#2F6B6B'},t[1]))}}}catch(e){}return el}}
+if(typeof openCard==='function'){const oc9=openCard;openCard=function(id){const r=oc9.apply(this,arguments);try{if(id==='me'&&G.me){const st=document.querySelector('#modalRoot .stack');if(st&&!st.querySelector('.ttlcard')){G.me.titles=G.me.titles||{};const n=Object.keys(G.me.titles).length;
+  st.append(h('div',{class:'row ttlcard',style:'gap:8px;justify-content:center;flex-wrap:wrap'},h('span',{class:'mute',style:'font-size:13px'},`칭호 ${n} / ${TTL.length}`),h('button',{class:'sm pri',onclick:()=>{closeModal();openTitles()}},G.me.title?'칭호 바꾸기':'칭호 달기')))}}}catch(e){}return r}}
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
