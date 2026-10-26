@@ -1617,7 +1617,7 @@ function radioText(di=dayIdx(T())){const r=rng(di*31+7),w=weather(di),nz=nightZo
 function pick2(a,r){return a[Math.floor(r()*a.length)]}
 
 /* ---------- 등록 ---------- */
-function loadScaled(file,maxW,maxH,q){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,maxW/im.width,maxH/im.height);const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',q||.86))};im.onerror=rej;im.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
+function loadScaled(file,maxW,maxH,q){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,maxW/im.width,maxH/im.height);const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(canvasURL(c,q||.86))};im.onerror=rej;im.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
 function cropper(src,onDone,onCancel){const S=220;let W=0,H=0,base=1,zoom=1,x=0,y=0;const im=h('img',{src,alt:'',draggable:'false'});const box=h('div',{class:'crop','aria-label':'끌어서 아이콘에 쓸 부분을 고르세요'},im);
   const clamp=()=>{const sc=base*zoom;x=Math.min(0,Math.max(S-W*sc,x));y=Math.min(0,Math.max(S-H*sc,y))};
   const apply=()=>{if(!W)return;clamp();const sc=base*zoom;im.style.width=W*sc+'px';im.style.height=H*sc+'px';im.style.transform=`translate(${x}px,${y}px)`};
@@ -1627,9 +1627,9 @@ function cropper(src,onDone,onCancel){const S=220;let W=0,H=0,base=1,zoom=1,x=0,
   box.addEventListener('pointermove',e=>{if(!drag)return;x=drag.x+e.clientX-drag.px;y=drag.y+e.clientY-drag.py;apply()});
   const end=()=>{drag=null};box.addEventListener('pointerup',end);box.addEventListener('pointercancel',end);
   const zr=h('input',{type:'range',min:'1',max:'3',step:'0.01',value:'1','aria-label':'확대',style:'width:220px;padding:0',oninput:e=>{const old=base*zoom;const cx=(S/2-x)/old,cy=(S/2-y)/old;zoom=+e.target.value;const nw=base*zoom;x=S/2-cx*nw;y=S/2-cy*nw;apply()}});
-  const ok=()=>{const sc=base*zoom,c=document.createElement('canvas');c.width=c.height=240;c.getContext('2d').drawImage(im,-x/sc,-y/sc,S/sc,S/sc,0,0,240,240);onDone(c.toDataURL('image/jpeg',.88))};
+  const ok=()=>{const sc=base*zoom,c=document.createElement('canvas');c.width=c.height=240;c.getContext('2d').drawImage(im,-x/sc,-y/sc,S/sc,S/sc,0,0,240,240);onDone(canvasURL(c,.88))};
   return h('div',{class:'stack',style:'gap:6px'},h('span',{class:'mute',style:'font-size:12px'},'끌어서 위치를 옮기고, 막대로 확대해요. 테두리 안이 아이콘이 돼요.'),box,zr,h('div',{class:'wrap'},h('button',{type:'button',class:'sm pri',onclick:ok},'이 부분으로 쓰기'),h('button',{type:'button',class:'sm',onclick:onCancel},'취소')))}
-function resizeImage(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const img=new Image();img.onload=()=>{const s=Math.min(img.width,img.height),c=document.createElement('canvas');c.width=c.height=240;const x=c.getContext('2d');x.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,240,240);res(c.toDataURL('image/jpeg',.85))};img.onerror=rej;img.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
+function resizeImage(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const img=new Image();img.onload=()=>{const s=Math.min(img.width,img.height),c=document.createElement('canvas');c.width=c.height=240;const x=c.getContext('2d');x.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,240,240);res(canvasURL(c,.85))};img.onerror=rej;img.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
 function openForm(edit){const c=edit?G.me:null;const st=c?{...c.stats}:{str:10,agi:10,sen:10,nerve:10,talk:10};let pool=c?0:30;let color=c?c.color:COLORS[2][0];let img=c?c.img:null;
   const fld=(label,el,full)=>h('label',{class:'field'+(full?' full':'')},h('span',null,label),el);
   const inp=(id,v,ph,max)=>h('input',{id,value:v||'',placeholder:ph||'',maxlength:max||40});
@@ -4998,6 +4998,15 @@ if(typeof openSettings==='function'){const os9=openSettings;openSettings=functio
   const draw=()=>box.replaceChildren(...[['night','밤'],['day','낮'],['auto','기기 설정 따라']].map(([k,n])=>h('button',{type:'button',class:'sm'+(themeGet()===k?' pri':''),onclick:()=>{themeSet(k);draw()}},n)));draw();
   const row=h('div',{class:'row themerow',style:'gap:8px;flex-wrap:wrap'},h('span',null,'화면 밝기',h('div',{class:'mute',style:'font-size:12px'},'낮은 밝은 종이색 화면이에요. 이 기기에만 적용돼요.')),box);
   const first=st.querySelector('label');if(first)first.before(row);else st.append(row)}}catch(e){}return r};try{$('btnSettings').onclick=openSettings}catch(e){}}
+
+/* ---------- 투명 배경 그림: 검은 배경으로 굳지 않게 webp/png로 올린다 ---------- */
+function canvasAlpha(c){try{const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;const step=4*Math.max(1,Math.floor(d.length/4/40000));for(let i=3;i<d.length;i+=step)if(d[i]<250)return true}catch(e){}return false}
+function canvasURL(c,q){if(!canvasAlpha(c))return c.toDataURL('image/jpeg',q||.86);
+  let u=c.toDataURL('image/webp',q||.86);if(u.startsWith('data:image/webp'))return u;
+  u=c.toDataURL('image/png');let cv=c;while(u.length>2.6e6&&cv.width>200){const n=document.createElement('canvas');n.width=Math.round(cv.width*.8);n.height=Math.round(cv.height*.8);n.getContext('2d').drawImage(cv,0,0,n.width,n.height);cv=n;u=cv.toDataURL('image/png')}return u}
+if(typeof uploadImage==='function'){uploadImage=async function(dataUrl,kind){const blob=await (await fetch(dataUrl)).blob();const ty=/^image\/(png|webp)$/.test(blob.type)?blob.type:'image/jpeg';const ext=ty==='image/png'?'png':ty==='image/webp'?'webp':'jpg';const path=`${AUTH.id}/${G.me.id}-${kind}.${ext}`;
+  const{error}=await sb.storage.from('avatars').upload(path,blob,{upsert:true,contentType:ty});if(error){console.error(error);toast('이미지를 올리지 못했어요: '+(error.message||error.statusCode||''));return null}
+  return sb.storage.from('avatars').getPublicUrl(path).data.publicUrl+'?v='+Date.now()}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
