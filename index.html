@@ -5312,6 +5312,9 @@ setInterval(()=>{try{const m=G.me;if(!m||document.hidden||!hasFx('corrupt')||(m.
 /* ---------- 문패로 주소를 얻으면 집도 4동 상층으로 옮긴다 ---------- */
 if(typeof usePlate==='function'){const up9=usePlate;usePlate=function(){const m=G.me,had=m&&m.hasAddr;const r=up9.apply(this,arguments);try{if(m&&!had&&m.hasAddr){log('짐을 싸서 철창 하숙을 나왔다. 이제 집은 4동 상층이다.','life');setTimeout(()=>toast('이제 집은 4동 상층이에요. 낮잠·혼자 쉬기·내 방은 거기서 할 수 있어요.'),1200);save()}}catch(e){}return r}}
 
+/* ---------- 무명동: 같이 둘러보기도 기력 2로 표기 ---------- */
+if(typeof renderView==='function'){const rv9=renderView;renderView=function(){const r=rv9.apply(this,arguments);try{const m=G.me;if(m&&typeof isMMD==='function'&&isMMD(m.cell))document.querySelectorAll('#view button').forEach(b=>{if(/둘러보기 \(기력 1\)$/.test(b.textContent))b.textContent=b.textContent.replace('(기력 1)','(기력 2)')})}catch(e){}return r}}
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
