@@ -5148,6 +5148,20 @@ function debtPayOpen(){const m=G.me;if(!m||!(m.debt>0))return;const amts=[50,100
       h('button',{class:'sm pri',disabled:m.money<=0||null,onclick:()=>{payDebt(m.money);closeModal();if(G.me.debt>0)debtPayOpen()}},m.money>=m.debt?`전부 갚기 ($${m.debt})`:`가진 돈 전부 ($${m.money})`))))}
 {const rl8=renderLeft;renderLeft=function(){const r=rl8.apply(this,arguments);try{const m=G.me;if(m&&m.debt>0){const L=$('left');const row=[...L.querySelectorAll('.row')].find(x=>x.firstElementChild&&x.firstElementChild.textContent==='빚');if(row&&!row.querySelector('.dpay')){const b=row.querySelector('b');const btn=h('button',{class:'sm dpay',style:'margin-left:8px;padding:2px 8px',onclick:debtPayOpen},'갚기');if(b)b.after(btn);else row.append(btn)}}}catch(e){}return r}}
 
+/* ---------- 빚 보증 고치기: 빚이 없으면 보증을 돌려보내고, 보증 선 쪽은 거둘 수 있다 ---------- */
+async function bailReturn(x,msg){try{await sb.from('bond_events').update({status:'declined',answered_at:new Date().toISOString(),data:{...(x.data||{}),nodebt:true}}).eq('id',x.id)}catch(e){}x.status='declined';try{bApplied()[x.id]=1}catch(e){}save();closeModal();try{bondRedraw()}catch(e){}if(msg)done('보증',msg,[])}
+if(typeof bondBailAccept==='function'){const ba0=bondBailAccept;bondBailAccept=async function(x){const m=G.me;if(m&&!(m.debt>0))return bailReturn(x,`장부를 넘겨 보던 사무원이 고개를 저었다. 「갚을 빚이 없는데요.」\n${bName(x.from_char)}의 보증서는 그대로 돌려보냈다. 마음만 받아 두기로 했다.`);return ba0.apply(this,arguments)}}
+if(typeof bondOpenPrompt==='function'){const bp0=bondOpenPrompt;bondOpenPrompt=function(x){const m=G.me;if(x&&x.kind==='bail'&&m&&!(m.debt>0)){
+  return openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},bName(x.from_char)),h('button',{class:'ghost',onclick:closeModal},'닫기')),
+    h('p',{style:'margin:0;line-height:1.75'},`${bName(x.from_char)}이(가) 내 빚 장부에 보증인으로 이름을 적겠다고 한다. 그런데 지금 나는 갚을 빚이 없다.`),
+    h('button',{class:'sm pri',onclick:()=>bailReturn(x,`「고마워. 그런데 지금은 빚이 없어.」\n보증서를 ${bName(x.from_char)}에게 돌려보냈다.`)},'고맙다고 하고 돌려보낸다')))}return bp0.apply(this,arguments)}}
+async function bailWithdraw(pid){const x=BONDS.find(y=>y.kind==='bail'&&y.from_char===G.me.id&&bOther(y)===pid&&y.status!=='declined');if(!x)return;
+  try{await sb.from('bond_events').update({status:'declined',answered_at:new Date().toISOString()}).eq('id',x.id)}catch(e){return toast('거두지 못했어요.')}x.status='declined';
+  try{bondRelLog(pid,`[보증] ${bName(G.me.id)}이(가) ${bName(pid)}의 빚 장부에서 보증인 이름을 지웠다.`)}catch(e){}toast('보증을 거뒀어요. 이제 대신 물어 줄 일은 없어요.');try{bondRedraw()}catch(e){}}
+function bailPatch(pid,el){try{const mine=BONDS.find(y=>y.kind==='bail'&&y.from_char===G.me.id&&bOther(y)===pid&&y.status!=='declined');
+  if(mine&&el){const btn=[...el.querySelectorAll('button')].find(b=>b.textContent.includes('빚 보증 서기'));if(btn){btn.replaceWith(h('div',{class:'wrap',style:'gap:6px;align-items:center'},h('span',{class:'tag'},mine.status==='done'?'보증 서는 중':'대답 기다리는 중'),h('button',{class:'sm ghost',onclick:()=>bailWithdraw(pid)},'보증 거두기')))}}}catch(e){}}
+if(typeof bondSection==='function'){const bs0=bondSection;bondSection=function(pid){const el=bs0.apply(this,arguments);try{bailPatch(pid,el);const d=BOND_REDRAW;if(typeof d==='function'){BOND_REDRAW=function(){const r=d.apply(this,arguments);bailPatch(pid,el);return r}}}catch(e){}return el}}
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
