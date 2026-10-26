@@ -449,7 +449,7 @@ const enEvery=()=>(fast()?5e3:5*MIN)*(G.me&&(G.me.fx||[]).some(f=>f.id==='dawn'&
 const hasFx=id=>(G.me&&G.me.fx||[]).some(f=>f.id===id&&f.until>T());
 function addFx(id){const m=G.me;m.fx=(m.fx||[]).filter(f=>f.id!==id&&f.until>T());m.fx.push({id,until:T()+ms(FXDEF[id].min)});if(id==='delirium')fakeLog()}
 function clearFx(id){G.me.fx=(G.me.fx||[]).filter(f=>f.id!==id)}
-const homeCell=m=>m.fac==='red'&&!m.fugitive?'1-1':m.fac==='sam'?'2-1':'0-1';
+const homeCell=m=>m.fac==='red'&&!m.fugitive?'1-1':m.fac==='sam'?'2-1':(m.hasAddr&&String(m.addr||'').startsWith('4동')?'3-1':'0-1');
 function tick(){const m=G.me;if(!m)return;const now=T();dailyBonus();prologueCheck();roomNight();ghostPager();if(G.opts.infEn)m.en=EN_MAX;
   if(m.en>=EN_MAX)m.enAt=now;else{const g=Math.floor((now-m.enAt)/enEvery());if(g>0){m.en=Math.min(EN_MAX,m.en+g);m.enAt=m.en>=EN_MAX?now:m.enAt+g*enEvery()}}
   const hrs=(now-(m.ts||now))/HOUR*(fast()?60:1);m.ts=now;
@@ -5308,6 +5308,9 @@ function corruptText(v){const m=G.me;if(!m||!hasFx('corrupt')||!v)return v;const
 /* 5단계: 가끔 일지에 내가 하지 않은 일이 적힌다 */
 var CORR5_LOG=['나는 13층 계단참에서 누군가와 오래 이야기했다. 무슨 이야기였는지는 적혀 있지 않다.','나는 내 방 문패를 떼어 다른 집 문에 걸었다.','나는 국숫집 4번 테이블에 앉아 두 그릇을 시켰다.','나는 무명동 302호 문을 두드렸다. 안에서 내가 대답했다.','나는 일기장 마지막 장에 내 이름을 아흔아홉 번 적었다.'];
 setInterval(()=>{try{const m=G.me;if(!m||document.hidden||!hasFx('corrupt')||(m.corrLv||0)<5)return;if(Date.now()-(m.corr5At||0)<45*60e3||!chance(.4))return;m.corr5At=Date.now();G.log.unshift({t:T()-ri(5,90)*MIN,text:pick(CORR5_LOG),k:'haunt'});save();try{renderLeft()}catch(e){}}catch(e){}},60e3);
+
+/* ---------- 문패로 주소를 얻으면 집도 4동 상층으로 옮긴다 ---------- */
+if(typeof usePlate==='function'){const up9=usePlate;usePlate=function(){const m=G.me,had=m&&m.hasAddr;const r=up9.apply(this,arguments);try{if(m&&!had&&m.hasAddr){log('짐을 싸서 철창 하숙을 나왔다. 이제 집은 4동 상층이다.','life');setTimeout(()=>toast('이제 집은 4동 상층이에요. 낮잠·혼자 쉬기·내 방은 거기서 할 수 있어요.'),1200);save()}}catch(e){}return r}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
