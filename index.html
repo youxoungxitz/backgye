@@ -5139,6 +5139,15 @@ if(typeof weather==='function'){const wx0=weather;weather=function(di){if(di==nu
   'paperboat.0.no':'발이 미끄러졌다. 얕은 물인데 바닥이 없는 것 같았다. 겨우 기어 나왔다.',
   'pipe.0.no':'손이 반대로 나를 끌어당겼다. 어깨가 배관에 부딪쳤다. 겨우 빠져나왔다.'})})();
 
+/* ---------- 빚 갚기: 어디서든 「나」 칸의 빚 옆에서 갚는다 (무소속·도망자도) ---------- */
+function debtPayOpen(){const m=G.me;if(!m||!(m.debt>0))return;const amts=[50,100,300].filter(a=>a<m.debt);
+  openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'빚 갚기'),h('button',{class:'ghost',onclick:closeModal},'닫기')),
+    h('p',{class:'mute',style:'margin:0;line-height:1.7'},`남은 빚 $${m.debt} · 가진 돈 $${m.money}`+(m.intr?` · 매주 월요일 이자가 붙어요.`:'')),
+    h('p',{class:'dim',style:'margin:0;font-size:12.5px'},'층마다 있는 적등방 수금함에 봉투를 넣는다. 홍등루까지 가지 않아도 된다.'),
+    h('div',{class:'wrap'},...amts.map(a=>h('button',{class:'sm',disabled:m.money<a||null,onclick:()=>{payDebt(a);closeModal();debtPayOpen()}},`$${a}`)),
+      h('button',{class:'sm pri',disabled:m.money<=0||null,onclick:()=>{payDebt(m.money);closeModal();if(G.me.debt>0)debtPayOpen()}},m.money>=m.debt?`전부 갚기 ($${m.debt})`:`가진 돈 전부 ($${m.money})`))))}
+{const rl8=renderLeft;renderLeft=function(){const r=rl8.apply(this,arguments);try{const m=G.me;if(m&&m.debt>0){const L=$('left');const row=[...L.querySelectorAll('.row')].find(x=>x.firstElementChild&&x.firstElementChild.textContent==='빚');if(row&&!row.querySelector('.dpay')){const b=row.querySelector('b');const btn=h('button',{class:'sm dpay',style:'margin-left:8px;padding:2px 8px',onclick:debtPayOpen},'갚기');if(b)b.after(btn);else row.append(btn)}}}catch(e){}return r}}
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
