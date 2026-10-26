@@ -3186,8 +3186,13 @@ function noticeEdit(n){const ta=h('textarea',{maxlength:4000,rows:10});ta.value=
 const EARLY_LINES={red:'향주 장부의 내 이름 옆에 작은 점이 하나 찍혔다. 조퇴한 날마다 하나씩 늘어난다고 들었다.',sam:'종루 출입 일지에 「조퇴」라고 적고 나왔다. 그 아래 칸에 누가 미리 같은 글씨로 내 이름을 적어 두었다.',free:'일당 봉투가 얇다. 그래도 오늘은 해가 지기 전에 집에 간다.'};
 const EARLY_GHOST=['다음 날 같이 일하는 사람이 말했다. 「어제 끝까지 있다 갔잖아. 문 닫을 때까지.」 퇴근 장부에는 내 글씨로 정시 퇴근이 찍혀 있다. 일당도 다 들어와 있었다.',
  '집에 와서 신발을 벗는데 밑창이 젖어 있다. 오늘은 비가 오지 않았다. 일당은 정시 퇴근한 만큼 들어와 있었다. 누가 남은 시간을 채우고 간 걸까.'];
-function earlyLeave(e){const m=G.me,w=m&&m.work;if(!w)return;if(scene)return toast('지금 장면부터 마무리해 주세요.');
-  const bt=e&&e.currentTarget;if(bt&&!bt.dataset.arm){bt.dataset.arm='1';bt.textContent='한 번 더 누르면 퇴근';setTimeout(()=>{if(bt.isConnected){delete bt.dataset.arm;bt.textContent='조기 퇴근'}},4000);return}
+function earlyLeave(e,confirmedWork){const m=G.me,w=m&&m.work;if(!w)return;if(scene)return toast('지금 장면부터 마무리해 주세요.');
+  // 매초 renderLeft()가 버튼을 교체하므로 확인 상태를 버튼 DOM에 저장하지 않는다.
+  if(confirmedWork!==w){openModal(h('div',{class:'stack'},
+    h('h2',{class:'disp',style:'font-size:22px'},'조기 퇴근할까요?'),
+    h('p',{class:'mute'},'일한 시간에 따라 일당을 받아요. 근무 시간의 25%를 채우지 못하면 일당이 없어요.'),
+    h('div',{class:'row'},h('button',{class:'ghost',onclick:closeModal},'계속 근무'),
+      h('button',{class:'pri',onclick:()=>{closeModal();if(G.me!==m||m.work!==w)return toast('근무 상태가 바뀌었어요. 현재 상태를 확인해 주세요.');earlyLeave(null,w)}},'퇴근하기'))));return}
   const total=fast()?60e3:4*HOUR,start=w.until-total,ratio=Math.max(0,Math.min(1,(T()-start)/total));const full=PAY[w.job]||40;m.work=null;
   const f=m.fugitive?'free':m.fac;let pay,text,lines=[],sg='';
   if(ratio<.25){pay=0;text='출근 도장만 찍고 나왔다. 아무도 붙잡지 않았다. 일당도 없었다.';log(`${w.job}에서 일찍 나왔다. 한 시간도 채우지 못해 일당은 없다.`,'work')}
