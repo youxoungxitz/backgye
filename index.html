@@ -5058,6 +5058,16 @@ async function acctDelete(){if(typeof sb==='undefined'||!sb||!AUTH)return;
     h('label',{class:'stack',style:'gap:4px'},h('span',{style:'font-size:13px'},'확인을 위해 「탈퇴」라고 적어 주세요.'),inp),h('div',{class:'wrap'},go,h('button',{class:'ghost sm',onclick:closeModal},'그만두기'))))}
 if(typeof openSettings==='function'){const os10=openSettings;openSettings=function(){const r=os10.apply(this,arguments);try{if(typeof sb!=='undefined'&&sb&&AUTH&&!(typeof isAdminUser==='function'&&isAdminUser())){const lo=[...document.querySelectorAll('#modalRoot button')].find(b=>b.textContent==='로그아웃');if(lo&&!document.querySelector('.acctdel'))lo.after(h('button',{class:'sm ghost acctdel',style:'color:var(--bad)',onclick:()=>{closeModal();acctDelete()}},'계정 탈퇴'))}}catch(e){}return r};try{$('btnSettings').onclick=openSettings}catch(e){}}
 
+/* ---------- 같은 칸 사람 목록: 접기 · 길면 안에서 스크롤 ---------- */
+function pfGet(){try{return localStorage.getItem('bk_pc_fold')==='1'}catch(e){return false}}
+function pfSet(v){try{localStorage.setItem('bk_pc_fold',v?'1':'0')}catch(e){}}
+function pfApply(){const P=$('peopleCard');if(!P||!P.firstElementChild)return;const hd=P.firstElementChild,list=hd.nextElementSibling;const fold=pfGet();
+  hd.style.cursor='pointer';hd.setAttribute('role','button');hd.setAttribute('aria-expanded',String(!fold));hd.title=fold?'눌러서 펼치기':'눌러서 접기';
+  let ar=hd.querySelector('.pfar');if(!ar){ar=h('span',{class:'pfar dim',style:'font-size:11px;margin-left:6px'});const lb=hd.querySelector('.lbl');if(lb)lb.after(ar);else hd.prepend(ar)}ar.textContent=fold?'▸ 펼치기':'▾ 접기';
+  hd.onclick=()=>{pfSet(!pfGet());pfApply()};
+  if(list){list.style.display=fold?'none':'';list.style.maxHeight='260px';list.style.overflowY='auto';list.style.overscrollBehavior='contain'}}
+if(typeof renderPeople==='function'){const rp7=renderPeople;renderPeople=function(){const r=rp7.apply(this,arguments);try{pfApply()}catch(e){}return r}}
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
