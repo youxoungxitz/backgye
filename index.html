@@ -703,7 +703,7 @@ function anomaly(){const m=G.me,[d,t]=cellDT(m.cell);const ok=Object.keys(EV).fi
 function explore(){if(!ready())return;const m=G.me;if(m.petEncounter&&!m.pet&&!m.petAdopted){petEncounterScene();return}if(!spend(1))return;const[d,t]=cellDT(m.cell);
   if(isBuild()&&!guardUse()){buildEvent();return}
   if(m.fugitive&&chance(.08)){chaser();return}
-  if(!m.pet&&!m.petAdopted&&chance(PET_RULE.chance)){m.petEncounter={kind:chance(.5)?'cat':'dog',at:T()};petEncounterScene();return}
+  if(!m.pet&&!m.petAdopted&&chance(PET_RULE.chance)){m.petEncounter={kind:pick(Object.keys(PET_KIND)),at:T()};petEncounterScene();return}
   const r=Math.random();
   if(r<.05){pagerEvent();return}
   if(t===0&&weather()[0]==='비'&&r<.25){laundryEvent();return}
@@ -4052,7 +4052,7 @@ function toyBook(){const m=G.me,got=m.toys||{};const all=Object.keys(TOYS);const
     h('p',{class:'dim',style:'margin:0;font-size:12px'},`흔함·드묾·귀함 칸을 하나씩 다 채울 때마다, 그리고 괴담 칸을 뺀 진열장을 다 채우면 할머니가 뭔가 줘요. 귀한 것이 ${TOY_PITY}판 동안 안 나오면 다음 판엔 꼭 나와요 (앞으로 ${Math.max(1,TOY_PITY-(+m.toyPity||0))}판). 뽑은 건 내 방에 놓을 수 있어요.`))}
 function openGacha(){if(!ready())return;const m=G.me;m.toys=m.toys||{};const dl=daily();dl.gacha=dl.gacha||0;
   openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'대성문구'),h('button',{class:'ghost',onclick:closeModal},'닫기')),
-    h('p',{class:'mute',style:'margin:0'},'인쇄소 1층 구석. 연필, 딱지, 색종이 사이로 할머니가 졸고 있다. 문 앞에 빨간 캡슐 뽑기 기계.'),
+    h('p',{class:'mute',style:'margin:0'},'인쇄소 1층 구석. 연필, 딱지, 색종이 사이로 할머니가 졸고 있다. 문 앞에 빨간 캡슐 뽑기 기계. 작은 식물의 교환권도 섞여 있다. 교환권을 뽑으면 할머니가 화분을 내어 준다.'),
     h('p',{class:'hand',style:'margin:0'},pick(TOY_OWNER)),
     h('div',{class:'row',style:'gap:14px;align-items:center;justify-content:flex-start;flex-wrap:wrap'},toyMachine(),h('div',{id:'toyOut',class:'stack',style:'gap:6px;flex:1;min-width:200px'},h('p',{class:'mute',style:'margin:0'},`한 판 $${TOY_PRICE}. 하루 ${TOY_DAY}판까지.`))),
     h('div',{class:'mute num',id:'toyStat',style:'font-size:12.5px'}),
@@ -4062,7 +4062,7 @@ function openGacha(){if(!ready())return;const m=G.me;m.toys=m.toys||{};const dl=
 /* 내 방에 뽑기 장난감도 놓을 수 있게 */
 {const o1=openRoom;openRoom=function(){const r=o1.apply(this,arguments);try{const m=G.me;const st=document.querySelector('#modalRoot .stack');const own=Object.keys(m.toys||{}).filter(k=>m.toys[k]>0&&TOYS[k]);
   if(st&&own.length){const form=st.querySelector('form.composer');const refresh=()=>{save();closeModal();openRoom();render()};
-   const sec=[h('span',{class:'lbl'},'뽑기 장난감'),...own.map(k=>h('div',{class:'pl'},h('div',null,itemIcon(k),h('b',null,TOYS[k].n),` × ${m.toys[k]}`),h('button',{class:'sm',disabled:m.room.length>=ROOM_MAX,onclick:()=>{m.toys[k]--;m.room.push(k);refresh()}},'놓기')))];
+   const sec=[h('span',{class:'lbl'},'뽑기 장난감 · 식물'),...own.map(k=>h('div',{class:'pl'},h('div',null,itemIcon(k),h('b',null,TOYS[k].n),` × ${m.toys[k]}`),h('button',{class:'sm',disabled:m.room.length>=ROOM_MAX,onclick:()=>{m.toys[k]--;m.room.push(k);refresh()}},'놓기')))];
    sec.forEach(e=>form?st.insertBefore(e,form):st.append(e))}}catch(e){}return r}}
 
 /* ---------- 기기 간 동기화: 저장할 때마다 판(rev)을 올리고, 서버가 더 새것이면 덮어쓰지 않고 서버 상태로 맞춘다 ---------- */
@@ -5505,7 +5505,7 @@ function petInteract(action,owner){const m=G.me;if(!m||m!==owner||!m.pet||!['pet
 function petPanel(p,isMe){if(!p||!p.pet||!PET_KIND[p.pet.kind])return null;const pet=p.pet,c=isMe?petCounts(p):null,away=isMe&&(p.cell!==homeCell(p)||!!p.work||!!p.nap);
  return h('div',{class:'stack pet-panel',style:'gap:8px;border-top:1px solid var(--line);padding-top:10px'},
  h('div',{class:'row'},h('b',null,pet.name),h('span',{class:'tag'},PET_KIND[pet.kind])),
- h('p',{class:'mute',style:'margin:0;font-size:13px'},pet.kind==='cat'?'익숙한 자리에 몸을 말고 있다. 인기척에 귀가 움직인다.':'방문을 보다가 고개를 기울인다. 꼬리가 바닥을 두드린다.'),
+ h('p',{class:'mute',style:'margin:0;font-size:13px'},PET_TEXT[pet.kind].idle||PET_IDLE[pet.kind]),
  isMe?h('div',{class:'wrap'},h('button',{class:'sm',disabled:away,onclick:()=>petInteract('pet',p)},'쓰다듬기'),h('button',{class:'sm',disabled:away,onclick:()=>petInteract('play',p)},'놀아 주기'),h('button',{class:'sm ghost',onclick:()=>{if(G.me===p)petNameForm()}},'이름 바꾸기')):null,
  isMe?h('p',{class:'dim',style:'margin:0;font-size:12px'},away?'자기 방에서 깨어 있고, 일을 쉬는 동안 함께할 수 있다.':`쓰다듬기 · 정신 +${PET_RULE.mind} (${Math.max(0,PET_RULE.limit-(c.pet||0))}회 남음) / 놀아 주기 · 기력 +${PET_RULE.en} (${Math.max(0,PET_RULE.limit-(c.play||0))}회 남음). 회복은 각각 하루 ${PET_RULE.limit}번. 그 뒤에도 함께할 수 있다.`):null)}
 if(!SHEETK.includes('pet'))SHEETK.push('pet');
@@ -5519,6 +5519,50 @@ function bondInviteGroups(avail,pid){const categories=[['지금 필요한 돌봄
  const buttons=h('div',{class:'wrap',style:'gap:6px'},vs.map(v=>h('button',{class:'sm',style:v.id==='mend'?'border-color:var(--bad);color:var(--bad)':'',onclick:()=>bondInvite(pid,v)},v.label)));
  if(label==='짓궂게 · 위험하게')return h('details',null,h('summary',{style:'cursor:pointer;color:var(--bad)'},`${label} · ${vs.length}개`),buttons);
  return h('div',{class:'stack',style:'gap:6px'},h('span',{class:'dim',style:'font-size:12.5px'},label),buttons)}))}
+
+/* ---------- 작은 식구 다섯 종 · 문방구의 작은 화분 ---------- */
+Object.assign(PET_KIND,{mouse:'쥐',bird:'새',snake:'뱀',rabbit:'토끼',lizard:'도마뱀'});
+Object.assign(PET_TEXT,{
+mouse:{find:'상자 밑에서 바스락거리는 소리가 났다. 작은 쥐 한 마리. 도망가려다 멈춰 서서 코를 움직인다. 둥근 귀에 먼지가 묻어 있다.',adopt:'손을 낮추자 작은 발이 올라왔다. 소매 안에 자리를 잡고 코만 내민다. 방에 돌아와 천을 깐 상자를 놓아 주었다. 한 바퀴 돌더니 구석에 몸을 말았다.',feed:'먹이를 조금 놓고 손을 거두었다. 앞발 두 개로 붙잡고 바쁘게 갉아 먹는다. 큰 조각은 상자 밑으로 끌고 갔다.',leave:'발을 조심스럽게 뒤로 뺐다. 쥐가 상자 밑으로 들어갔다. 한동안 종이 긁는 소리가 났다.',idle:'천 사이에서 둥근 귀가 나왔다. 코끝이 바쁘게 움직인다.',
+pet:['등을 손가락 하나로 쓸었다. 작은 몸이 잠깐 멈췄다. 곧 손바닥 안에서 편하게 자리를 고친다.','귀 뒤에 붙은 먼지를 떼었다. 수염이 손끝을 스친다. 생각보다 간지럽다.','손을 펴고 기다렸다. 올라온 쥐가 엄지에 턱을 얹는다. 아주 가벼운 무게.','천 위에 앉힌 채 등을 만졌다. 앞발로 얼굴을 몇 번 닦더니 눈을 감았다.','머리를 조심스럽게 쓸었다. 손가락 아래로 코가 들어왔다. 따뜻한 숨이 닿는다.','소매 밖으로 나온 등을 쓰다듬었다. 더 나오지는 않는다. 오늘은 여기까지가 편한 모양이다.'],
+play:['빈 종이심을 굴렸다. 입구를 살피더니 안으로 들어간다. 반대편에서 수염이 먼저 나왔다.','종이를 접어 작은 길을 만들었다. 벽을 따라 걷다가 지름길을 찾았다. 벽 위로 넘어왔다.','천 아래에 나무 공을 굴렸다. 움직이는 곳을 앞발로 짚는다. 정답을 찾은 것처럼 코를 들었다.','손바닥 두 개를 이어 놓았다. 이쪽에서 저쪽으로 바쁘게 건너간다. 작은 발이 간지럽다.','빈 상자에 종이를 구겨 넣었다. 바스락거리는 소리가 한참 이어졌다. 머리 위에 종이 한 조각을 얹고 나왔다.','낮은 나무토막을 놓았다. 올라갔다 내려왔다 하더니 꼭대기에 앉았다. 방이 조금 다르게 보이는 모양이다.']},
+bird:{find:'환기창 아래에서 날갯짓 소리가 났다. 작은 새 한 마리가 낮은 난간에 앉아 있다. 손을 내밀어도 멀리 날아가지 않는다.',adopt:'손가락에 작은 발이 감겼다. 천으로 바람을 가리고 방까지 돌아왔다. 창을 닫고 낮은 횃대를 놓았다. 깃을 고르더니 짧게 울었다.',feed:'곡식을 조금 놓았다. 고개를 갸웃하더니 하나씩 쪼아 먹는다. 마지막 한 알은 난간 틈에 떨어졌다. 한참 그쪽을 들여다본다.',leave:'손을 거두고 한 걸음 물러났다. 새가 난간 위로 옮겨 앉았다. 뒤에서 짧은 울음이 한 번 들렸다.',idle:'횃대에 앉아 깃을 고른다. 가끔 이쪽으로 고개를 기울인다.',
+pet:['다가온 머리를 손끝으로 살짝 쓸었다. 목 뒤 깃털이 부풀었다. 작은 눈이 천천히 감긴다.','손가락에 앉힌 채 머리를 긁어 주었다. 발이 조금 느슨해진다. 조심스럽게 손을 받쳤다.','머리를 숙이기에 손끝을 댔다. 긁기 좋은 쪽으로 고개를 돌린다. 원하는 것이 분명하다.','이마의 깃을 가볍게 쓸었다. 부리로 손톱을 톡 건드린다. 아프지는 않았다.','손을 가까이 두고 기다렸다. 잠시 살피더니 머리를 손가락에 기댄다. 먼저 움직이지 않았다.','머리 뒤를 짧게 긁어 주었다. 눈을 반쯤 감고 낮은 소리를 낸다. 라디오보다 작고 가까운 소리.'],
+play:['짧게 휘파람을 불었다. 한참 뒤 비슷한 소리가 돌아왔다. 끝 음이 조금 달랐다.','나무 고리를 흔들었다. 부리로 잡았다 놓는다. 작은 소리가 일정하게 이어진다.','손가락을 횃대 옆에 내밀었다. 한 발씩 건너온다. 반대편 손으로도 길을 만들어 주었다.','종이 조각을 접어 놓았다. 모서리를 부리로 잡고 당긴다. 마음에 드는 모양이 될 때까지 찢었다.','고개를 왼쪽으로 기울였다. 새도 고개를 기울인다. 오른쪽으로 바꾸니 이번에는 가만히 본다.','창과 문을 닫고 횃대를 옮겨 놓았다. 짧게 날아 건너간다. 돌아올 때는 내 어깨를 골랐다.']},
+snake:{find:'따뜻한 배관 옆에 가느다란 몸이 감겨 있다. 작은 뱀 한 마리. 인기척에 고개를 든다. 혀가 잠깐 나왔다 들어갔다.',adopt:'천을 댄 상자를 가까이 놓았다. 뱀이 천천히 안으로 들어갔다. 방에 돌아와 숨을 곳을 마련했다. 몸을 감고 고개만 내놓는다.',feed:'먹이를 앞에 두고 멀찍이 앉았다. 한동안 움직이지 않던 고개가 낮아졌다. 자리를 뜰 때 보니 먹이가 사라져 있다.',leave:'배관에서 한 발 물러났다. 뱀은 다시 몸을 감았다. 고개가 천천히 그 안으로 들어간다.',idle:'낮은 은신처에 몸을 감고 있다. 입구에서 혀끝이 잠깐 보인다.',
+pet:['등을 따라 손끝을 천천히 움직였다. 비늘이 매끈하다. 손을 떼고도 한동안 감촉이 남았다.','스스로 손등에 올라오기를 기다렸다. 가느다란 몸이 손목을 느슨하게 감는다. 서두를 이유가 없다.','가만히 있는 몸의 옆을 살짝 쓸었다. 혀끝이 한 번 나왔다. 더 만지지 않고 곁에 앉았다.','천 위에 놓인 등을 조심스럽게 만졌다. 고개가 느리게 돌아온다. 서로 한동안 보고 있었다.','손바닥 위로 지나가는 몸을 받쳤다. 힘이 들어갔다 풀리는 것이 전해진다. 작지만 분명한 움직임.','은신처 밖으로 나온 등을 한 번 쓸었다. 몸을 더 내밀지는 않는다. 손을 거두고 조용히 기다렸다.'],
+play:['낮은 나뭇가지를 놓았다. 천천히 몸을 걸치고 반대편으로 넘어간다. 끝까지 지켜보았다.','빈 종이심을 옆으로 눕혔다. 고개가 들어가고 한참 뒤 꼬리가 사라진다. 다른 쪽에서 다시 고개가 나왔다.','접은 천으로 낮은 언덕을 만들었다. 가장 높은 곳에서 잠깐 멈춘다. 방을 살피는 것 같다.','작은 상자의 입구를 열어 두었다. 안을 살피더니 밖으로 돌아 나온다. 오늘은 마음에 들지 않는 모양이다.','손을 낮게 받쳐 길을 만들었다. 몸이 천천히 건너간다. 내 호흡도 덩달아 느려졌다.','은신처 옆에 둥근 나무토막을 놓았다. 주위를 한 바퀴 돌더니 그늘에 몸을 감았다. 함께 한참 쉬었다.']},
+rabbit:{find:'계단 아래 종이 더미가 움직였다. 긴 귀 두 개가 먼저 올라온다. 작은 토끼 한 마리. 코를 움직이며 이쪽을 살핀다.',adopt:'낮게 앉아 기다리자 천 위로 올라왔다. 몸을 받쳐 조심스럽게 데려왔다. 방 안을 살피더니 벽 옆에 앉았다. 귀 하나만 이쪽을 향해 있다.',feed:'마른 풀을 앞에 놓았다. 잠깐 냄새를 맡더니 입이 바빠진다. 긴 줄기 하나가 조금씩 짧아졌다.',leave:'종이 더미를 밟지 않게 돌아섰다. 긴 귀가 소리를 따라 움직인다. 모퉁이를 돌아서자 더는 보이지 않았다.',idle:'앞발을 가지런히 모으고 앉아 있다. 코끝이 작게 움직인다.',
+pet:['이마를 천천히 쓸었다. 고개가 조금 낮아진다. 귀 뒤까지 손을 옮겼다.','바닥에 앉아 등을 쓰다듬었다. 옆으로 몸을 붙여 온다. 작은 온기가 오래 남았다.','귀 사이에 손을 얹었다. 눈을 가늘게 뜨고 가만히 있는다. 손의 힘을 조금 더 뺐다.','볼 옆을 살짝 쓸었다. 코가 두어 번 움직인다. 고개를 돌리지 않아 조금 더 만졌다.','다가와 앉기를 기다렸다. 머리를 내밀기에 이마를 긁어 주었다. 서로 아무 소리도 내지 않았다.','등을 쓸다 손을 멈췄다. 코끝이 손목에 닿았다. 다시 쓰다듬자 편하게 몸을 낮춘다.'],
+play:['넓은 종이 상자에 입구를 냈다. 들어갔다가 반대편으로 나온다. 안에서 발 구르는 소리가 났다.','가벼운 나무 공을 놓았다. 코로 밀더니 따라간다. 벽에 닿은 공을 다시 굴려 주었다.','천을 바닥에 펼쳤다. 앞발로 긁고 모서리를 당긴다. 제 마음에 드는 주름을 만들었다.','상자 두 개 사이에 길을 냈다. 살피며 걷다가 짧게 뛰었다. 귀가 한 번 흔들렸다.','바닥에 앉아 이름을 불렀다. 한참 모른 척하더니 무릎 옆에 와 앉았다. 손에 든 것은 없었다.','종이로 낮은 턱을 만들었다. 가볍게 넘어가더니 돌아서서 또 넘는다. 발소리가 생각보다 작다.']},
+lizard:{find:'벽에 붙은 작은 그림자가 움직였다. 도마뱀 한 마리. 금 간 타일 위에서 고개를 돌린다. 발끝이 벽을 꼭 붙잡고 있다.',adopt:'작은 상자를 벽 아래에 대었다. 한참 뒤 스스로 내려왔다. 방에 돌아와 나뭇가지와 은신처를 놓았다. 가장 높은 곳에 올라가 앉는다.',feed:'작은 먹이를 내려놓고 기다렸다. 고개가 조금씩 움직인다. 눈을 깜박인 사이 먹이가 없어졌다.',leave:'벽에서 천천히 손을 뗐다. 도마뱀이 타일 틈으로 움직인다. 꼬리 끝이 마지막으로 사라졌다.',idle:'나뭇가지 위에 가만히 앉아 있다. 눈만 이쪽을 향한다.',
+pet:['등을 손끝으로 가볍게 쓸었다. 작은 발이 천을 꼭 잡는다. 한 번만 만지고 손을 거두었다.','손바닥을 낮게 내밀었다. 발 하나씩 올라온다. 작은 발바닥의 감촉이 낯설다.','몸 옆을 살짝 쓸었다. 고개가 손가락을 따라 돌아온다. 잠깐 눈이 마주쳤다.','손등에 앉아 있는 동안 등을 조심스럽게 만졌다. 움직이지 않아 나도 가만히 있었다.','은신처 앞에 손을 놓았다. 코끝이 손가락에 닿는다. 다가온 만큼만 천천히 쓰다듬었다.','천 위로 내려온 등을 가볍게 쓸었다. 발이 몇 걸음 움직인다. 편한 자리를 고를 때까지 기다렸다.'],
+play:['낮은 나뭇가지를 비스듬히 놓았다. 끝까지 올라가 고개를 든다. 방 안을 내려다보는 작은 주인 같다.','나무토막 두 개를 이어 놓았다. 틈을 살피더니 한 발씩 건넌다. 마지막에 꼬리가 따라왔다.','천 위에 작은 상자를 눕혔다. 그 안으로 들어갔다가 입구에서 얼굴만 내민다.','손을 바닥 가까이 이어 놓았다. 손가락을 하나씩 넘어온다. 발을 디딜 때마다 간지럽다.','가지 옆으로 다른 길을 만들어 주었다. 새 길을 한참 살핀다. 결국 원래 가지로 돌아갔다.','낮은 돌 옆에 종이심을 놓았다. 안을 들여다보고 위로 올라간다. 예상한 길로는 가지 않는다.']}
+});
+const PET_IDLE={cat:'익숙한 자리에 몸을 말고 있다. 인기척에 귀가 움직인다.',dog:'방문을 보다가 고개를 기울인다. 꼬리가 바닥을 두드린다.'};
+Object.assign(PET_SPR,{
+mouse:{c:{g:'#8A8880',w:'#C8B8A0',e:'#202422',p:'#B8867A'},p:['...gg.gg....','..gppgppg...','...ggggg....','...gegeg....','..gggwgg....','.ggggwgg....','.ggggwgg.pp.','..gggggpp...','..ww.ww.....']},
+bird:{c:{g:'#677B68',w:'#C7C0A0',e:'#202422',b:'#C49B55',t:'#745737'},p:['....ggg.....','...ggweg....','...ggwwbb...','...ggww.....','..ggggww....','.gggggww....','..ggggw.....','...ggg......','...b.b......','.tttttttt...','....t.......']},
+snake:{c:{g:'#6D8057',w:'#B3B78A',e:'#202422'},p:['......gggg..','.....ggweg..','.....ggwwg..','......gwg...','......gwg...','...ggggwg...','..ggwwwwgg..','.ggggggggwg.','.gwwwwwwwwg.','..gggggggg..']},
+rabbit:{c:{w:'#C8C4B6',p:'#B89486',g:'#98988D',e:'#202422'},p:['..ww..ww....','..wp..pw....','..wp..pw....','..wwwwww....','..wewwew....','...wwpww....','...wwww.....','..wwgwww....','.wwggwww.w..','.wwggwwwww..','..ww.wwww...']},
+lizard:{c:{g:'#8A9662',s:'#C3BC8D',e:'#202422'},p:['......ggg...','.....ggseg..','....ggsss...','..g.gggg....','..gggggg.g..','.gggsggggg..','.g.gsgg.....','...gsg.g....','...ggg......','..gg........','.gg.........']}
+});
+const PLANT_TOYS={
+ plant_cactus:{n:'작은 선인장',r:'c',d:'손가락만 한 선인장. 화분 밑에 연필로 「너무 자주 주지 말 것」이라고 적혀 있다.'},
+ plant_succulent:{n:'다육이 화분',r:'c',d:'두툼한 잎이 겹겹이 붙었다. 흙 위에 작은 흰 돌 하나. 방에 놓을 수 있다.'},
+ plant_fern:{n:'고사리 화분',r:'u',d:'작은 잎이 부채처럼 펼쳐졌다. 젖은 골목 냄새가 조금 난다.'},
+ plant_ivy:{n:'담쟁이 화분',r:'u',d:'짧은 덩굴이 화분 밖으로 늘어졌다. 창문 쪽으로 잎을 돌려 두었다.'},
+ plant_moonflower:{n:'달맞이꽃 화분',r:'r',d:'가느다란 줄기 끝에 노란 꽃이 달렸다. 이름표 뒷면에는 「해가 진 뒤에 볼 것」.'}
+};
+Object.assign(TOYS,PLANT_TOYS);
+const PLANT_COLORS={g:'#5F7950',l:'#9AA66D',d:'#354C35',p:'#956747',s:'#C19A6B',k:'#352A23',y:'#E3C569'};
+Object.assign(RA_SPR,{
+ plant_cactus:{c:PLANT_COLORS,p:['....gg....','..g.gl.g..','..g.gl.g..','..ggglgg..','....gl....','....gg....','..ssssss..','..pppppp..','...pppp...','...kkkk...']},
+ plant_succulent:{c:PLANT_COLORS,p:['...l..l...','..glgglg..','...glgg...','.llggggll.','..ggllgg..','...gggg...','..ssssss..','..pppppp..','...pppp...','...kkkk...']},
+ plant_fern:{c:PLANT_COLORS,p:['..l....l..','...lg.gl..','.l..gg..l.','..lggggl..','.ll.gl.ll.','...lggl...','..ssssss..','..pppppp..','...pppp...','...kkkk...']},
+ plant_ivy:{c:PLANT_COLORS,p:['...glgl...','..lggggl..','...ggglg..','..ssssssg.','..ppppppl.','...pppp.g.','...kkkk.l.','........g.','.......lg.','........l.']},
+ plant_moonflower:{c:PLANT_COLORS,p:['....y.....','...yyy....','....yg....','..l.gl....','...lg.....','....g.....','..ssssss..','..pppppp..','...pppp...','...kkkk...']}
+});
 
 /* ---------- 시작 ---------- */
 async function boot(){
