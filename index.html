@@ -5260,6 +5260,21 @@ if(typeof wallEl==='function'){const we9=wallEl;wallEl=function(k){const el=we9.
   const rows=[...el.querySelectorAll('.hand')].filter(c=>c.style.opacity!=='0.7'&&!c.closest('form'));
   rows.forEach((r,i)=>{const x=list[i];if(!x||!(admin||wallMine(x)))return;let arm=0;const b=h('button',{type:'button',class:'sm ghost',style:'font-family:var(--f-body);font-size:11px;padding:0 6px;margin-left:6px;color:var(--bad)',onclick:e=>{e.preventDefault();if(Date.now()-arm<3000)return wallRemove(k,x);arm=Date.now();b.textContent='한 번 더 누르면 지워져요'}},admin&&!wallMine(x)?'지우기 (운영)':'지우기');r.append(b)})}catch(e){}return el}}
 
+/* ---------- 돈 건네기: 지인에게 하루 한 번, 최대 $100 (선물 기록을 같이 쓴다) ---------- */
+const MONEY_MAX=100;
+async function moneyGive(pid,amt,note){const m=G.me;amt=Math.floor(+amt||0);if(amt<1)return toast('얼마를 줄지 적어 주세요.');if(amt>MONEY_MAX)return toast(`하루에 $${MONEY_MAX}까지만 줄 수 있어요.`);
+  const dl=daily();if(dl.moneyGive)return toast('오늘은 이미 돈을 건넸어요. 내일 또 할 수 있어요.');if(m.money<amt)return toast('돈이 모자라요.');
+  m.money-=amt;dl.moneyGive=1;save();const row=await bondSend(pid,'gift',{money:amt,note:String(note||'').trim().slice(0,60)});
+  if(!row){m.money+=amt;dl.moneyGive=0;save();return}
+  bondRelLog(pid,`[돈] 봉투에 $${amt}을 넣어 건넸다.${note?' 쪽지: '+String(note).slice(0,60):''}`);log(`${bName(pid)}에게 $${amt}을 건넸다.`,'rel');toast(`${bName(pid)}에게 $${amt}을 건넸어요.`);try{bondRedraw()}catch(e){};render()}
+/* 받는 쪽: 열지 않은 돈봉투를 한 번만 받는다 */
+if(typeof bondProcess==='function'){const bp9=bondProcess;bondProcess=function(){try{const m=G.me;if(m){const ap=bApplied();for(const x of BONDS){if(ap[x.id]||x.kind!=='gift'||x.to_char!==m.id||x.status!=='open'||!(x.data&&+x.data.money>0))continue;const amt=Math.min(MONEY_MAX,Math.floor(+x.data.money));
+  m.money+=amt;log(`${bName(x.from_char)}에게서 봉투를 받았다. $${amt}.${x.data.note?' 쪽지: '+x.data.note:''}`,'rel');toast(`${bName(x.from_char)}에게서 봉투: $${amt}`)}}}catch(e){}return bp9.apply(this,arguments)}}
+function moneyPatch(pid,el){try{if(!el||el.querySelector('.mgive'))return;const lb=[...el.querySelectorAll('.lbl')].find(x=>x.textContent==='선물 두고 오기');if(!lb)return;const after=lb.nextElementSibling||lb;
+  const dl=daily(),used=!!dl.moneyGive,m=G.me;const amt=h('input',{type:'number',min:'1',max:String(MONEY_MAX),step:'1',value:String(Math.min(MONEY_MAX,Math.max(0,m.money))),style:'width:90px'});const note=h('input',{maxlength:60,placeholder:'봉투에 적을 말 (선택)'});
+  after.after(h('span',{class:'lbl mgive'},'돈 건네기 · 하루 한 번, $'+MONEY_MAX+'까지'),used?h('p',{class:'dim',style:'margin:0;font-size:12.5px'},'오늘은 이미 돈을 건넸어요. 내일 또 할 수 있어요.'):h('div',{class:'bond-wrap'},h('span',null,'$'),amt,note,h('button',{class:'sm',onclick:()=>moneyGive(pid,amt.value,note.value)},'봉투를 건넨다')))}catch(e){}}
+if(typeof bondSection==='function'){const bs8=bondSection;bondSection=function(pid){const el=bs8.apply(this,arguments);try{moneyPatch(pid,el);const d=BOND_REDRAW;if(typeof d==='function'){BOND_REDRAW=function(){const r=d.apply(this,arguments);moneyPatch(pid,el);return r}}}catch(e){}return el}}
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
