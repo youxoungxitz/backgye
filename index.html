@@ -5253,6 +5253,13 @@ if(typeof idCard==='function'){const ic9=idCard;idCard=function(p,isMe){const el
 if(typeof openCard==='function'){const oc9=openCard;openCard=function(id){const r=oc9.apply(this,arguments);try{if(id==='me'&&G.me){const st=document.querySelector('#modalRoot .stack');if(st&&!st.querySelector('.ttlcard')){G.me.titles=G.me.titles||{};const n=Object.keys(G.me.titles).length;
   st.append(h('div',{class:'row ttlcard',style:'gap:8px;justify-content:center;flex-wrap:wrap'},h('span',{class:'mute',style:'font-size:13px'},`칭호 ${n} / ${TTL.length}`),h('button',{class:'sm pri',onclick:()=>{closeModal();openTitles()}},G.me.title?'칭호 바꾸기':'칭호 달기')))}}}catch(e){}return r}}
 
+/* ---------- 벽 낙서 지우기: 내가 쓴 낙서(부캐 포함)와 운영자 ---------- */
+async function wallRemove(k,x){if(!sb)return;const{error}=await sb.from('wall_posts').delete().eq('id',x.id);if(error)return toast('지우지 못했어요.');WALLS[k]=(WALLS[k]||[]).filter(y=>y.id!==x.id);toast('낙서를 지웠어요. 벽에 희미한 자국만 남았다.');try{renderView()}catch(e){}}
+function wallMine(x){if(!G.me||!x)return false;if(x.character_id===G.me.id)return true;const p=SAMPLES[x.character_id];return!!(p&&typeof AUTH!=='undefined'&&AUTH&&p.owner===AUTH.id)}
+if(typeof wallEl==='function'){const we9=wallEl;wallEl=function(k){const el=we9.apply(this,arguments);try{if(!sb||!G.me)return el;const list=walls(k);const admin=typeof isAdminUser==='function'&&isAdminUser();
+  const rows=[...el.querySelectorAll('.hand')].filter(c=>c.style.opacity!=='0.7'&&!c.closest('form'));
+  rows.forEach((r,i)=>{const x=list[i];if(!x||!(admin||wallMine(x)))return;let arm=0;const b=h('button',{type:'button',class:'sm ghost',style:'font-family:var(--f-body);font-size:11px;padding:0 6px;margin-left:6px;color:var(--bad)',onclick:e=>{e.preventDefault();if(Date.now()-arm<3000)return wallRemove(k,x);arm=Date.now();b.textContent='한 번 더 누르면 지워져요'}},admin&&!wallMine(x)?'지우기 (운영)':'지우기');r.append(b)})}catch(e){}return el}}
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
