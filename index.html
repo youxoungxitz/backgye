@@ -5334,6 +5334,92 @@ if(typeof viewPeople==='function'){const vp9=viewPeople;viewPeople=function(){co
     if(Array.isArray(out)){const i=out.findIndex(el=>el&&(el.id==='peopleQ'||(el.querySelector&&el.querySelector('#peopleQ'))));if(i>=0)out.splice(i+1,0,bar);else out.push(bar)}
     if(f==='friend'&&!nf&&Array.isArray(out))out.push(h('p',{class:'mute',style:'font-size:13px'},'아직 지인이 없어요. 지인 코드로 신청하거나, 같은 칸에서 「통성명하기」를 청해 보세요.'))}catch(e){}return out}}
 
+/* ---------- 일곱 번째 장 (조각 2,000) · 설계실 마흔 명 ---------- */
+if(typeof GOALS!=='undefined'&&!GOALS.some(g=>g[1]==='일곱 번째 장'))GOALS.push([2000,'일곱 번째 장','설계도 뒷면에 목록이 적혀 있다. 등유 몇 통, 붕대 몇 롤, 향 몇 묶음. 무명동에서 하룻밤을 버티는 데 드는 것들이다. 목록 맨 아래에 다른 글씨로 한 줄이 덧붙어 있다. 「모자라면 사람으로 채운다.」']);
+var BP_STEPS=[10,40];
+bpCounterEl=function(){if(Date.now()-BP_AT>180e3)bpLoad().then(()=>{if(BP_N!=null)try{renderView()}catch(e){}});
+  const N=BP_N,m=G.me;const need=N!=null&&N>=BP_STEPS[0]?BP_STEPS[1]:BP_STEPS[0];const n=N==null?0:Math.min(N,need);
+  const txt=N==null?'':N>=BP_STEPS[1]?'마흔 번째 사람이 나온 뒤, 설계실 책상 서랍이 열려 있었다. 서랍 안에는 성채 바깥 지도가 들어 있었다고 한다. 지도 속 도시는 레이란이 아니었다.'
+    :N>=BP_STEPS[0]?`열 명이 다녀가자 증축 소리가 달라졌고, 다섯 번째 동이 열렸다. 이제 설계실 책상 서랍이 잠겨 있다. 주민 ${BP_STEPS[1]}명이 다녀가면 서랍이 열린다는 소문이 돈다.`
+    :`인쇄소(3동 중층) 뒤편, 어제 없던 문. 주민 ${BP_STEPS[0]}명이 설계실을 다녀가면 무언가 열린다고 한다.`;
+  return h('div',{class:'stack',style:'gap:6px;border-top:1px solid var(--line);padding-top:10px'},
+    meter('설계실에 들어간 주민',n,need,'var(--lantern)',N==null?'세는 중…':`${N} / ${need}명`),
+    h('p',{class:'mute',style:'margin:0;font-size:12.5px'},txt+(m&&m.bpDone?' 나는 이미 다녀왔다.':'')))};
+
+/* ---------- 같은 칸 상호작용: 청할 거리 추가 · 결과 문구 여러 가지 ---------- */
+(function(){if(typeof ACTS==='undefined')return;
+ const V={
+  light:{acc:['불을 붙여 주었다. 성냥불 너머로 처음 보는 얼굴이 잠깐 환해졌다.','라이터 돌이 두 번 헛돌고 세 번째에 붙었다. 「여기 습해서요.」 둘 다 조금 웃었다.','손바닥으로 바람을 막아 주며 불을 붙였다. 불이 꺼질 때까지 둘 다 말이 없었다.'],
+         got:['상대가 불을 붙여 주었다. 성냥불 너머로 처음 보는 얼굴이 잠깐 환해졌다.','상대가 손바닥으로 바람을 막아 주었다. 불빛에 비친 손등에 오래된 화상 자국이 있었다.','성냥갑을 통째로 건네받았다. 「가져가요. 여긴 밤이 길어요.」']},
+  share:{acc:['김이 나는 만두를 반씩 나눠 먹었다. 국물이 손목으로 흘렀다. 둘 다 웃었다.','마지막 하나를 두고 서로 밀었다. 결국 반으로 갈랐다.','계단에 나란히 앉아 먹었다. 위층에서 망치 소리가 났지만 둘 다 모른 척했다.'],
+         got:['만두를 반씩 나눠 먹었다. 상대가 마지막 하나를 내 쪽으로 밀어 주었다.','상대가 「여기 만두는 4번 테이블 거 아니죠?」 하고 물었다. 아니라고 하자 그제야 먹었다.','먹는 내내 상대가 성채에 온 지 얼마나 됐는지 물었다. 대답하고 나니 꽤 오래였다.']},
+  watch:{acc:['계단 쪽을 같이 지켜봐 주었다. 아무것도 올라오지 않았다. 아마도.','지켜보는 동안 계단 하나가 삐걱였다. 아무도 밟지 않았는데. 상대에게는 말하지 않았다.'],
+         got:['상대가 계단 쪽을 지켜봐 주었다. 등 뒤가 조금 덜 서늘하다.','「괜찮아요, 아무것도 없어요.」 상대가 그렇게 말하고 계단을 한 번 더 봤다.']},
+  way:{acc:['길을 알려 주었다. 가르쳐 준 계단 수가 맞는지는 모르겠다.','손가락으로 계단을 짚어 가며 알려 주었다. 「열세 번째에서 왼쪽. 열네 번째는 없어요.」'],
+       got:['길을 알려 주었다. 그리고 지나가는 말로 소문 하나를 흘렸다.','상대가 종이에 길을 그려 주었다. 그림 속 계단이 하나 많았다. 그리고 소문 하나.']},
+  walk:{acc:['같이 다니기로 했다. 발소리가 둘이라 조금 덜 무섭다.','「앞에 서요, 뒤에 서요?」 둘이 같이 앞에 섰다.'],
+        got:['같이 다니기로 했다. 30분 동안 「같이 둘러보기」를 할 수 있어요.','상대가 손전등을 하나 더 꺼내 주었다. 30분 동안 「같이 둘러보기」를 할 수 있어요.']},
+  name:{acc:['서로 이름을 말했다. 한 번 더 확인했다. 이름은 여기서 쉽게 흐려지니까.','이름을 말하자 상대가 따라 불렀다. 한 글자도 틀리지 않았다. 그게 이상하게 고마웠다.'],
+        got:['서로 이름을 말했다. 지인 신청을 보내 보세요.','상대가 내 이름을 손바닥에 적어 보였다. 「잊어버리면 보여 줄게요.」 지인 신청을 보내 보세요.']}};
+ for(const a of ACTS){const v=V[a.id];if(!v)continue;a._acc=v.acc;a._got=v.got;Object.defineProperty(a,'acc',{get(){return pick(this._acc)},configurable:true});Object.defineProperty(a,'got',{get(){return pick(this._got)},configurable:true})}
+ const NEW=[
+  {id:'umbrella',n:'우산 같이 쓰기',ask:'비가 많이 오네요. 같이 쓰고 가실래요?',d:'둘 다 정신 +3, 젖지 않는다',
+   acc:['우산 하나에 어깨를 반씩 걸쳤다. 각자 바깥쪽 어깨만 젖었다.','우산 위로 빗소리가 시끄러워서 말소리가 들리지 않았다. 그래도 둘이 걷는 건 들렸다.'],
+   got:['상대가 우산을 내 쪽으로 기울여 주었다. 상대 어깨가 다 젖었다.','우산 아래로 같이 걸었다. 처마 끝 물줄기를 둘이 동시에 피했다.'],me:{mind:3},you:{mind:3}},
+  {id:'tea',n:'차 한 잔 사 주기',ask:'차찬텡 밀크티 한 잔 사 드릴게요. 쉬었다 가요.',d:'내가 $6을 내고, 상대는 기력 +2 · 정신 +4, 나는 정신 +2',cost:6,
+   acc:['달고 진한 밀크티를 받았다. 잔을 두 손으로 감쌌다. 「다음엔 제가 살게요.」','차를 마시며 창밖을 봤다. 비가 오는지 안 오는지 모를 날씨였다.'],
+   got:['상대가 밀크티를 맛있게 마셨다. 사 준 사람이 더 기분이 좋다.','「달다.」 상대가 그 한마디만 하고 끝까지 마셨다. 그걸로 충분했다.'],me:{mind:2},you:{en:2,mind:4}},
+  {id:'count',n:'계단 같이 세기',ask:'이 계단, 몇 칸인지 같이 세어 볼래요? 혼자 세면 자꾸 틀려서요.',d:'둘 다 정신 +2. 가끔 수가 맞지 않는다',
+   acc:['같이 셌다. 마흔두 칸. 둘이 센 숫자가 똑같아서 안심했다.','같이 셌다. 나는 마흔둘, 상대는 마흔셋. 다시 세지는 않기로 했다.'],
+   got:['같이 셌다. 마흔두 칸. 오늘은 맞았다.','같이 셌다. 마지막 칸에서 상대가 멈칫했다. 「방금 하나 더 있지 않았어요?」 아니라고 했다. 아마도.'],me:{mind:2},you:{mind:2}},
+  {id:'collar',n:'옷깃 고쳐 주기',ask:'옷깃이 접혀 있어요. 고쳐 드려도 될까요?',d:'둘 다 정신 +2',
+   acc:['옷깃을 고쳐 주었다. 상대가 머쓱하게 웃었다.','옷깃을 펴 주다가, 목덜미에 남은 손자국 같은 멍을 봤다. 아무것도 묻지 않았다.'],
+   got:['상대가 내 옷깃을 고쳐 주었다. 누가 내 몸에 손을 댄 게 오랜만이었다.','「이제 됐다.」 상대가 옷깃을 두 번 두드렸다. 이상하게 든든했다.'],me:{mind:2},you:{mind:2}},
+  {id:'rule',n:'수칙 하나 알려 주기',ask:'이건 꼭 알아 두세요. 수칙에는 안 적혀 있는 거예요.',d:'상대는 평판 +1, 나는 정신 +2',
+   acc:['수칙에 없는 수칙 하나를 들었다. 「문패 없는 집에선 대답하지 마요.」 고개를 끄덕였다.','「4번 테이블은 비워 둬요. 누가 앉아 있는 것처럼 보여도요.」 들은 걸 수첩에 적었다.'],
+   got:['상대가 수첩에 받아 적었다. 누군가에게 알려 줄 수 있어서 다행이다.','상대가 한 번 따라 말했다. 틀리지 않았다. 이 사람은 오래 버틸 것 같다.'],me:{mind:2},you:{rep:1}},
+  {id:'tangerine',n:'귤 하나 건네기',ask:'귤 하나 드실래요? 제사상에서 남은 건 아니에요.',d:'내가 $2를 내고, 상대는 체력 +4 · 정신 +2',cost:2,
+   acc:['귤을 받아 깠다. 껍질에서 바깥 냄새가 났다. 성채 바깥 어딘가의 냄새.','귤이 생각보다 달았다. 반을 나눠 돌려주었다.'],
+   got:['상대가 귤을 까서 반을 돌려주었다. 손끝이 노랗게 물들었다.','상대가 귤 껍질을 버리지 않고 주머니에 넣었다. 「냄새 좋아서요.」'],me:{},you:{hp:4,mind:2}}];
+ for(const n of NEW){if(ACTS.some(a=>a.id===n.id))continue;const a=Object.assign({},n);a._acc=n.acc;a._got=n.got;delete a.acc;delete a.got;Object.defineProperty(a,'acc',{get(){return pick(this._acc)},configurable:true});Object.defineProperty(a,'got',{get(){return pick(this._got)},configurable:true});ACTS.push(a)}})();
+
+/* ---------- 둘만의 장면: 쉬기 · 다정하게 · 짓궂게로 나눠 보기 ---------- */
+var SC_NEG_OPEN=false;
+if(typeof relPanel==='function'){const rp8=relPanel;relPanel=function(id,r){const el=rp8.apply(this,arguments);try{if(!r||!r.friend)return el;const lb=[...el.querySelectorAll('.lbl')].find(x=>x.textContent.startsWith('둘만의 장면'));const box=lb&&lb.nextElementSibling;if(!box||!box.classList.contains('wrap'))return el;
+  const avail=SCENES.filter(sc=>sceneOK(sc,r));const btn=sc=>h('button',{class:'sm',style:sc.neg?'border-color:var(--bad);color:var(--bad)':'',onclick:()=>{closeModal();doScene(id,sc)}},sceneLabel(sc)||sc.id);
+  const rest=avail.filter(s=>s.rest),warm=avail.filter(s=>!s.rest&&!s.neg),neg=avail.filter(s=>s.neg&&!s.rest);
+  const grp=(t,note,list)=>list.length?h('div',{class:'stack',style:'gap:4px'},h('span',{class:'dim',style:'font-size:11.5px'},t+(note?` · ${note}`:'')),h('div',{class:'wrap'},list.map(btn))):null;
+  const negBox=neg.length?(()=>{const d=h('details',{class:'stack',style:'gap:4px'},h('summary',{class:'dim',style:'font-size:11.5px;cursor:pointer;color:var(--bad)'},`짓궂게 · 악연 쪽으로 기우는 장면 ${neg.length}개`),h('div',{class:'wrap',style:'margin-top:4px'},neg.map(btn)));if(SC_NEG_OPEN)d.open=true;d.addEventListener('toggle',()=>{SC_NEG_OPEN=d.open});return d})():null;
+  box.replaceWith(h('div',{class:'stack',style:'gap:8px'},grp('쉬기','오히려 기력 +1',rest),grp('다정하게','',warm),negBox))}catch(e){}return el}}
+
+/* ---------- 함께하기 장면 추가 ---------- */
+(function(){if(typeof INVITES==='undefined')return;const add=[
+ {id:'tea2',st:1,label:'밀크티 두 잔 사 오기',t:'{a}이(가) 차찬텡 밀크티 두 잔을 들고 {b}을(를) 찾아왔다. 한 잔은 얼음이 다 녹아 있었다.',o:[
+  {l:'녹은 쪽을 집는다',t:'{b}이(가) 얼음이 녹은 잔을 집었다. 「이쪽이 덜 달아서요.」 {a}은(는) 그게 거짓말인 걸 알았다.',a:{mind:5},b:{en:2,mind:3}},
+  {l:'두 잔을 섞는다',t:'{b}이(가) 두 잔을 한데 섞어 반씩 나눴다. 맛이 애매해졌다. 둘 다 끝까지 마셨다.',a:{en:1,mind:4},b:{en:1,mind:4}},
+  {l:'지금은 됐다고 한다',t:'{b}은(는) 바쁘다며 손을 저었다. {a}은(는) 두 잔을 다 마시고 배가 차가워졌다.',a:{en:2,mind:-2},b:{}}]},
+ {id:'roof',st:1,label:'옥상에서 비행기 보자고 하기',t:'{a}이(가) {b}을(를) 옥상으로 불렀다. 곧 여객기가 낮게 지나갈 시간이다.',o:[
+  {l:'같이 올려다본다',t:'여객기가 머리 위를 지나갔다. 바람에 빨래가 한꺼번에 펄럭였다. 소리가 다 지나갈 때까지 둘은 말이 없었다.',a:{mind:6},b:{mind:6}},
+  {l:'귀를 막고 소리 지른다',t:'{b}이(가) 엔진 소리에 맞춰 크게 소리를 질렀다. {a}도 따라 질렀다. 아무도 듣지 못했다.',a:{mind:7},b:{mind:7}},
+  {l:'창문 숫자를 센다',t:'{b}이(가) 지나가는 비행기 창문을 셌다. 「하나가 불이 켜져 있었어요. 누가 이쪽을 보고 있었어요.」',a:{mind:-3,clue:1},b:{mind:-3},neg:true}]},
+ {id:'mahjong2',st:1,label:'마작 한 판 붙자고 하기',t:'{a}이(가) {b} 앞에 마작 패 한 줌을 와르르 쏟았다. 「한 판만.」',o:[
+  {l:'진지하게 붙는다',t:'둘이 진지하게 붙었다. {b}이(가) 이겼다. {a}이(가) 한 판만 더 하자고 세 번 말했다.',a:{mind:3},b:{money:10,mind:4}},
+  {l:'일부러 져 준다',t:'{b}이(가) 일부러 져 주었다. {a}은(는) 눈치채고 판을 엎었다. 둘 다 패를 줍느라 한참 걸렸다.',a:{mind:5},b:{mind:5}},
+  {l:'백(白) 패를 집는다',t:'{b}이(가) 패 더미에서 백(白) 패 한 장을 집었다. 둘이 쏟은 패에는 백이 없었다.',a:{mind:-6},b:{mind:-6,clue:1},neg:true}]},
+ {id:'mirror',st:2,label:'거울 앞에서 머리 묶어 주기',t:'{a}이(가) {b}을(를) 거울 앞에 앉히고 머리를 빗기 시작했다.',o:[
+  {l:'눈을 감고 맡긴다',t:'{b}은(는) 눈을 감았다. 빗질이 느리고 조심스러웠다. 다 묶고 나서야 눈을 떴다.',a:{mind:5},b:{mind:7}},
+  {l:'거울 속 얼굴을 본다',t:'{b}은(는) 거울 속 {a}을(를) 봤다. 거울 속 {a}이(가) 먼저 웃었다. 진짜 {a}은(는) 한 박자 늦게 웃었다.',a:{mind:-2},b:{mind:3}},
+  {l:'반대로 묶어 준다',t:'{b}이(가) 일어나서 이번엔 {a}의 머리를 묶어 주었다. 엉망이었다. {a}은(는) 그대로 하루를 보냈다.',a:{mind:6},b:{mind:6}}]},
+ {id:'letter',st:2,label:'편지 대신 읽어 달라고 하기',t:'{a}이(가) 젖은 편지 한 통을 {b}에게 내밀었다. 「글씨가 번져서요. 대신 읽어 줄래요?」',o:[
+  {l:'소리 내어 읽어 준다',t:'{b}이(가) 천천히 읽어 주었다. 번진 글자는 {b}이(가) 채워 넣었다. 원래 무슨 말이었는지는 둘 다 묻지 않았다.',a:{mind:7},b:{mind:4}},
+  {l:'끝까지 읽고 접는다',t:'{b}은(는) 끝까지 읽더니 편지를 접어 돌려주었다. 「좋은 소식이에요.」 {a}은(는) 그 말을 믿기로 했다.',a:{mind:5},b:{mind:2}},
+  {l:'받는 사람 이름을 읽는다',t:'{b}이(가) 받는 사람 이름을 읽었다. {a}의 이름이 아니었다. {b}의 이름이었다.',a:{mind:-5},b:{mind:-7,clue:1},neg:true}]},
+ {id:'sleep',st:3,label:'잠들 때까지 옆에 있어 주기',t:'{a}이(가) {b}의 방문 앞에 의자를 끌어다 놓았다. 「잠들 때까지만.」',o:[
+  {l:'불을 끄고 눕는다',t:'{b}이(가) 불을 껐다. 문밖에서 의자 삐걱이는 소리가 났다. 그 소리를 세다가 잠들었다.',a:{mind:4,en:-1},b:{mind:9,en:2}},
+  {l:'얘기를 걸다 잠든다',t:'{b}이(가) 이것저것 묻다가 말끝을 흐렸다. {a}은(는) 대답하다가 상대가 잠든 걸 알고 조용히 웃었다.',a:{mind:6},b:{mind:7,en:1}},
+  {l:'증축 소리가 날 때까지 깨어 있는다',t:'둘 다 잠들지 못했다. 새벽 세 시, 망치 소리가 시작되자 {a}이(가) 문을 두 번 두드렸다. 「여기 있어요.」',a:{mind:3},b:{mind:5}}]}];
+ for(const v of add)if(!INVITES.some(x=>x.id===v.id))INVITES.push(v)})();
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
