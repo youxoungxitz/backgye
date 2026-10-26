@@ -700,9 +700,10 @@ function playEv(src,id,step,keep){const E=src[id],st=E.s[step||'start'];if(!step
     if(res.go){result={title:E.n,text:fill(res.t||''),lines:[...lines,...give(res.rw)],bad:!!res.bad};if(res.bad)flicker();playEv(src,id,res.go,true);return}
     if(res.bad&&chance(.5))flicker();const tt=fill(res.t);log(`${E.n}: ${tt.split('\n')[0]}`,'haunt');done(E.n,tt+(res.fear?fearLine():''),[...lines,...give(res.rw)],!!res.bad)}}))},keep)}
 function anomaly(){const m=G.me,[d,t]=cellDT(m.cell);const ok=Object.keys(EV).filter(k=>EV[k].w(d,t)&&k!==m.lastEv);if(!ok.length)return false;const k=hasFx('oily')&&ok.includes('cat')&&chance(.5)?'cat':pick(ok);m.lastEv=k;playEv(EV,k);return true}
-function explore(){if(!ready())return;const m=G.me;if(!spend(1))return;const[d,t]=cellDT(m.cell);
+function explore(){if(!ready())return;const m=G.me;if(m.petEncounter&&!m.pet&&!m.petAdopted){petEncounterScene();return}if(!spend(1))return;const[d,t]=cellDT(m.cell);
   if(isBuild()&&!guardUse()){buildEvent();return}
   if(m.fugitive&&chance(.08)){chaser();return}
+  if(!m.pet&&!m.petAdopted&&chance(PET_RULE.chance)){m.petEncounter={kind:chance(.5)?'cat':'dog',at:T()};petEncounterScene();return}
   const r=Math.random();
   if(r<.05){pagerEvent();return}
   if(t===0&&weather()[0]==='비'&&r<.25){laundryEvent();return}
@@ -889,7 +890,7 @@ function openRoom(){const m=G.me;if(!m)return;m.room=m.room||[];const own=Object
     h('span',{class:'lbl'},'가진 밤물건'),
     own.length?own.map(k=>h('div',{class:'pl'},h('div',null,itemIcon(k),h('b',null,ITEMS[k].n),` × ${m.items[k]}`),h('button',{class:'sm',disabled:m.room.length>=ROOM_MAX,onclick:()=>{m.items[k]--;m.room.push(k);refresh()}},'놓기'))):h('p',{class:'mute',style:'margin:0;font-size:13px'},'놓을 밤물건이 없어요. 수칙을 어기면 얻을 수 있어요.'),
     h('form',{class:'composer',onsubmit:e=>{e.preventDefault();m.roomNote=note.value.trim();save();toast('쪽지를 붙였어요.');render()}},note,h('button',{type:'submit',class:'sm'},'붙이기'))))}
-function roomEl(p,isMe,id){const room=p.room||[];if(!isMe&&!room.length&&!p.roomNote)return null;const r=!isMe&&G.rel?G.rel[id]:null;
+function roomEl(p,isMe,id){const room=p.room||[];if(!isMe&&!room.length&&!p.roomNote&&!p.pet)return null;const r=!isMe&&G.rel?G.rel[id]:null;
   return h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},'방'),
     room.length?h('div',{class:'wrap'},room.map(k=>h('span',{class:'tag'},toyName(k)))):h('span',{class:'mute',style:'font-size:13px'},'아무것도 놓여 있지 않다.'),
     p.roomNote?h('div',{class:'hand'},'「'+p.roomNote+'」'):null,
@@ -2990,7 +2991,7 @@ function bondSection(pid,r){const m=G.me,p=SAMPLES[pid],st=stageOf(r);const box=
       inc.length?h('div',{class:'stack',style:'gap:6px'},...inc.map(x=>h('div',{class:'banner',style:'color:var(--ink);display:flex;gap:8px;align-items:center;flex-wrap:wrap'},h('span',{style:'flex:1;min-width:0'},bondPromptTitle(x)),h('button',{class:'sm pri',onclick:()=>bondOpenPrompt(x)},'대답하기')))):null,
       hurt?h('div',{class:'banner',style:'color:var(--bad)'},`${bName(pid)}이(가) 다쳤대요. 「상처 소독해 주러 가기」를 걸 수 있어요.`):null,
       outInv.length?h('p',{class:'dim',style:'margin:0;font-size:12.5px'},'대답 기다리는 중: '+outInv.map(x=>x.kind==='invite'?(INVITES.find(v=>v.id===x.data.iv)||{}).label:x.kind==='duo'?'같이 겪는 괴이':x.kind==='photo'?'사진':x.kind==='rule'?'둘만의 수칙':'보증').join(', ')):null,
-      avail.length?h('div',{class:'wrap'},avail.map(v=>h('button',{class:'sm',style:v.id==='mend'?'border-color:var(--bad);color:var(--bad)':'',onclick:()=>bondInvite(pid,v)},v.label))):h('p',{class:'mute',style:'margin:0;font-size:12.5px'},'지금 걸 수 있는 장면이 없어요.'),
+      avail.length?bondInviteGroups(avail,pid):h('p',{class:'mute',style:'margin:0;font-size:12.5px'},'지금 걸 수 있는 장면이 없어요.'),
       h('p',{class:'dim',style:'margin:0;font-size:12px'},'장면을 걸면 기력 1. 상대가 하루 안에 고르면 둘 다 효과를 받고 관계 기록에 같이 남아요.'),
       h('div',{class:'wrap'},
         h('button',{class:'sm',disabled:!same||null,title:same?'':'같은 칸에 있어야 해요',onclick:()=>bondDuoPick(pid)},same?'같이 괴이 마주치기 (기력 2)':'같이 괴이 마주치기 · 같은 칸에서'),
@@ -3615,12 +3616,13 @@ function raDraw(g,kind,p,night,haunt){const R=(x,y,w,h,c)=>{g.fillStyle=c;g.fill
   if(p&&p.roomNote){const N={red:[41,27],sam:[41,25],flat:[53,27],cage:[61,27]}[kind];R(N[0],N[1],6,7,'#F2EEDC');R(N[0]+1,N[1]+2,4,1,'#8A8070');R(N[0]+1,N[1]+4,3,1,'#8A8070');R(N[0]+2,N[1]-1,2,1,'#B0262A')}
   /* 물건 */
   const room=(p&&p.room)||[],slots=RA_SLOTS[kind];room.slice(0,6).forEach((k,i)=>{const[x,b]=slots[i];raSprite(g,k,x,b);if(night&&typeof ROOMFX!=='undefined'&&ROOMFX[k]){g.fillStyle='rgba(125,242,207,.35)';g.fillRect(x+4,b-12,2,1)}});
+  petDraw(g,kind,p);
   /* 밤에는 어둡고 등 아래만 밝다 */
   if(night){const[lx,ly]=RA_KIND[kind].lamp;const gr=g.createRadialGradient(lx,ly,2,lx,ly,62);gr.addColorStop(0,'rgba(255,200,120,.06)');gr.addColorStop(.3,'rgba(6,8,12,.35)');gr.addColorStop(1,'rgba(4,6,10,.84)');g.fillStyle=gr;g.fillRect(0,0,RA_W,RA_H)
   /* 섬망이나 증축 시간: 방 구석에 누가 서 있다 */
   if(haunt){const hx=kind==='sam'?32:kind==='flat'?78:kind==='red'?62:88,hy=kind==='cage'?18:16;g.fillStyle='rgba(0,0,0,.82)';g.fillRect(hx+2,hy,4,4);g.fillRect(hx,hy+4,8,14);g.fillRect(hx+1,hy+18,2,10);g.fillRect(hx+5,hy+18,2,10);g.fillStyle='#FF3D33';g.fillRect(hx+3,hy+1,1,1);g.fillRect(hx+5,hy+1,1,1)}}}
 function roomArt(p,isMe){const kind=raKind(p);const cv=document.createElement('canvas');cv.width=RA_W;cv.height=RA_H;cv.className='roomart';cv.setAttribute('role','img');
-  const names=((p&&p.room)||[]).map(k=>toyName(k));cv.setAttribute('aria-label',`${RA_KIND[kind].n} 방 그림${names.length?'. 놓인 물건: '+names.join(', '):''}`);
+  const names=((p&&p.room)||[]).map(k=>toyName(k));cv.setAttribute('aria-label',`${RA_KIND[kind].n} 방 그림${names.length?'. 놓인 물건: '+names.join(', '):''}${p&&p.pet?'. 함께 사는 '+(PET_KIND[p.pet.kind]||'동물')+': '+p.pet.name:''}`);
   const x=typeof hour==='function'?hour():12;const night=x>=19||x<6;const haunt=!!(isMe&&((typeof hasFx==='function'&&hasFx('delirium'))||(typeof isBuild==='function'&&isBuild())));
   try{raDraw(cv.getContext('2d'),kind,p,night,haunt)}catch(e){}
   return h('figure',{class:'roomfig'},cv,h('figcaption',null,`${p&&p.addr&&String(p.addr).includes(RA_KIND[kind].n.split(' ').pop())?'':RA_KIND[kind].n+' · '}${(p&&p.addr)||''}${night?' · 밤':''}`))}
@@ -5424,6 +5426,99 @@ if(typeof relPanel==='function'){const rp8=relPanel;relPanel=function(id,r){cons
   {l:'얘기를 걸다 잠든다',t:'{b}이(가) 이것저것 묻다가 말끝을 흐렸다. {a}은(는) 대답하다가 상대가 잠든 걸 알고 조용히 웃었다.',a:{mind:6},b:{mind:7,en:1}},
   {l:'증축 소리가 날 때까지 깨어 있는다',t:'둘 다 잠들지 못했다. 새벽 세 시, 망치 소리가 시작되자 {a}이(가) 문을 두 번 두드렸다. 「여기 있어요.」',a:{mind:3},b:{mind:5}}]}];
  for(const v of add)if(!INVITES.some(x=>x.id===v.id))INVITES.push(v)})();
+
+/* ---------- 방의 작은 식구: 캐릭터당 한 번의 입양 ---------- */
+const PET_RULE={chance:.06,limit:3,mind:5,en:1};
+const PET_KIND={cat:'고양이',dog:'강아지'};
+const PET_TEXT={
+cat:{find:'상자 안에서 작은 소리가 났다. 젖은 고양이 한 마리. 손을 내밀자 냄새를 맡는다. 뒤로 물러나지는 않는다.',
+adopt:'품에 안자 젖은 발이 소매를 붙잡았다. 방까지 오는 동안 울지 않았다. 내려놓으니 구석부터 살핀다. 한참 뒤 침대 끝에 올라앉았다. 내가 잘 자리를 조금 비워 두었다.',
+feed:'먹이를 조금 덜어 상자 앞에 놓았다. 내가 물러난 뒤에야 고개를 숙인다. 먹는 동안 귀만 이쪽을 향해 있다. 빈 그릇을 한 번 더 핥았다. 조금 더 두고 올 걸 그랬다.',
+leave:'몸을 일으켰다. 고양이는 상자 안으로 발을 거두었다. 몇 걸음 걷고 돌아보았다. 어둠 속에 눈 두 개가 그대로 있다.',
+pet:[
+'귀 뒤를 긁어 주었다. 고개가 손끝을 따라 기울어진다. 손을 떼자 앞발로 손목을 붙잡았다. 조금 더 앉아 있었다.',
+'등을 천천히 쓸었다. 손바닥 아래로 작은 진동이 전해진다. 복도의 물 떨어지는 소리와 박자가 맞는다. 어느 쪽을 듣고 있었는지 잊었다.',
+'턱 아래를 내밀기에 손가락을 댔다. 눈이 가늘어진다. 평소에는 불러도 오지 않으면서 이럴 때는 몸을 맡긴다.',
+'무릎 위에 올라와 둥글게 앉았다. 털을 쓰다듬자 발끝이 한 번 펴졌다. 일어나야 할 일이 있었던 것 같다. 잠깐은 생각나지 않는다.',
+'이마에 붙은 먼지를 떼어 주었다. 고양이가 손바닥에 얼굴을 문지른다. 깨끗해진 자리로 다시 손을 밀어 넣는다. 먼지는 이미 없는데.',
+'자는 줄 알고 조심스럽게 등을 만졌다. 꼬리 끝만 천천히 움직인다. 손을 멈추니 꼬리도 멈췄다. 다시 쓰다듬었다.'],
+play:[
+'천 끈을 바닥에 끌었다. 엉덩이를 두어 번 흔들더니 덮친다. 끈 대신 내 소매를 잡았다. 놓으라고 하니 더 꼭 붙든다.',
+'종이를 구겨 굴렸다. 침대 밑으로 따라 들어가더니 반대편에서 얼굴을 내민다. 종이공은 두고 나왔다. 결국 내가 주우러 엎드렸다.',
+'손수건 아래로 손가락을 움직였다. 가만히 보던 앞발이 정확히 내려온다. 발톱은 세우지 않았다. 몇 번쯤 잡혀 주었다.',
+'빈 상자를 옆으로 눕혔다. 들어갔다 나왔다 하더니 안에서 앞발만 내민다. 입구에 끈을 흔들었다. 작은 발이 바빠졌다.',
+'천 조각을 높이 들었다. 앞발 두 개로 붙잡으려다 짧게 뛰었다. 착지하고는 아무 일도 없었다는 듯 발을 핥는다. 다시 흔드니 또 뛴다.',
+'나무 실패를 굴렸다. 발로 건드릴 때마다 방향이 바뀐다. 내 쪽으로 돌아온 것을 다시 밀어 주었다. 방 한가운데서 작은 소리가 오래 오갔다.']},
+dog:{find:'계단 아래에서 작은 발소리가 났다. 길 잃은 강아지 한 마리. 젖은 코를 들고 이쪽을 본다. 목줄이 있던 자리에 털만 눌려 있다.',
+adopt:'데려가려고 몸을 숙이자 먼저 무릎에 앞발을 올렸다. 품 안에서 작은 심장이 빠르게 뛴다. 방에 내려놓고 문을 닫았다. 꼬리가 바닥을 두드린다. 문밖의 발소리에는 관심이 없다.',
+feed:'먹이를 내려놓자 코부터 들이민다. 급하게 먹다가 재채기를 했다. 다 먹고도 한동안 손바닥을 핥는다. 빈손을 보여 주었는데 꼬리는 계속 흔들린다.',
+leave:'돌아서자 작은 발소리가 따라왔다. 계단 앞에서 멈춰 서서 손을 저었다. 강아지도 멈췄다. 모퉁이를 돌 때까지 발소리는 다시 들리지 않았다.',
+pet:[
+'머리에 손을 얹었다. 기다렸다는 듯 몸을 붙여 온다. 작은 몸에서 따뜻한 냄새가 난다. 굳어 있던 어깨가 조금 내려갔다.',
+'턱 아래를 긁어 주자 눈을 감았다. 꼬리는 멈추지 않는다. 바닥을 두드리는 소리가 좁은 방을 채운다.',
+'옆구리를 쓸어 주었더니 발라당 누웠다. 배를 내놓고 이쪽을 본다. 문 잠긴 걸 확인하고 옆에 앉았다. 한동안 아무 일도 없었다.',
+'귀를 천천히 만져 주었다. 손바닥에 고개가 무겁게 기댄다. 졸린 모양이다. 받치고 있던 손을 조금 편하게 바꾸었다.',
+'바지에 붙은 털을 떼고 있는데 머리가 끼어들었다. 손 아래로 정확히 들어온다. 털 떼는 건 포기하고 등을 쓸었다.',
+'등을 쓰다듬다가 손을 멈췄다. 젖은 코가 손등을 밀었다. 한 번 더. 결국 다시 쓰다듬었다. 강아지가 길게 숨을 내쉰다.'],
+play:[
+'천 조각을 흔들자 앞다리를 낮췄다. 던지기도 전에 달려갈 준비를 한다. 문 쪽으로 던졌더니 물고 돌아왔다. 내려놓지는 않는다.',
+'헝겊 공을 굴렸다. 급하게 쫓아가다가 발이 한 번 미끄러졌다. 아무렇지 않게 공을 물고 온다. 모른 척 다시 굴렸다.',
+'낡은 수건 양끝을 나눠 잡았다. 작은 몸이 제법 힘껏 당긴다. 슬쩍 놓아 주자 수건을 끌고 방을 한 바퀴 돌았다. 이긴 모양이다.',
+'빈손을 등 뒤로 숨겼다. 왼쪽으로 갔다가 오른쪽으로 온다. 아무것도 없다는 걸 보여 주니 손가락을 핥았다. 그래도 재미있었던 것 같다.',
+'침대 옆에 쪼그려 앉아 이름을 불렀다. 두 걸음도 안 되는 거리를 뛰어온다. 반대편으로 옮겨 다시 불렀다. 매번 처음 듣는 것처럼 달려온다.',
+'손바닥을 내밀자 앞발이 올라왔다. 한 번 더 내미니 이번에는 두 개가 올라온다. 중심을 잃고 품으로 기울었다. 받아 안은 채 잠깐 웃었다.']}};
+// 기존 방의 1칸=1도트 규칙. 외부 이미지 없이 같은 캔버스에 그린다.
+const PET_SPR={cat:{c:{k:'#202422',g:'#646961',s:'#92958a',e:'#C9A84A'},p:[
+'..k....k....','..gk..kg....','..gggggg....','.kggggggk...','.kgeggegk...','..ggsggg....','...ggggk..k.','..kggggg..g.','..ggsggg..g.','..ggsggg.gg.','..gkkggggg..','..ss.sss....']},
+dog:{c:{k:'#30291e',b:'#886b43',t:'#B59A6A',w:'#D8D0B8'},p:[
+'...bbbbb.....','..bbtwwbb....','.bbttwwtbb...','.bbktwwkbb...','.bbtwwwtbb...','..btwkwtb....','...twwwt..b..','..ttwwwtb.b..','..ttwwwttbb..','..ttwwtttb...','..tbbbtbb....','..ww..www....']}};
+function petDraw(g,kind,p){if(!p||!p.pet||!PET_SPR[p.pet.kind])return;const S=PET_SPR[p.pet.kind],x={red:84,sam:87,flat:82,cage:43}[kind]||84,y=(kind==='cage'?64:62)-S.p.length;
+ S.p.forEach((row,j)=>[...row].forEach((ch,i)=>{if(S.c[ch]){g.fillStyle=S.c[ch];g.fillRect(x+i,y+j,1,1)}}))}
+function petValidEncounter(m,e){return G.me===m&&m.petEncounter===e&&!m.pet&&!m.petAdopted&&!!PET_KIND[e&&e.kind]}
+function petEncounterScene(){const m=G.me,e=m&&m.petEncounter;if(!m||!e)return;if(m.pet||m.petAdopted){delete m.petEncounter;save();return}if(!PET_KIND[e.kind]){delete m.petEncounter;save();return}
+ openScene({id:'pet_found',title:'길 잃은 '+PET_KIND[e.kind],text:PET_TEXT[e.kind].find,choices:[
+ {l:'입양하기',run:()=>{if(petValidEncounter(m,e))petNameForm(e)}},
+ {l:'먹이 주기',run:()=>petFinishEncounter(m,e,'feed')},
+ {l:'떠나기',run:()=>petFinishEncounter(m,e,'leave')} ]})}
+function petFinishEncounter(m,e,action){if(!petValidEncounter(m,e))return;delete m.petEncounter;const text=PET_TEXT[e.kind][action];log(text,'life');done('길 잃은 '+PET_KIND[e.kind],text,[])}
+function petCleanName(v){return String(v||'').normalize('NFC').trim().replace(/\s+/g,' ')}
+function petNameForm(encounter){const m=G.me,p=m&&m.pet,adopting=!!encounter;if(!m||adopting&&!petValidEncounter(m,encounter)||!adopting&&!p)return;
+ const input=h('input',{id:'petName',type:'text',maxlength:24,placeholder:'이름 1~12자',value:adopting?'':p.name,'aria-label':'반려동물 이름',autocomplete:'off'});
+ const err=h('p',{class:'mute',role:'alert',style:'margin:0;color:var(--bad)'});
+ const form=h('form',{class:'stack',onsubmit:e=>{e.preventDefault();const name=petCleanName(input.value);
+   if(!name||[...name].length>12||/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f<>]/.test(name)){err.textContent='이름은 1~12자. 보이지 않는 문자와 < >는 쓸 수 없다.';return}
+   if(G.me!==m||adopting&&!petValidEncounter(m,encounter)||!adopting&&m.pet!==p){closeModal();return toast('지금의 식구를 다시 확인해야 한다.')}
+   if(adopting){m.pet={kind:encounter.kind,name,adoptedAt:T()};m.petAdopted=true;delete m.petEncounter;m.cell=homeCell(m);closeModal();log(`${PET_KIND[m.pet.kind]}에게 「${name}」이라는 이름을 지어 주었다.`,'life');done('새 식구',PET_TEXT[m.pet.kind].adopt+`\n\n「${name}」. 앞으로는 이렇게 부르기로 했다.`,['함께 집으로 돌아왔다.'])}
+   else{p.name=name;save();closeModal();openRoom();render();toast(`「${name}」. 새 이름을 불러 보았다.`)}
+ }},h('h2',{class:'disp',style:'font-size:22px'},adopting?'새 식구의 이름':'이름 바꾸기'),
+ h('p',{class:'mute',style:'margin:0'},adopting?'함께 살 식구는 한 마리. 한 번 데려오면 다른 동물로 바꿀 수 없다. 이름은 나중에도 바꿀 수 있다.':'조용히 이름을 불러 보았다. 귀가 이쪽을 향한다.'),input,err,
+ h('div',{class:'wrap'},h('button',{type:'button',class:'ghost',onclick:()=>{closeModal();if(!adopting&&G.me===m)openRoom()}},'돌아가기'),h('button',{type:'submit',class:'pri'},adopting?'이 이름으로 데려오기':'이 이름으로 부르기')));
+ openModal(form);input.focus()}
+function petCounts(m){const d=m.petCare;return d&&d.day===dayIdx(T())?d:{day:dayIdx(T()),pet:0,play:0}}
+function petInteract(action,owner){const m=G.me;if(!m||m!==owner||!m.pet||!['pet','play'].includes(action))return;
+ if(m.cell!==homeCell(m))return toast('방으로 돌아가야 한다.');if(m.work)return toast('일을 마치고 돌아가야 한다.');if(m.nap)return toast('아직 잠들어 있다.');if(scene)return toast('지금 마주한 일부터 마무리해야 한다.');
+ const p=m.pet,lines=PET_TEXT[p.kind][action],counts=petCounts(m),key=action==='pet'?'mind':'en',cap=key==='mind'?100:EN_MAX,amount=key==='mind'?PET_RULE.mind:PET_RULE.en;
+ let gain=0;if((counts[action]||0)<PET_RULE.limit){gain=Math.max(0,Math.min(amount,cap-m[key]));if(gain>0){give({[key]:gain});counts[action]=(counts[action]||0)+1;m.petCare=counts}}
+ p.last=p.last||{};const options=lines.map((_,i)=>i).filter(i=>i!==p.last[action]);const index=pick(options);p.last[action]=index;
+ const out=[gain?`${key==='mind'?'정신':'기력'} +${gain}`:(counts[action]||0)>=PET_RULE.limit?'오늘의 회복은 끝났다. 곁에 있는 시간은 남아 있다.':'이미 충분히 쉬었다. 회복 횟수는 그대로다.'];
+ log(`「${p.name}」${action==='pet'?'의 등을 쓰다듬었다.':'와 한동안 놀았다.'}`,'life');closeModal();done(`${p.name} · ${action==='pet'?'쓰다듬기':'놀아 주기'}`,lines[index],out)}
+function petPanel(p,isMe){if(!p||!p.pet||!PET_KIND[p.pet.kind])return null;const pet=p.pet,c=isMe?petCounts(p):null,away=isMe&&(p.cell!==homeCell(p)||!!p.work||!!p.nap);
+ return h('div',{class:'stack pet-panel',style:'gap:8px;border-top:1px solid var(--line);padding-top:10px'},
+ h('div',{class:'row'},h('b',null,pet.name),h('span',{class:'tag'},PET_KIND[pet.kind])),
+ h('p',{class:'mute',style:'margin:0;font-size:13px'},pet.kind==='cat'?'익숙한 자리에 몸을 말고 있다. 인기척에 귀가 움직인다.':'방문을 보다가 고개를 기울인다. 꼬리가 바닥을 두드린다.'),
+ isMe?h('div',{class:'wrap'},h('button',{class:'sm',disabled:away,onclick:()=>petInteract('pet',p)},'쓰다듬기'),h('button',{class:'sm',disabled:away,onclick:()=>petInteract('play',p)},'놀아 주기'),h('button',{class:'sm ghost',onclick:()=>{if(G.me===p)petNameForm()}},'이름 바꾸기')):null,
+ isMe?h('p',{class:'dim',style:'margin:0;font-size:12px'},away?'자기 방에서 깨어 있고, 일을 쉬는 동안 함께할 수 있다.':`쓰다듬기 · 정신 +${PET_RULE.mind} (${Math.max(0,PET_RULE.limit-(c.pet||0))}회 남음) / 놀아 주기 · 기력 +${PET_RULE.en} (${Math.max(0,PET_RULE.limit-(c.play||0))}회 남음). 회복은 각각 하루 ${PET_RULE.limit}번. 그 뒤에도 함께할 수 있다.`):null)}
+if(!SHEETK.includes('pet'))SHEETK.push('pet');
+{const old=personFromRow;personFromRow=function(r){const p=old.apply(this,arguments);p.pet=r.sheet&&r.sheet.pet||null;return p}}
+{const old=openRoom;openRoom=function(){const r=old.apply(this,arguments),st=document.querySelector('#modalRoot .stack'),panel=petPanel(G.me,true);if(st&&panel){const fig=st.querySelector('.roomfig');if(fig)fig.after(panel);else st.append(panel)}return r}}
+{const old=roomEl;roomEl=function(p,isMe,id){let el=old.apply(this,arguments);const panel=petPanel(p,isMe);if(panel){if(!el)el=h('div',{class:'stack'},h('span',{class:'lbl'},'방'),roomArt(p,isMe));el.append(panel)}return el}}
+/* 함께하기: 조건과 보상은 기존대로, 표시만 분류한다. */
+function bondInviteGroups(avail,pid){const categories=[['지금 필요한 돌봄',['mend']],['일상 · 쉬기',['cig','noodle','tea2','roof','mahjong2']],['다정하게',['umb','radio','stairs','coat','mirror']],['깊은 이야기',['secret','letter','sleep']],['짓궂게 · 위험하게',['dare']]];
+ const known=new Set(categories.flatMap(x=>x[1]));const rest=avail.filter(v=>!known.has(v.id));if(rest.length)categories.push(['다른 장면',rest.map(v=>v.id)]);
+ return h('div',{class:'stack',style:'gap:12px'},categories.map(([label,ids])=>{const vs=avail.filter(v=>ids.includes(v.id));if(!vs.length)return null;
+ const buttons=h('div',{class:'wrap',style:'gap:6px'},vs.map(v=>h('button',{class:'sm',style:v.id==='mend'?'border-color:var(--bad);color:var(--bad)':'',onclick:()=>bondInvite(pid,v)},v.label)));
+ if(label==='짓궂게 · 위험하게')return h('details',null,h('summary',{style:'cursor:pointer;color:var(--bad)'},`${label} · ${vs.length}개`),buttons);
+ return h('div',{class:'stack',style:'gap:6px'},h('span',{class:'dim',style:'font-size:12.5px'},label),buttons)}))}
 
 /* ---------- 시작 ---------- */
 async function boot(){
