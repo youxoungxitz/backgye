@@ -5162,6 +5162,92 @@ function bailPatch(pid,el){try{const mine=BONDS.find(y=>y.kind==='bail'&&y.from_
   if(mine&&el){const btn=[...el.querySelectorAll('button')].find(b=>b.textContent.includes('빚 보증 서기'));if(btn){btn.replaceWith(h('div',{class:'wrap',style:'gap:6px;align-items:center'},h('span',{class:'tag'},mine.status==='done'?'보증 서는 중':'대답 기다리는 중'),h('button',{class:'sm ghost',onclick:()=>bailWithdraw(pid)},'보증 거두기')))}}}catch(e){}}
 if(typeof bondSection==='function'){const bs0=bondSection;bondSection=function(pid){const el=bs0.apply(this,arguments);try{bailPatch(pid,el);const d=BOND_REDRAW;if(typeof d==='function'){BOND_REDRAW=function(){const r=d.apply(this,arguments);bailPatch(pid,el);return r}}}catch(e){}return el}}
 
+/* ---------- 칭호: 한 일이 이름 옆에 남는다 ---------- */
+const TTL_CAT={gamble:'도박',money:'돈',haunt:'괴담',mmd:'무명동',life:'생활',rel:'관계',gate:'귀문',hidden:'숨은 칭호'};
+const TTL=[
+ ['gambler','도박광','gamble','마작 30판',m=>tc(m).mj>=30],
+ ['reader','패를 읽는 자','gamble','마작 5연승',m=>tc(m).mjBest>=5],
+ ['fleeced','털린 사람','gamble','마작으로 하루에 $100 잃기',m=>tc(m).mjLossMax>=100],
+ ['debtor','빚쟁이','money','빚 $1000 넘기기',m=>(m.debt||0)>=1000||tc(m).debtMax>=1000],
+ ['cleared','장부에서 지워진 이름','money','빚 다 갚기',m=>tc(m).hadDebt&&!(m.debt>0)],
+ ['payer','수금함 단골','money','빚 갚기 20번',m=>tc(m).pay>=20],
+ ['rulebreaker','수칙 위반자','haunt','수칙 5번 어기기',m=>tc(m).rules>=5],
+ ['collector','도감 수집가','haunt','괴담 도감 30장',m=>Object.keys(m.dex||{}).length>=30],
+ ['table4','4번 테이블 손님','haunt','국숫집 4번 자리에 5번 앉기',m=>tc(m).seat4>=5],
+ ['answered','대답한 사람','haunt','문패 없는 집에 대꾸하기',m=>!!tc(m).answered],
+ ['mmdreg','무명동 단골','mmd','무명동 둘러보기 50번',m=>tc(m).mmd>=50],
+ ['lost','길 잃은 사람','mmd','무명동에서 길 잃기 10번',m=>tc(m).lost>=10],
+ ['outline','윤곽에 맞는 사람','mmd','바닥의 설계도에 누워 보기',m=>!!tc(m).outline],
+ ['nailless','손톱 없는 손','mmd','손톱 없음 3번',m=>tc(m).nails>=3],
+ ['worker','성실한 일꾼','life','생업 30번 마치기',m=>tc(m).work>=30],
+ ['lazy','게으른','life','몰래 졸기 10번, 안 들키기',m=>tc(m).dozeOk>=10],
+ ['recorder','기록자','life','일기 30장',m=>(m.diaryN||0)>=30],
+ ['decorator','방구석 장인','life','벽지·바닥·전구 다 바꿔 보기',m=>{const d=tc(m).deco||{};return!!(d.w&&d.f&&d.l)}],
+ ['busybody','오지랖','rel','같은 칸에서 청하기 30번',m=>tc(m).act>=30],
+ ['deep','깊은 사이','rel','깊은 사이 한 명 이상',m=>typeof stageOf==='function'&&Object.values(G.rel||{}).some(r=>r&&r.friend&&stageOf(r)>=3)],
+ ['guarantor','보증인','rel','빚 보증 서 주기',m=>typeof BONDS!=='undefined'&&BONDS.some(x=>x.kind==='bail'&&x.from_char===m.id&&x.status==='done')],
+ ['beyond','문 너머를 본 사람','gate','귀문이 열린 밤, 붉은 문 마주하기',m=>!!(m.dex||{})['x:gate']],
+ ['lampkeeper','등불지기','gate','귀문 등불 얻기',m=>!!tc(m).lantern||(m.items&&m.items.lantern>0)||(m.room||[]).includes('lantern')],
+ ['ninety9','아흔아홉 번째','hidden','아흔아홉 번째 문을 세 번 만나기',m=>tc(m).door99>=3],
+ ['shadow2','두 번째 그림자','hidden','그림자가 둘이 되어 보기',m=>tc(m).twin>=1],
+ ['nameless','이름 없는 사람','hidden','이름이 세 번 흐려지기',m=>tc(m).blur>=3]];
+const ttlOf=id=>TTL.find(t=>t[0]===id);
+function tc(m){m=m||G.me;m.tc=m.tc||{};return m.tc}
+function tcAdd(k,n){const m=G.me;if(!m)return;const c=tc(m);c[k]=(c[k]||0)+(n||1)}
+var TTL_NEW=[];
+function titleCheck(){const m=G.me;if(!m)return;m.titles=m.titles||{};const c=tc(m);if(m.debt>0){c.hadDebt=1;c.debtMax=Math.max(c.debtMax||0,m.debt)}let got=false;
+  for(const t of TTL){if(m.titles[t[0]])continue;let ok=false;try{ok=t[4](m)}catch(e){}if(ok){m.titles[t[0]]=Date.now();got=true;
+    log(`칭호를 얻었다: 「${t[1]}」`,'life');setTimeout(()=>toast(`칭호를 얻었어요 · 「${t[1]}」`),400);try{sfx('pager')}catch(e){}}}
+  if(got){save();try{renderLeft()}catch(e){}}}
+function ttlEl(id,small){const t=ttlOf(id);if(!t)return null;return h('span',{class:'ttl',style:`font-size:${small?10.5:11.5}px;color:var(--amber);margin-left:5px;font-weight:600;white-space:nowrap`},`「${t[1]}」`)}
+function titleSet(id){const m=G.me;m.title=id||'';save();closeModal();openTitles();render();toast(id?`「${ttlOf(id)[1]}」을(를) 달았어요.`:'칭호를 뗐어요.')}
+function openTitles(){const m=G.me;m.titles=m.titles||{};const own=TTL.filter(t=>m.titles[t[0]]);
+  const groups=Object.keys(TTL_CAT).map(cat=>{const list=TTL.filter(t=>t[2]===cat);return h('div',{class:'stack',style:'gap:4px'},h('span',{class:'lbl'},TTL_CAT[cat]),
+    ...list.map(t=>{const has=!!m.titles[t[0]],on=m.title===t[0];const hid=cat==='hidden'&&!has;
+      return h('div',{class:'row',style:'gap:8px;padding:4px 0;border-bottom:1px dashed var(--line)'},h('div',{style:'min-width:0'},h('b',{style:`font-size:13.5px;${has?'':'color:var(--dim)'}`},hid?'???':`「${t[1]}」`),h('div',{class:'dim',style:'font-size:11.5px'},has?t[3]:'???')),
+        has?h('button',{class:'sm'+(on?' pri':''),style:'flex:none',onclick:()=>titleSet(on?'':t[0])},on?'떼기':'달기'):null)}))});
+  openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'칭호'),h('button',{class:'ghost',onclick:closeModal},'닫기')),
+    h('p',{class:'mute',style:'margin:0;font-size:13px'},`얻은 칭호 ${own.length} / ${TTL.length} · 단 칭호는 이름 옆에 보여요. 사람 목록, 프로필, 무전에서 다른 사람도 볼 수 있어요.`),
+    m.title?h('p',{style:'margin:0;font-size:13px'},'지금 단 칭호',ttlEl(m.title)):null,...groups,
+    h('p',{class:'dim',style:'margin:0;font-size:11.5px'},'귀문 칭호는 귀문이 열리는 밤에만 얻을 수 있어요. 숨은 칭호는 얻기 전까지 이름도 보이지 않아요.')))}
+/* 행동 세기: 일지 문구를 보고 센다 */
+{const lg9=log;log=function(text,k){const r=lg9.apply(this,arguments);try{const t=String(text||''),m=G.me;if(m&&!/^칭호를 얻었다/.test(t)){const c=tc(m);let x;
+  if(x=t.match(/^마작에서 \$(\d+)을 땄다/)){c.mj=(c.mj||0)+1;c.mjRun=(c.mjRun||0)+1;c.mjBest=Math.max(c.mjBest||0,c.mjRun)}
+  else if(x=t.match(/^마작에서 \$(\d+)을 잃었다/)){c.mj=(c.mj||0)+1;c.mjRun=0;const d=dayIdx(T());if(c.mjDay!==d){c.mjDay=d;c.mjLoss=0}c.mjLoss+=+x[1];c.mjLossMax=Math.max(c.mjLossMax||0,c.mjLoss)}
+  else if(/^마작에서 백\(白\) 패/.test(t)){c.mj=(c.mj||0)+1;c.mjRun=0}
+  if(/수칙 \d+번을 어겼다/.test(t))c.rules=(c.rules||0)+1;
+  if(/^빚 \$\d+을 갚았다/.test(t))c.pay=(c.pay||0)+1;
+  if(/문패 없는 집에 대꾸했다/.test(t))c.answered=1;
+  if(/에게 청했다\./.test(t))c.act=(c.act||0)+1;
+  if(/^무명동을 둘러보았다/.test(t)||/^무명동 · /.test(t))c.mmd=(c.mmd||0)+1;
+  if(/^무명동 · 바닥의 설계도: 딱 맞았다/.test(t))c.outline=1;
+  if(/^무명동 · 아흔아홉 번째 문/.test(t))c.door99=(c.door99||0)+1;
+  setTimeout(titleCheck,50)}}catch(e){}return r}}
+if(typeof toast==='function'){const ts9=toast;toast=function(msg){try{if(/^길을 잃었다/.test(String(msg||'')))tcAdd('lost')}catch(e){}return ts9.apply(this,arguments)}}
+if(typeof fxGain==='function'){const fg9=fxGain;fxGain=function(id){const had=typeof hasFx==='function'&&hasFx(id);const r=fg9.apply(this,arguments);try{if(!had&&hasFx(id)){if(id==='nails')tcAdd('nails');if(id==='twin')tcAdd('twin');if(id==='blur')tcAdd('blur')}}catch(e){}return r}}
+if(typeof hauntRoll==='function'){const hr9=hauntRoll;hauntRoll=function(id){try{if(id==='noodle')tcAdd('seat4')}catch(e){}return hr9.apply(this,arguments)}}
+if(typeof finishWork==='function'){const fw9=finishWork;finishWork=function(){const w=G.me&&G.me.work;const r=fw9.apply(this,arguments);try{if(w&&!(G.me&&G.me.work))tcAdd('work')}catch(e){}return r}}
+if(typeof doze==='function'){const dz9=doze;doze=function(){const n0=G.me?daily().nap||0:0;const r=dz9.apply(this,arguments);try{if(G.me&&(daily().nap||0)>n0&&!String((G.log[0]||{}).text||'').includes('들켰다'))tcAdd('dozeOk')}catch(e){}return r}}
+if(typeof decoSet==='function'){const ds9=decoSet;decoSet=function(k,v){try{if(v){const c=tc();c.deco=c.deco||{};c.deco[k]=1}}catch(e){}return ds9.apply(this,arguments)}}
+{const gv9=give;give=function(rw){const r=gv9.apply(this,arguments);try{if(rw&&rw.item==='lantern'&&G.me)tc().lantern=1}catch(e){}return r}}
+setInterval(()=>{try{if(G.me&&!document.hidden)titleCheck()}catch(e){}},8000);
+/* 다른 사람에게도 보이게 */
+if(typeof SHEETK!=='undefined'&&!SHEETK.includes('title'))SHEETK.push('title');
+if(typeof personFromRow==='function'){const pf8=personFromRow;personFromRow=function(r){const p=pf8.apply(this,arguments);try{const s=(r&&r.sheet)||{};p.title=typeof s.title==='string'?s.title:''}catch(e){}return p}}
+function ttlByName(name){name=String(name||'').trim();if(G.me&&G.me.name===name)return G.me.title;for(const id of SAMPLE_IDS){const s=SAMPLES[id];if(s&&s.name===name)return s.title}return''}
+/* 같은 칸 사람 목록 */
+if(typeof renderPeople==='function'){const rp9=renderPeople;renderPeople=function(){const r=rp9.apply(this,arguments);try{document.querySelectorAll('#peopleCard .person b').forEach(b=>{if(b.parentElement.querySelector('.ttl'))return;const id=ttlByName(b.textContent);const el=id&&ttlEl(id,true);if(el)b.after(el)})}catch(e){}return r}}
+/* 무전 */
+if(typeof renderChat==='function'){const rc9=renderChat;renderChat=function(){const r=rc9.apply(this,arguments);try{document.querySelectorAll('#chatCard .msg .who').forEach(w=>{if(w.querySelector('.ttl'))return;const nm=[...w.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim();const id=ttlByName(nm);const el=id&&ttlEl(id,true);if(el)w.append(el)})}catch(e){}return r}}
+/* 프로필: 이름 옆 칭호, 내 프로필엔 칭호 수첩 */
+{const os11=openSheet;openSheet=function(id){const r=os11.apply(this,arguments);try{const sh=document.querySelector('#modalRoot .sheet')||document.querySelector('#modalRoot .stack');if(sh){const p=id==='me'?G.me:SAMPLES[id];const nmEl=[...sh.querySelectorAll('.disp')].find(e=>p&&e.textContent.trim().startsWith(p.name));
+  if(p&&p.title&&nmEl&&!sh.querySelector('.ttlhd')){const t=ttlEl(p.title);if(t){t.classList.add('ttlhd');nmEl.after(t)}}
+  if(id==='me'&&G.me&&!sh.querySelector('.ttlbox')){G.me.titles=G.me.titles||{};const n=Object.keys(G.me.titles).length;const box=h('div',{class:'row ttlbox talkbox',style:'gap:8px'},h('span',{class:'lbl'},`칭호 ${n} / ${TTL.length}`),h('button',{class:'sm',onclick:()=>{closeModal();openTitles()}},G.me.title?'칭호 바꾸기':'칭호 달기'));const dl=sh.querySelector('dl');if(dl)dl.after(box);else sh.append(box)}}}catch(e){}return r}}
+/* 「나」 칸 이름 옆 */
+{const rl9=renderLeft;renderLeft=function(){const r=rl9.apply(this,arguments);try{const m=G.me;const L=$('left');if(m&&L&&m.title&&!L.querySelector('.ttlme')){const nm=L.querySelector('.disp');if(nm){const t=ttlEl(m.title,true);t.classList.add('ttlme');t.style.cursor='pointer';t.onclick=openTitles;nm.parentElement.after(t)}}}catch(e){}return r}}
+/* 삐삐함 알림 */
+if(typeof inboxItems==='function'){const ib9=inboxItems;inboxItems=function(){const out=ib9.apply(this,arguments);try{const m=G.me;if(!m||!m.titles)return out;m.ttlSeen=m.ttlSeen||{};for(const[id,t]of Object.entries(m.titles)){const d=ttlOf(id);if(!d||Date.now()-t>7*86400e3)continue;out.push({k:'칭호',t,title:`칭호를 얻었어요 · 「${d[1]}」`,body:d[3],unread:!m.ttlSeen[id],go:()=>{m.ttlSeen[id]=1;save();closeModal();openTitles()}})}out.sort((a,b)=>b.t-a.t)}catch(e){}return out};if(typeof INBOX_C!=='undefined')INBOX_C['칭호']='var(--amber,#FFC247)'}
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
