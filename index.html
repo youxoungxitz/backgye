@@ -1525,7 +1525,8 @@ function doQuest(q){if(!ready())return;const m=G.me;if(m.qdone[q.key])return;if(
 
 /* ---------- 세력 ---------- */
 const RANKN={guest:'객',lamp:'등잡이',hong:'홍봉',white:'백선',head:'향주',rookie:'신참',leader:'조장',captain:'대장'};
-const REPN=r=>r>=150?'이름난 사람':r>=80?'믿을 만한 사람':r>=30?'아는 얼굴':'낯선 얼굴';
+const REP_LEVELS=[[0,'낯선 얼굴'],[50,'눈에 익은 얼굴'],[150,'이름이 오가는 사람'],[300,'제법 알려진 사람'],[500,'이름난 사람'],[800,'소문이 따라붙는 사람'],[1200,'성채에 이름을 새긴 사람'],[1800,'모르는 이가 드문 사람'],[2500,'성채의 산증인']];
+const REPN=r=>REP_LEVELS.reduce((n,v)=>r>=v[0]?v[1]:n,REP_LEVELS[0][1]);
 function rankLabel(m){if(m.fugitive)return'무소속(도망자)';if(m.fac==='free')return'무소속 · '+REPN(m.rep||0);return FACS[m.fac]+' · '+RANKN[m.rank]}
 function promote(){const m=G.me;
   if(m.fac==='red'&&m.rank==='guest'){if(m.merit>=50&&m.debt<=m.debt0/2){m.rank='lamp';log('등잡이가 되었다. 붉은 등 하나를 받았다.','fac');done('승진','향주가 붉은 등 하나를 건넨다. 「이제 우리 사람이다. 그 말이 무슨 뜻인지는 알지?」',['적등방 · 등잡이'])}else toast('공적 50, 그리고 처음 빚의 절반 이상을 갚아야 해요.')}
@@ -1573,8 +1574,10 @@ function nightRoom(keep){const m=G.me,nz=nightZone(),i=m.nz.i;const R=ROOMS[nz.r
     result={title:'이전 방',text:res[0],lines:out,bad:!ok};nightRoom(true)}}))},keep)}
 
 /* ---------- 관계 ---------- */
-const STAGES=['스친 사이','아는 사이','가까운 사이','깊은 사이'];
-const stageOf=r=>!r||!r.friend?0:r.scenes>=12?3:r.scenes>=5?2:1;
+const STAGES=['낯선 사람','안면 있는 사이','익숙한 사이','가까운 사이','마음을 연 사이','깊은 사이','서로에게 특별한 사이','삶에 스며든 사이'];
+const REL_THRESHOLDS=[0,2,6,10,18,24,40,70];
+const relPoints=r=>Math.max(0,Number(r&&r.points!=null?r.points:2*(r&&r.scenes||0))||0);
+const stageOf=r=>!r||!r.friend?0:REL_THRESHOLDS.reduce((n,v,i)=>relPoints(r)>=v?i:n,0);
 function relOf(id){return G.rel[id]=G.rel[id]||{friend:false,req:false,scenes:0,neg:0,name:'',cd:{},log:[],pin:[]}}
 const SCENES=[
  {id:'cig',st:1,rest:true,t:['{a}이(가) {b}에게 마지막 담배를 반으로 잘라 건넸다.','{a}이(가) 불 붙은 담배를 {b}의 입에 물려 주었다. 둘 다 말이 없었다.'],rw:{mind:4}},
@@ -1740,11 +1743,11 @@ function relPanel(id,r){const st=stageOf(r);const m=G.me;
   const ft=h('input',{id:'freeScene',maxlength:120,placeholder:'한 줄 장면 직접 쓰기 (효과 없음)'});
   return h('div',{class:'stack'},
     h('div',{class:'row'},h('span',{class:'lbl'},'관계'),h('span',{class:'wrap'},h('span',{class:'tag'},STAGES[st]),r.name?h('span',{class:'tag red'},r.name):null)),
-    h('p',{class:'mute',style:'margin:0;font-size:12.5px'},`함께한 장면 ${r.scenes}회 · 가까운 사이 5회, 깊은 사이 12회`),
+    h('p',{class:'mute',style:'margin:0;font-size:12.5px'},`관계 포인트 ${relPoints(r)} · 함께한 장면 ${r.scenes}회`),
     h('span',{class:'lbl'},'둘만의 장면 · 기력 1 · 「쉬기」는 오히려 기력 +1 (하루 4번)'),
     avail.length?h('div',{class:'wrap'},avail.map(sc=>h('button',{class:'sm'+(sc.neg?'':''),style:sc.neg?'border-color:var(--bad);color:var(--bad)':'',onclick:()=>{closeModal();doScene(id,sc)}},sceneLabel(sc),sc.rest?' · 쉬기':''))):h('p',{class:'mute',style:'margin:0;font-size:13px'},'지금 여기서 할 수 있는 장면이 없어요.'),
     locked?h('p',{class:'dim',style:'margin:0;font-size:12px'},`장소·시간·날씨·상태가 맞으면 열리는 장면 ${locked}개가 더 있어요.`):null,
-    st>=2&&!r.name?h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},'관계의 이름 제안'),h('div',{class:'wrap'},nameOpts.map(n=>h('button',{class:'sm',onclick:()=>nameRel(id,n)},n))),h('div',{class:'composer'},custom,h('button',{class:'sm',onclick:()=>{if(custom.value.trim())nameRel(id,custom.value.trim())}},'제안'))):null,
+    st>=3&&!r.name?h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},'관계의 이름 제안'),h('div',{class:'wrap'},nameOpts.map(n=>h('button',{class:'sm',onclick:()=>nameRel(id,n)},n))),h('div',{class:'composer'},custom,h('button',{class:'sm',onclick:()=>{if(custom.value.trim())nameRel(id,custom.value.trim())}},'제안'))):null,
     r.enemyAsked&&r.name!=='악연'?h('button',{class:'sm',style:'border-color:var(--bad);color:var(--bad)',onclick:()=>nameRel(id,'악연')},'악연을 받아들인다'):null,
     h('div',{class:'composer'},ft,h('button',{class:'sm',onclick:()=>{freeScene(id,ft.value);ft.value=''}},'남기기')),
     r.log.length?h('div',{class:'feed'},r.log.slice(0,12).map(l=>h('div',{class:'it'},h('span',{class:'k'},mdhm(l.t)),h('span',null,l.text)))):null)}
@@ -1960,7 +1963,7 @@ async function loadRel(){if(!G.me)return;const id=G.me.id;
   REL={};for(const r of (r1.data||[])){const other=r.a===id?r.b:r.a;REL[other]=r}
   REQ_IN=(r2.data||[]).filter(x=>x.to_char===id&&x.status==='pending');REQ_OUT=(r2.data||[]).filter(x=>x.from_char===id&&x.status==='pending');syncRel()}
 function syncRel(){const cd=(G.me&&G.me.relcd)||{};G.rel={};const ids=new Set([...Object.keys(REL),...REQ_OUT.map(x=>x.to_char)]);
-  for(const k of ids){const r=REL[k];G.rel[k]={friend:!!r,req:REQ_OUT.some(x=>x.to_char===k),scenes:r?r.scenes:0,neg:r?r.neg:0,name:r?r.name:'',proposal:r?r.name_proposal:null,cd:cd[k]||{},log:[],pin:[],enemyAsked:r?r.neg>=3:false}}}
+  for(const k of ids){const r=REL[k];G.rel[k]={friend:!!r,req:REQ_OUT.some(x=>x.to_char===k),scenes:r?r.scenes:0,points:r?r.points:0,neg:r?r.neg:0,name:r?r.name:'',proposal:r?r.name_proposal:null,cd:cd[k]||{},log:[],pin:[],enemyAsked:r?r.neg>=3:false}}}
 function relOf(id){return G.rel[id]||(G.rel[id]={friend:false,req:false,scenes:0,neg:0,name:'',proposal:null,cd:{},log:[],pin:[]})}
 async function befriend(pid){if(!G.me)return;if(sameOwner(pid))return toast('내 다른 캐릭터와는 지인을 맺을 수 없어요.');const r=relOf(pid);if(r.friend||r.req)return;
   const{error}=await sb.from('friend_requests').insert({from_char:G.me.id,to_char:pid});if(error&&!String(error.message).includes('duplicate'))return toast('신청하지 못했어요.');
@@ -1969,16 +1972,17 @@ async function answerReq(req,ok){const{error}=await sb.from('friend_requests').u
   if(ok){const[a,b]=[req.from_char,req.to_char].sort();await sb.from('relations').upsert({a,b},{onConflict:'a,b',ignoreDuplicates:true});const p=SAMPLES[req.from_char];log(`${p?p.name:'누군가'}과(와) 지인이 되었다.`,'rel');toast('지인이 되었어요.')}
   await loadRel();render()}
 function pairOf(pid){return[G.me.id,pid].sort()}
-async function doScene(pid,sc){if(!ready())return;const r=relOf(pid);if(!r.friend)return;
-  if(r.cd[sc.id]&&T()-r.cd[sc.id]<cdMs())return toast('같은 장면은 조금 뒤에 다시 할 수 있어요.');let restEn=0;if(sc.rest){const dl=daily();if(dl.rest<4){restEn=1;dl.rest++}}else if(!spend(1))return;
-  G.me.relcd=G.me.relcd||{};G.me.relcd[pid]=G.me.relcd[pid]||{};G.me.relcd[pid][sc.id]=T();
-  const p=SAMPLES[pid];const text=pick(sc.t).replaceAll('{a}',G.me.name).replaceAll('{b}',p.name);
-  const out=give(restEn?{...sc.rw,en:restEn}:sc.rw);if(sc.cure){clearFx(sc.cure);out.push(FXDEF[sc.cure].n+' 해제')}if(sc.fx){addFx(sc.fx);out.push(FXDEF[sc.fx].n)}
-  const before=stageOf(r);const[a,b]=pairOf(pid);const row=REL[pid];const scenes=(row?row.scenes:0)+1,neg=(row?row.neg:0)+(sc.neg?1:0);
-  await sb.from('relations').update({scenes,neg,updated_at:new Date().toISOString()}).eq('a',a).eq('b',b);
-  await sb.from('relation_logs').insert({a,b,author:G.me.id,text:`${text} (${out.join(', ')})`});
-  await loadRel();const after=stageOf(relOf(pid));if(after!==before){out.push(`관계: ${STAGES[after]}`);log(`${p.name}과(와) ${STAGES[after]}가 되었다.`,'rel')}
-  log(text,'rel');done('장면',text,out)}
+async function doScene(pid,sc){if(!ready()||REL_SCENE_BUSY.has(pid))return;const m=G.me,r=relOf(pid);if(!r.friend||!sceneOK(sc,r))return;
+ if(r.cd[sc.id]&&T()-r.cd[sc.id]<cdMs())return toast('같은 장면은 조금 뒤에 다시 할 수 있어요.');
+ if(!sc.rest&&m.en<1)return toast('기력이 모자라요.');
+ const p=SAMPLES[pid];if(!p)return;REL_SCENE_BUSY.add(pid);
+ try{const text=pick(sc.t).replaceAll('{a}',m.name).replaceAll('{b}',p.name);
+ const rr=await recordRelScene(pid,'solo:'+sc.id,text,sc.neg);if(!rr||G.me!==m)return;
+ let restEn=0;if(sc.rest){const dl=daily();if(dl.rest<4){restEn=1;dl.rest++}}else m.en=Math.max(0,m.en-1);
+ m.relcd=m.relcd||{};m.relcd[pid]=m.relcd[pid]||{};m.relcd[pid][sc.id]=T();
+ const out=give(restEn?{...sc.rw,en:restEn}:sc.rw);if(sc.cure){clearFx(sc.cure);out.push(FXDEF[sc.cure].n+' 해제')}if(sc.fx){addFx(sc.fx);out.push(FXDEF[sc.fx].n)}
+ out.push(`관계 포인트 +${rr.awarded||0}`);log(text,'rel');save();done('장면',text,out);
+ }finally{REL_SCENE_BUSY.delete(pid)}}
 async function proposeName(pid,name){const[a,b]=pairOf(pid);const{error}=await sb.from('relations').update({name_proposal:{by:G.me.id,name}}).eq('a',a).eq('b',b);if(error)return toast('제안하지 못했어요.');toast(`「${name}」을(를) 제안했어요. 상대가 받으면 붙어요.`);await loadRel();closeModal();render()}
 async function acceptName(pid,yes){const[a,b]=pairOf(pid);const r=REL[pid];if(!r||!r.name_proposal)return;const upd=yes?{name:r.name_proposal.name,name_proposal:null}:{name_proposal:null};
   await sb.from('relations').update(upd).eq('a',a).eq('b',b);if(yes)log(`${SAMPLES[pid].name}과(와)의 관계: ${r.name_proposal.name}`,'rel');await loadRel();closeModal();render()}
@@ -1997,13 +2001,13 @@ function relPanel(id,r){const st=stageOf(r);const m=G.me;const p=SAMPLES[id];
   const prop=r.proposal;
   return h('div',{class:'stack'},
     h('div',{class:'row'},h('span',{class:'lbl'},'관계'),h('span',{class:'wrap'},h('span',{class:'tag'},STAGES[st]),r.name?h('span',{class:'tag red'},r.name):null,online(p)?h('span',{class:'tag good'},'접속 중'):null)),
-    h('p',{class:'mute',style:'margin:0;font-size:12.5px'},`함께한 장면 ${r.scenes}회 · 가까운 사이 5회, 깊은 사이 12회`),
+    h('p',{class:'mute',style:'margin:0;font-size:12.5px'},`관계 포인트 ${relPoints(r)} · 함께한 장면 ${r.scenes}회`),
     prop&&prop.by!==m.id?h('div',{class:'banner',style:'color:var(--ink)'},`${p.name}이(가) 관계 이름 「${prop.name}」을(를) 제안했어요. `,h('button',{class:'sm pri',onclick:()=>acceptName(id,true)},'받기'),' ',h('button',{class:'sm',onclick:()=>acceptName(id,false)},'거절')):null,
     prop&&prop.by===m.id?h('div',{class:'banner'},`「${prop.name}」 제안을 보냈어요. 상대가 받으면 붙어요.`):null,
     h('span',{class:'lbl'},'둘만의 장면 · 기력 1 · 「쉬기」는 오히려 기력 +1 (하루 4번)'),
     avail.length?h('div',{class:'wrap'},avail.map(sc=>h('button',{class:'sm',style:sc.neg?'border-color:var(--bad);color:var(--bad)':'',onclick:()=>{closeModal();doScene(id,sc)}},sceneLabel(sc),sc.rest?' · 쉬기':''))):h('p',{class:'mute',style:'margin:0;font-size:13px'},'지금 여기서 할 수 있는 장면이 없어요.'),
     locked?h('p',{class:'dim',style:'margin:0;font-size:12px'},`장소·시간·날씨·상태가 맞으면 열리는 장면 ${locked}개가 더 있어요.`):null,
-    st>=2&&!prop?h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},r.name?'관계 이름 바꾸자고 제안':'관계 이름 제안'),h('div',{class:'wrap'},['친구','반려','가족 같은 사이','동업자'].map(n=>h('button',{class:'sm',onclick:()=>proposeName(id,n)},n))),h('div',{class:'composer'},custom,h('button',{class:'sm',onclick:()=>{if(custom.value.trim())proposeName(id,custom.value.trim())}},'제안'))):null,
+    st>=3&&!prop?h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},r.name?'관계 이름 바꾸자고 제안':'관계 이름 제안'),h('div',{class:'wrap'},['친구','반려','가족 같은 사이','동업자'].map(n=>h('button',{class:'sm',onclick:()=>proposeName(id,n)},n))),h('div',{class:'composer'},custom,h('button',{class:'sm',onclick:()=>{if(custom.value.trim())proposeName(id,custom.value.trim())}},'제안'))):null,
     r.enemyAsked&&r.name!=='악연'&&!prop?h('button',{class:'sm',style:'border-color:var(--bad);color:var(--bad)',onclick:()=>proposeName(id,'악연')},'악연을 제안한다'):null,
     h('div',{class:'composer'},ft,h('button',{class:'sm',onclick:()=>{freeScene(id,ft.value);ft.value=''}},'남기기')),
     h('span',{class:'lbl'},'관계 기록'),logBox)}
@@ -2161,8 +2165,7 @@ async function claimParty(p){if(p.claimed)return;p.claimed=true;p.read=true;awai
   const out=give({money:Math.max(0,Math.min(20,+rw.money||0)),mind:Math.max(0,Math.min(3,+rw.mind||0))});const n=SAMPLES[p.from]?SAMPLES[p.from].name:'지인';
   log(`${n}과(와) 같이 둘러봤다. ${out.join(', ')}`,'rel');toast(`${n}이(가) 같이 둘러보자고 끌고 갔어요. ${out.join(', ')}`);save();render()}
 async function partyNotify(pid,text,rw){const[a,b]=pairOf(pid);const row=REL[pid];
-  await sb.from('relations').update({scenes:(row?row.scenes:0)+1,updated_at:new Date().toISOString()}).eq('a',a).eq('b',b);
-  await sb.from('relation_logs').insert({a,b,author:G.me.id,text:'[같이 둘러보기] '+text});
+  if(!await recordRelScene(pid,'party','[같이 둘러보기] '+text,false))return;
   await sb.from('pages').insert({from_char:G.me.id,to_char:pid,kind:'party',body:text.slice(0,300),reward:rw});loadRel().then(render)}
 function onPage(x){if(!G.me||x.to_char!==G.me.id||PAGES.some(p=>p.id===x.id))return;const p=normPage(x);PAGES.unshift(p);if(p.kind==='party')claimParty(p);else{pagerRing(p);pagerLabel()}}
 async function loadRadio(){RADIO_AT=Date.now();if(!sb||!G.me)return;const{data}=await sb.from('radio_stories').select('*').order('created_at',{ascending:false}).limit(40);
@@ -2892,28 +2895,21 @@ function bondProcess(){const m=G.me;if(!m)return;const ap=bApplied();let changed
 /* 다치면 가까운 지인에게 소식이 간다 (3시간에 한 번) */
 {const g0=give;give=function(rw){const m=G.me;const before=m?m.hp:0;const out=g0.apply(this,arguments);
   try{if(m&&rw&&rw.hp<=-10&&typeof sb!=='undefined'&&sb&&Date.now()-(m.hurtAt||0)>3*3600e3){m.hurtAt=Date.now();
-    for(const pid in REL){const row=REL[pid];if(!row||row.scenes<5)continue;const[a,b]=pairOf(pid);sb.from('bond_events').insert({a,b,kind:'hurt',from_char:m.id,to_char:pid,data:{hp:Math.round(m.hp)},status:'done'}).then(()=>{})}}}catch(e){}
+    for(const pid in REL){const row=REL[pid];if(!row||relPoints(row)<10)continue;const[a,b]=pairOf(pid);sb.from('bond_events').insert({a,b,kind:'hurt',from_char:m.id,to_char:pid,data:{hp:Math.round(m.hp)},status:'done'}).then(()=>{})}}}catch(e){}
   return out}}
 function bHurtRecent(pid){return BONDS.some(x=>x.kind==='hurt'&&x.from_char===pid&&bAge(x)<BOND_TTL)}
 /* ---------- 보내기 · 대답하기 ---------- */
 async function bondSend(pid,kind,data,status){const[a,b]=pairOf(pid);const{data:row,error}=await sb.from('bond_events').insert({a,b,kind,from_char:G.me.id,to_char:pid,data,status:status||'open'}).select().single();
   if(error){toast('보내지 못했어요. 운영자에게 9_bonds.sql 실행을 부탁해 주세요.');return null}bondUpsert(row);return row}
-async function bondRelLog(pid,text,neg){const[a,b]=pairOf(pid);const row=REL[pid];
-  try{await sb.from('relations').update({scenes:(row?row.scenes:0)+1,neg:(row?row.neg:0)+(neg?1:0),updated_at:new Date().toISOString()}).eq('a',a).eq('b',b);
-    await sb.from('relation_logs').insert({a,b,author:G.me.id,text:String(text).slice(0,295)})}catch(e){}loadRel().then(()=>{try{render()}catch(e){}})}
+async function bondRelLog(pid,text,neg){
+ const key=/^\[(말 걸기|이야기 나누기|속 이야기)\]/.test(text)?'talk':null;
+ return recordRelScene(pid,key,text,neg);
+}
 async function bondInvite(pid,iv){if(!ready())return;if(BONDS.some(x=>x.kind==='invite'&&x.from_char===G.me.id&&x.to_char===pid&&x.status==='open'&&bAge(x)<BOND_TTL))return toast('먼저 건 장면에 아직 대답이 없어요.');
   if(!spend(1))return;const row=await bondSend(pid,'invite',{iv:iv.id,text:bFill(iv.t,G.me.id,pid)});if(row){toast(`${bName(pid)}에게 장면을 걸었어요. 대답을 기다려요.`);bondRedraw()}}
-async function bondAnswerInvite(x,i){const iv=INVITES.find(v=>v.id===x.data.iv);if(!iv)return;const o=iv.o[i];const a=x.from_char,b=G.me.id;
-  const text=bFill(iv.t,a,b)+' '+bFill(o.t,a,b);const out=give(o.b);
-  const{error}=await sb.from('bond_events').update({status:'done',answered_at:new Date().toISOString(),data:{...x.data,pick:i,text,aRw:o.a}}).eq('id',x.id);if(error)return toast('대답하지 못했어요.');
-  x.status='done';x.data={...x.data,pick:i,text,aRw:o.a};bApplied()[x.id]=1;await bondRelLog(a,`[함께] ${text}`,o.neg);
-  closeModal();done('함께한 장면',text,out,!!o.neg)}
+async function bondAnswerInvite(x,i){return answerBondScene(x,i)}
 async function bondDuoStart(pid,d,i){if(!spend(2))return;const row=await bondSend(pid,'duo',{d:d.id,ap:i,cell:G.me.cell});if(row){closeModal();done(d.n,d.t+`\n\n나는 「${d.o[i]}」을(를) 골랐다. ${bName(pid)}의 선택을 기다린다.`,['기력 -2'])}}
-async function bondAnswerDuo(x,i){const d=DUOS.find(v=>v.id===x.data.d);if(!d)return;if(!spend(1))return;const key=`${x.data.ap}${i}`,res=d.r[key];const a=x.from_char,b=G.me.id;
-  const text=`${d.n} · ${bName(a)}은(는) 「${d.o[x.data.ap]}」, ${bName(b)}은(는) 「${d.o[i]}」. `+bFill(res.t,a,b);const out=give(res.b);
-  const{error}=await sb.from('bond_events').update({status:'done',answered_at:new Date().toISOString(),data:{...x.data,bp:i,text,aRw:res.a}}).eq('id',x.id);if(error)return toast('대답하지 못했어요.');
-  x.status='done';bApplied()[x.id]=1;const left=key==='01'||key==='10';await bondRelLog(a,`[같이 겪은 괴이] ${text}`,left);
-  closeModal();flicker();done(d.n,bFill(res.t,a,b),[`${bName(a)}: 「${d.o[x.data.ap]}」`,`나: 「${d.o[i]}」`,...out],true)}
+async function bondAnswerDuo(x,i){return answerBondScene(x,i)}
 async function bondDecline(x){await sb.from('bond_events').update({status:'declined',answered_at:new Date().toISOString()}).eq('id',x.id);x.status='declined';bondRedraw();try{pagerLabel()}catch(e){}}
 function bondPromptTitle(x){if(x.kind==='invite')return'장면을 걸어왔어요. 대답해 주세요.';if(x.kind==='duo')return'같이 괴이를 마주쳤어요. 고르세요.';if(x.kind==='photo')return'금성 사진관에서 같이 사진 찍자고 해요.';if(x.kind==='rule')return'둘만의 수칙을 제안했어요.';if(x.kind==='bail')return'빚 보증을 서 주겠대요.';return'새 소식이 있어요.'}
 /* 응답 모달 */
@@ -3000,7 +2996,7 @@ function bondSection(pid,r){const m=G.me,p=SAMPLES[pid],st=stageOf(r);const box=
       photos.length?h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},`둘의 사진첩 · ${photos.length}장`),h('div',{class:'bph-row'},photos.slice(0,8).map(x=>bondPhotoEl(x)))):null,
       h('span',{class:'lbl'},'선물 두고 오기'),h('div',{class:'bond-wrap'},sel,note,h('button',{class:'sm',onclick:()=>bondGift(pid,sel.value,note.value)},'두고 온다')),
       h('span',{class:'lbl'},'둘만의 수칙'),rule?h('blockquote',{class:'hand',style:'margin:0'},'「'+rule.data.text+'」'):null,
-      st>=2?h('div',{class:'bond-wrap'},rIn,h('button',{class:'sm',onclick:()=>bondRuleAsk(pid,rIn.value)},rule?'새로 정하기':'정하자고 하기')):h('p',{class:'dim',style:'margin:0;font-size:12px'},'가까운 사이가 되면 둘만의 수칙을 정할 수 있어요.'),
+      st>=3?h('div',{class:'bond-wrap'},rIn,h('button',{class:'sm',onclick:()=>bondRuleAsk(pid,rIn.value)},rule?'새로 정하기':'정하자고 하기')):h('p',{class:'dim',style:'margin:0;font-size:12px'},'가까운 사이가 되면 둘만의 수칙을 정할 수 있어요.'),
       h('span',{class:'lbl'},'삐삐 암호'),codes.length?h('div',{class:'wrap',style:'gap:4px'},codes.map(x=>h('span',{class:'tag'},`${x.data.code} = ${x.data.mean}`))):null,
       h('div',{class:'bond-wrap'},cIn,cMean,h('button',{class:'sm',onclick:()=>bondCodeSet(pid,cIn.value,cMean.value)},'정하기')),
       p&&p.fac==='red'?h('div',{class:'stack',style:'gap:4px'},h('span',{class:'lbl'},'빚 보증'),h('button',{class:'sm',style:'align-self:flex-start',onclick:()=>bondBailAsk(pid)},`${bName(pid)}의 빚 보증 서기 ($200)`),h('p',{class:'dim',style:'margin:0;font-size:12px'},'상대가 받으면 신용 +10. 상대가 적등방에서 달아나면 내가 $200을 대신 물어요. 돈이 모자라면 빚이 돼요.')):null].filter(Boolean))};
@@ -4259,7 +4255,7 @@ const TALK_SCENE=[
  ['차찬텡 구석 자리에서 식은 밀크티를 두고 한참 이야기했다.','옥상 난간에 기대 이야기했다. 바람이 말을 반쯤 가져갔다.','국숫집에서 국수가 불도록 이야기했다. 4번 테이블은 비어 있었다.','복도 형광등 아래에서 이야기했다. 형광등이 두 번 깜빡이는 동안 둘 다 말이 없었다.'],
  ['불 꺼진 복도 끝에서 작게 이야기했다. 서로 얼굴은 잘 보이지 않았다.','이야기가 끝나고도 한참 아무 말 없이 앉아 있었다.','증축 소리가 그칠 때까지 이야기했다. 대답을 다 듣고 나서야 문을 잠갔다.','같은 담요를 덮고 이야기했다. 누가 먼저 잠들었는지는 아무도 모른다.']];
 let TALKS=[];
-const talkTier=pid=>{const st=stageOf(G.rel&&G.rel[pid]);return st===0?0:st===3?2:1};
+const talkTier=pid=>{const st=stageOf(G.rel&&G.rel[pid]);return !(G.rel&&G.rel[pid]&&G.rel[pid].friend)?0:st>=5?2:1};
 const talkName=id=>G.me&&G.me.id===id?G.me.name:(SAMPLES[id]?SAMPLES[id].name:'누군가');
 const talkLive=x=>x.status==='open'&&Date.now()-Date.parse(x.created_at)<TALK_TTL;
 function talkQ(c,me,p){const tr=p&&p.reason,ar=me&&me.reason;return(tr==='born'&&c.tb)||(tr==='lost'&&c.tl)||(ar==='born'&&c.ab)||c.q}
@@ -4287,7 +4283,8 @@ const talkPlain=t=>String(t||'').replace(/\*([^*\n]+)\*/g,'($1)');
 function talkOdd(x){const o=TALK_ODD.find(c=>c.id===x.topic);return o?o.after:''}
 async function talkAnswer(x,text,dodge){const m=G.me;text=String(text||'').trim();if(!dodge&&!text)return toast('대답을 적어 주세요.');
   const upd={status:dodge?'dodged':'done',answer:dodge?null:text.slice(0,300),answered_at:new Date().toISOString()};
-  const{error}=await sb.from('talks').update(upd).eq('id',x.id);if(error)return toast('대답하지 못했어요.');Object.assign(x,upd);talkUpsert(x);closeModal();
+  if(x.to_char!==m.id||x.status!=='open'||Date.now()-Date.parse(x.created_at)>=TALK_TTL)return;
+  const{data:changed,error}=await sb.from('talks').update(upd).eq('id',x.id).eq('status','open').select('id');if(error)return toast('대답하지 못했어요.');if(!changed||!changed.length)return toast('이미 답한 이야기예요.');Object.assign(x,upd);talkUpsert(x);closeModal();
   const from=talkName(x.from_char),T0=TALK_TIER[x.tier]||TALK_TIER[0];
   if(dodge){log(`${from}의 이야기를 얼버무렸다.`,'life');save();return done(T0.n,`「${x.q}」\n\n대충 웃어넘겼다. ${from}은(는) 더 묻지 않았다.`,[])}
   const out=give({mind:T0.mind});const odd=talkOdd(x);const sc=pick(TALK_SCENE[x.tier]||TALK_SCENE[0]);
@@ -4693,7 +4690,8 @@ function actOpen(x){const a=actOf(x);if(!a)return;const from=talkName(x.from_cha
   openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},`${from} · ${a.n}`),h('button',{class:'ghost','data-collapse-read':true,onclick:closeModal},'닫기')),
    h('blockquote',{class:'hand',style:'margin:0'},'「'+x.q+'」'),h('p',{class:'mute',style:'margin:0;font-size:13px'},'같은 칸에 있는 사람이 청했어요. '+a.d+'.'),
    h('div',{class:'wrap'},h('button',{class:'pri',onclick:()=>actAnswer(x,true)},'받는다'),h('button',{class:'ghost sm',onclick:()=>actAnswer(x,false)},'정중히 거절한다'))))}
-async function actAnswer(x,yes){const a=actOf(x);const upd={status:yes?'done':'dodged',answer:'',answered_at:new Date().toISOString()};const{error}=await sb.from('talks').update(upd).eq('id',x.id);if(error)return toast('대답하지 못했어요.');Object.assign(x,upd);talkUpsert(x);closeModal();
+async function actAnswer(x,yes){const a=actOf(x);const upd={status:yes?'done':'dodged',answer:'',answered_at:new Date().toISOString()};if(x.to_char!==m.id||x.status!=='open'||Date.now()-Date.parse(x.created_at)>=TALK_TTL)return;
+  const{data:changed,error}=await sb.from('talks').update(upd).eq('id',x.id).eq('status','open').select('id');if(error)return toast('대답하지 못했어요.');if(!changed||!changed.length)return toast('이미 답한 이야기예요.');Object.assign(x,upd);talkUpsert(x);closeModal();
   const from=talkName(x.from_char);if(!yes){log(`${from}의 청을 거절했다.`,'life');save();return done(a.n,`「${x.q}」\n\n고개를 저었다. ${from}은(는) 알겠다는 듯 물러났다.`,[])}
   const out=give(a.you);if(a.name){try{relOf(x.from_char).name=1}catch(e){}}if(a.walk){G.me.walkWith={id:x.from_char,until:Date.now()+ACT_TTL}}
   log(`${from}의 청을 받았다. 「${a.n}」`,'life');save();done(a.n,`${from}: 「${x.q}」\n\n${a.acc}`,out,false);if(a.name)setTimeout(()=>toast(`${from}에게 지인 신청을 보내 볼 수 있어요.`),900)}
@@ -4741,15 +4739,17 @@ async function feelSave(pid,tag,score,note,vis){const m=G.me;const row={from_cha
   const i=FEEL.findIndex(x=>x.from_char===m.id&&x.to_char===pid);if(i>=0)FEEL[i]=row;else FEEL.push(row);toast(`마음을 적어 두었어요 · ${FEEL_VIS[vis]}`);closeModal();openSheet(pid)}
 async function feelDel(pid){const m=G.me;const{error}=await sb.from('feelings').delete().eq('from_char',m.id).eq('to_char',pid);if(error)return toast('지우지 못했어요.');FEEL=FEEL.filter(x=>!(x.from_char===m.id&&x.to_char===pid));toast('마음을 지웠어요.');closeModal();openSheet(pid)}
 /* 관계 포인트: 장면 수로 단계가 정해진다 (아는 사이 → 가까운 사이 5 → 깊은 사이 12) */
-const REL_NEED=[0,5,12];
+const REL_NEED=REL_THRESHOLDS;
 async function relBreak(pid,box){try{const[a,b]=pairOf(pid);const{data}=await sb.from('relation_logs').select('text').eq('a',a).eq('b',b).limit(300);const rows=data||[];const c={};const cat=t=>/^\[같이 둘러보기\]/.test(t)?'같이 둘러보기':/^\[직접 쓴 장면\]/.test(t)?'직접 쓴 장면':/^\[(말 걸기|이야기 나누기|속 이야기)\]/.test(t)?'이야기':/^\[둘만의 수칙\]/.test(t)?'둘만의 수칙':'함께한 장면';
   for(const r of rows){const k=cat(String(r.text||''));c[k]=(c[k]||0)+1}const ent=Object.entries(c).sort((x,y)=>y[1]-x[1]);if(box)box.replaceChildren(...(ent.length?ent.map(([k,n])=>h('span',{class:'tag'},`${k} ${n}`)):[h('span',{class:'dim',style:'font-size:11.5px'},'아직 기록으로 남은 장면이 없어요.')]))}catch(e){if(box)box.replaceChildren()}}
-function relPointsEl(pid,r){if(!r||!r.friend)return null;const st=stageOf(r),sc=r.scenes||0;const next=st===1?5:st===2?12:null;const prev=st===1?0:st===2?5:12;const pct=next?Math.min(100,Math.round((sc-prev)/(next-prev)*100)):100;
-  const br=h('div',{class:'wrap',style:'gap:4px'},h('span',{class:'dim',style:'font-size:11.5px'},'불러오는 중…'));if(sb)relBreak(pid,br);
-  return h('div',{class:'stack talkbox',style:'gap:6px'},h('div',{class:'row'},h('span',{class:'lbl'},'관계 포인트 · 둘이 같이 쌓는 것'),h('b',{class:'num',style:'font-size:13px'},next?`${STAGES[st]} · ${sc} / ${next}`:`${STAGES[st]} · ${sc}`)),
-    h('div',{style:'height:6px;background:var(--line);border-radius:3px;overflow:hidden'},h('div',{style:`height:100%;width:${pct}%;background:var(--tube)`})),
-    h('p',{class:'dim',style:'margin:0;font-size:12px'},next?`장면을 ${next-sc}번 더 함께하면 「${STAGES[st+1]}」가 돼요.`:'더 오를 단계가 없어요. 깊은 사이예요.'),
-    br,(r.neg||0)>0?h('p',{class:'dim',style:'margin:0;font-size:12px;color:var(--bad)'},`앙금 ${r.neg} · 나쁘게 끝난 장면`):null)}
+function relPointsEl(pid,r){if(!r||!r.friend)return null;const st=stageOf(r),pt=relPoints(r),next=REL_THRESHOLDS[st+1],prev=REL_THRESHOLDS[st];
+ const pct=next==null?100:Math.max(0,Math.min(100,(pt-prev)/(next-prev)*100));
+ return h('div',{class:'stack talkbox',style:'gap:6px'},h('b',null,`${STAGES[st]}${r.name?' · '+r.name:''}`),
+ h('span',{class:'num'},`관계 포인트 ${pt} · 함께한 장면 ${r.scenes||0}회`),
+ h('div',{style:'height:6px;background:var(--line);overflow:hidden'},h('div',{style:`height:100%;width:${pct}%;background:var(--tube)`})),
+ h('p',{class:'dim',style:'margin:0'},next==null?'서로의 삶에 깊이 스며들었다.':`「${STAGES[st+1]}」까지 ${next-pt}포인트`),
+ h('p',{class:'dim',style:'margin:0;font-size:12px'},'장면 +2 · 같은 상대와 하루 최대 +6 · 같은 종류의 장면은 하루 한 번만 포인트가 오른다. 한국 시간 자정 기준.'),
+ r.points==null?h('p',{class:'dim'},'관계 포인트 서버 업데이트가 필요하다.'):null)}
 /* 한쪽 마음 */
 function feelEl(pid){const m=G.me,p=SAMPLES[pid];if(!m||!p||p.isNpc||(typeof sameOwner==='function'&&sameOwner(pid)))return null;
   if(FEEL_OFF)return h('div',{class:'stack talkbox',style:'gap:6px'},h('span',{class:'lbl'},'마음'),h('p',{class:'mute',style:'margin:0;font-size:12.5px'},'운영자가 15_feelings.sql을 실행하면 열려요.'));
@@ -4924,7 +4924,7 @@ var STEPS=[
  {n:'셋째 단계 · 깊이 들어가기',r:25,all:100,tasks:[
   ['night','밤의 구역 오르기','새 계단이 생긴 칸에서 「새 계단을 오른다」를 눌러 보세요. 기력 3이 들어요.',m=>!!(m.steps&&m.steps.done.night)],
   ['feel','마음 적어 두기','누군가의 프로필에서 내 캐릭터의 마음을 적어 보세요. 나만 보기로 해도 돼요.',m=>typeof FEEL!=='undefined'&&FEEL.some(x=>x.from_char===m.id)],
-  ['close','가까운 사이 되기','지인과 장면을 다섯 번 함께해서 「가까운 사이」가 되어 보세요.',m=>typeof stageOf==='function'&&Object.values(G.rel||{}).some(r=>r&&r.friend&&stageOf(r)>=2)],
+  ['close','가까운 사이 되기','지인과 관계 포인트 10을 쌓아 「가까운 사이」가 되어 보세요.',m=>typeof stageOf==='function'&&Object.values(G.rel||{}).some(r=>r&&r.friend&&stageOf(r)>=3)],
   ['diary','일기 세 장','집에서 일기를 세 번 써 보세요. 하루에 한 장씩이에요.',m=>(m.diaryN||0)>=3],
   ['dex10','괴담 도감 열 장','도감을 열 장까지 채워 보세요. 수칙을 어기면 나오는 장도 있어요.',m=>Object.keys(m.dex||{}).length>=10],
   ['rep','평판 5','의뢰와 장면으로 성채 사람들에게 이름을 알려 보세요.',m=>(m.rep||0)>=5]]}];
@@ -5191,7 +5191,7 @@ const TTL=[
  ['recorder','기록자','life','일기 30장',m=>(m.diaryN||0)>=30],
  ['decorator','방구석 장인','life','벽지·바닥·전구 다 바꿔 보기',m=>{const d=tc(m).deco||{};return!!(d.w&&d.f&&d.l)}],
  ['busybody','오지랖','rel','같은 칸에서 청하기 30번',m=>tc(m).act>=30],
- ['deep','깊은 사이','rel','깊은 사이 한 명 이상',m=>typeof stageOf==='function'&&Object.values(G.rel||{}).some(r=>r&&r.friend&&stageOf(r)>=3)],
+ ['deep','깊은 사이','rel','깊은 사이 한 명 이상',m=>typeof stageOf==='function'&&Object.values(G.rel||{}).some(r=>r&&r.friend&&stageOf(r)>=5)],
  ['guarantor','보증인','rel','빚 보증 서 주기',m=>typeof BONDS!=='undefined'&&BONDS.some(x=>x.kind==='bail'&&x.from_char===m.id&&x.status==='done')],
  ['beyond','문 너머를 본 사람','gate','귀문이 열린 밤, 붉은 문 마주하기',m=>!!(m.dex||{})['x:gate']],
  ['lampkeeper','등불지기','gate','귀문 등불 얻기',m=>!!tc(m).lantern||(m.items&&m.items.lantern>0)||(m.room||[]).includes('lantern')],
@@ -5513,11 +5513,11 @@ if(!SHEETK.includes('pet'))SHEETK.push('pet');
 {const old=openRoom;openRoom=function(){const r=old.apply(this,arguments),st=document.querySelector('#modalRoot .stack'),panel=petPanel(G.me,true);if(st&&panel){const fig=st.querySelector('.roomfig');if(fig)fig.after(panel);else st.append(panel)}return r}}
 {const old=roomEl;roomEl=function(p,isMe,id){let el=old.apply(this,arguments);const panel=petPanel(p,isMe);if(panel){if(!el)el=h('div',{class:'stack'},h('span',{class:'lbl'},'방'),roomArt(p,isMe));el.append(panel)}return el}}
 /* 함께하기: 조건과 보상은 기존대로, 표시만 분류한다. */
-function bondInviteGroups(avail,pid){const categories=[['지금 필요한 돌봄',['mend']],['일상 · 쉬기',['cig','noodle','tea2','roof','mahjong2']],['다정하게',['umb','radio','stairs','coat','mirror']],['깊은 이야기',['secret','letter','sleep']],['짓궂게 · 위험하게',['dare']]];
+function bondInviteGroups(avail,pid){const categories=[['지금 필요한 돌봄',['mend']],['일상 · 쉬기',['cig','noodle','tea2','roof','mahjong2']],['다정하게',['umb','radio','stairs','coat','mirror']],['깊은 이야기',['secret','letter','sleep']],['짓궂게 · 위험하게',['dare']],['악연 전용',['enemy_punch','enemy_trip','enemy_collar']]];
  const known=new Set(categories.flatMap(x=>x[1]));const rest=avail.filter(v=>!known.has(v.id));if(rest.length)categories.push(['다른 장면',rest.map(v=>v.id)]);
  return h('div',{class:'stack',style:'gap:12px'},categories.map(([label,ids])=>{const vs=avail.filter(v=>ids.includes(v.id));if(!vs.length)return null;
  const buttons=h('div',{class:'wrap',style:'gap:6px'},vs.map(v=>h('button',{class:'sm',style:v.id==='mend'?'border-color:var(--bad);color:var(--bad)':'',onclick:()=>bondInvite(pid,v)},v.label)));
- if(label==='짓궂게 · 위험하게')return h('details',null,h('summary',{style:'cursor:pointer;color:var(--bad)'},`${label} · ${vs.length}개`),buttons);
+ if(label==='짓궂게 · 위험하게'||label==='악연 전용')return h('details',null,h('summary',{style:'cursor:pointer;color:var(--bad)'},`${label} · ${vs.length}개`),buttons);
  return h('div',{class:'stack',style:'gap:6px'},h('span',{class:'dim',style:'font-size:12.5px'},label),buttons)}))}
 
 /* ---------- 작은 식구 다섯 종 · 문방구의 작은 화분 ---------- */
@@ -5713,6 +5713,85 @@ actAnswer=async function(x,yes){if(collapseBlock())return;const m=G.me,a=actOf(x
 const actResultRead0=actResult;actResult=function(x){if(collapseBlock())return;if(!G.me||x.from_char!==G.me.id||!['done','dodged'].includes(x.status))return;
   const r=actResultRead0(x);if(G.me.actPaid)delete G.me.actPaid[x.id];save();return r;
 };
+
+/* ---------- 관계 포인트 v2 · 악연 장면 ---------- */
+const REL_SCENE_BUSY=new Set(),BOND_ANSWER_BUSY=new Set(),BOND_SEND_BUSY=new Set();
+// Existing scene requirements: acquaintance / close / deep => new point stages.
+for(const pool of [SCENES,INVITES])for(const v of pool)v.st=({0:0,1:0,2:3,3:5})[v.st]??v.st;
+if(!SHEETK.includes('violenceBlocked'))SHEETK.push('violenceBlocked');
+{const old=personFromRow;personFromRow=function(r){return {...old(r),violenceBlocked:!!(r.sheet&&r.sheet.violenceBlocked)}}}
+const relDay=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
+const enemySceneAllowed=pid=>!!(G.me&&relOf(pid).friend&&relOf(pid).name==='악연'&&!G.me.violenceBlocked&&SAMPLES[pid]&&!SAMPLES[pid].violenceBlocked&&SAMPLES[pid].cell===G.me.cell);
+const ENEMY_SCENES=[
+ {id:'enemy_punch',st:0,violent:true,label:'주먹을 휘두르기',t:'{a}이(가) 말이 끝나기도 전에 주먹을 휘둘렀다. 좁은 복도에서 옷자락이 거칠게 스친다.',o:[
+  {l:'피하기',t:'{b}이(가) 고개를 틀었다. 주먹이 귀 옆을 스쳤다. 둘 사이에 한 걸음만큼의 거리가 남았다.'},
+  {l:'팔목 붙잡기',t:'{b}이(가) 날아오는 팔목을 붙잡았다. 놓으라는 말에도 손아귀가 풀리지 않았다.'},
+  {l:'맞서기',t:'{b}도 주먹을 쥐었다. 서로의 어깨가 부딪쳤다. 복도 끝에서 문 닫히는 소리가 났다.'}]},
+ {id:'enemy_trip',st:0,violent:true,label:'일부러 발을 걸기',t:'{a}이(가) 지나가는 {b}의 발치로 신발 끝을 밀어 넣었다. 우연이라고 하기에는 눈이 너무 오래 마주쳤다.',o:[
+  {l:'발을 빼기',t:'{b}이(가) 발을 멈췄다. 내민 신발을 내려다보다가 보란 듯이 넘어갔다.'},
+  {l:'어깨 밀치기',t:'{b}이(가) 균형을 잡고 {a}의 어깨를 밀쳤다. 벽에 걸린 부적이 한 번 흔들렸다.'},
+  {l:'말없이 노려보기',t:'{b}이(가) 돌아섰다. 아무 말도 하지 않았다. 먼저 시선을 피한 쪽도 없었다.'}]},
+ {id:'enemy_collar',st:0,violent:true,label:'멱살을 잡아 벽으로 밀기',t:'{a}이(가) {b}의 옷깃을 움켜쥐고 벽 쪽으로 밀어붙였다. 등 뒤에서 낡은 벽지가 바스락거렸다.',o:[
+  {l:'손을 떼어내기',t:'{b}이(가) 옷깃을 잡은 손을 하나씩 떼어냈다. 구겨진 깃을 펴는 동안에도 눈을 돌리지 않았다.'},
+  {l:'똑같이 멱살 잡기',t:'{b}도 {a}의 옷깃을 움켜쥐었다. 둘 사이로 숨소리가 거칠게 엉켰다.'},
+  {l:'낮게 경고하기',t:'{b}이(가) 손을 내려다보며 낮게 말했다. 「지금 놓는 게 좋을 텐데.」 벽 너머의 인기척이 멎었다.'}]}
+];
+for(const v of ENEMY_SCENES){v.need=enemySceneAllowed;for(const o of v.o){o.a={};o.b={};o.neg=true}INVITES.push(v)}
+function relServerError(error){const msg=String(error&&error.message||'');
+ if(/VIOLENCE_OFF/.test(msg))return '둘 중 한 사람이 악연 장면 수신을 꺼 두었어요.';
+ if(/ENEMY_ONLY/.test(msg))return '악연인 상대와 같은 칸에 있을 때만 걸 수 있어요.';
+ if(/VIOLENCE_DAILY/.test(msg))return '이 상대와의 악연 장면 요청은 오늘 이미 한 번 있었어요.';
+ if(/BOND_PENDING/.test(msg))return '상대와 아직 대답하지 않은 장면이 있어요.';
+ if(/EXPIRED|ALREADY_ANSWERED/.test(msg))return '이미 끝났거나 기한이 지난 장면이에요.';
+ if(/function|schema cache|column/.test(msg))return '관계 업데이트 SQL을 먼저 적용해야 해요.';
+ return '관계 기록을 저장하지 못했어요. 연결을 확인해 주세요.';
+}
+async function recordRelScene(pid,key,text,neg){const m=G.me;if(!m||!relOf(pid).friend)return null;
+ const {data,error}=await sb.rpc('castle_record_scene',{p_actor:m.id,p_other:pid,p_key:key,p_text:String(text).slice(0,295),p_neg:!!neg,p_token:crypto.randomUUID()});
+ if(error){toast(relServerError(error));return null}if(G.me===m){await loadRel();save()}return data;
+}
+bondInvite=async function(pid,iv){if(!ready()||BOND_SEND_BUSY.has(pid))return;const m=G.me;
+ if(!relOf(pid).friend||stageOf(relOf(pid))<iv.st||(iv.when&&!iv.when())||(iv.need&&!iv.need(pid)))return toast('지금은 걸 수 없는 장면이에요.');
+ if(m.en<1)return toast('기력이 모자라요.');BOND_SEND_BUSY.add(pid);
+ try{const[a,b]=pairOf(pid);const{data,error}=await sb.from('bond_events').insert({a,b,kind:'invite',from_char:m.id,to_char:pid,data:{iv:iv.id,text:bFill(iv.t,m.id,pid)},status:'open'}).select().single();
+ if(error)return toast(relServerError(error));if(G.me!==m)return;
+ m.en=Math.max(0,m.en-1);save();bondUpsert(data);toast('장면을 걸었어요. 상대의 대답을 기다려요.');bondRedraw();
+ }finally{BOND_SEND_BUSY.delete(pid)}
+};
+async function answerBondScene(x,i){if(!ready()||BOND_ANSWER_BUSY.has(x.id)||!G.me||x.to_char!==G.me.id||x.status!=='open')return;
+ const m=G.me;let text,aRw,bRw,neg,title;
+ if(x.kind==='invite'){const v=INVITES.find(v=>v.id===x.data.iv),o=v&&v.o[i];if(!o)return;
+ text=bFill(v.t,x.from_char,m.id)+' '+bFill(o.t,x.from_char,m.id);aRw=o.a;bRw=o.b;neg=!!o.neg;title='함께한 장면';
+ }else{const d=DUOS.find(v=>v.id===x.data.d),res=d&&d.r[`${x.data.ap}${i}`];if(!res||m.en<1)return;
+ text=`${d.n} · ${bName(x.from_char)}: ${d.o[x.data.ap]} / ${m.name}: ${d.o[i]}. `+bFill(res.t,x.from_char,m.id);aRw=res.a;bRw=res.b;neg=x.data.ap!==i;title=d.n;}
+ BOND_ANSWER_BUSY.add(x.id);
+ try{const{data,error}=await sb.rpc('castle_answer_bond',{p_event:x.id,p_pick:i,p_text:text,p_arw:aRw||{},p_neg:neg});
+ if(error)return toast(relServerError(error));if(!data||!data.accepted)return toast('이미 답한 장면이에요.');
+ x.status='done';x.data={...x.data,pick:i,text,aRw};if(G.me!==m)return;
+ bApplied()[x.id]=1;if(x.kind==='duo')m.en=Math.max(0,m.en-1);const out=give(bRw||{});
+ out.push(`관계 포인트 +${data.awarded||0}`);await loadRel();save();closeModal();done(title,text,out,neg);
+ }finally{BOND_ANSWER_BUSY.delete(x.id)}
+}
+bondDuoStart=async function(pid,d,i){if(!ready()||BOND_SEND_BUSY.has(pid))return;const m=G.me;
+ if(!relOf(pid).friend||!SAMPLES[pid]||SAMPLES[pid].cell!==m.cell||!d.o[i])return;
+ if(m.en<2)return toast('기력이 모자라요.');BOND_SEND_BUSY.add(pid);
+ try{const[a,b]=pairOf(pid);const{data,error}=await sb.from('bond_events').insert({a,b,kind:'duo',from_char:m.id,to_char:pid,data:{d:d.id,ap:i,cell:m.cell},status:'open'}).select().single();
+ if(error)return toast(relServerError(error));if(G.me!==m)return;m.en=Math.max(0,m.en-2);save();bondUpsert(data);closeModal();done(d.n,d.t+`\n\n나는 「${d.o[i]}」을(를) 골랐다. ${bName(pid)}의 선택을 기다린다.`,['기력 -2']);
+ }finally{BOND_SEND_BUSY.delete(pid)}};
+// Declining must not overwrite a concurrently completed request.
+bondDecline=async function(x){if(!G.me||x.to_char!==G.me.id)return;const{data,error}=await sb.from('bond_events').update({status:'declined',answered_at:new Date().toISOString()}).eq('id',x.id).eq('status','open').select('id');
+ if(error)return toast(relServerError(error));if(!data||!data.length)return toast('이미 끝난 장면이에요.');x.status='declined';closeModal();bondRedraw();pagerLabel()};
+async function setViolenceBlocked(value,button){const m=G.me;if(!m||button.disabled)return;button.disabled=true;
+ try{const{error}=await sb.rpc('castle_set_violence_block',{p_actor:m.id,p_blocked:value});if(error)return toast(relServerError(error));
+ if(G.me!==m)return;m.violenceBlocked=value;save();button.textContent=value?'악연 장면 수신: 꺼짐':'악연 장면 수신: 켜짐';button.onclick=()=>setViolenceBlocked(!m.violenceBlocked,button);
+ }finally{button.disabled=false}}
+{const old=openSettings;openSettings=function(){const r=old.apply(this,arguments);const box=document.querySelector('#modalRoot .stack');if(box&&G.me){
+ const btn=h('button',{class:'sm'},G.me.violenceBlocked?'악연 장면 수신: 꺼짐':'악연 장면 수신: 켜짐');btn.onclick=()=>setViolenceBlocked(!G.me.violenceBlocked,btn);
+ box.append(h('div',{class:'stack'},h('b',null,'악연 전용 장면'),h('p',{class:'dim'},'주먹·발 걸기·멱살 장면. 끄면 새 요청과 대기 중인 장면의 진행이 제한된다. 체력 피해는 없다.'),btn));}return r};$('btnSettings').onclick=openSettings}
+{const old=bondSection;bondSection=function(pid,r){const box=old(pid,r);box.append(h('p',{class:'dim',style:'font-size:12px'},'악연 전용 장면은 같은 칸에서, 두 사람 사이 하루 한 번 요청할 수 있다. 거절하거나 응답하지 않으면 포인트는 오르지 않는다. 설정에서 수신을 끌 수 있다.'));return box}}
+const REP_REACTIONS=['아직 내 이름을 묻는 사람이 많다.','골목 상인이 얼굴을 알아보고 고개를 끄덕였다.','내가 없는 자리에서 내 이름이 오갔다.','길을 묻기도 전에 상인이 나를 알아봤다.','이름을 대자 맞은편 사람이 눈썹을 올렸다.','처음 보는 상인이 내 이름을 안다. 어디서 들었느냐고 묻자, 여기서는 모르는 쪽이 이상하다며 웃는다.','낡은 벽의 낙서 사이에 내 이름이 있다. 언제 적힌 것인지는 아무도 모른다.','이름을 말하기 전에 자리가 비었다. 앉으라는 손짓이 따라왔다.','누군가 오래된 성채 이야기에 내 이름을 끼워 넣었다. 나는 그런 일을 겪은 기억이 없다.'];
+{const old=give;give=function(rw){const m=G.me,before=m?REPN(m.rep||0):null;const out=old.apply(this,arguments);if(m&&G.me===m&&rw&&rw.rep>0&&REPN(m.rep||0)!==before){const i=REP_LEVELS.findIndex(v=>v[1]===REPN(m.rep||0));log(REP_REACTIONS[i],'life');out.push('평판: '+REPN(m.rep||0))}return out}}
+{const old=openSheet;openSheet=function(id){const r=old.apply(this,arguments);if(id==='me'&&G.me){const box=document.querySelector('#modalRoot .sheet');if(box){const pt=G.me.rep||0,next=REP_LEVELS.find(v=>v[0]>pt);box.append(h('div',{class:'stack talkbox'},h('b',null,'평판 · '+REPN(pt)),h('p',{class:'dim'},next?`평판 ${pt} · 「${next[1]}」까지 ${next[0]-pt}`:`평판 ${pt} · 성채에 이름이 남았다.`)))}}return r}}
 
 /* ---------- 시작 ---------- */
 async function boot(){
