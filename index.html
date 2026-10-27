@@ -5770,7 +5770,7 @@ async function answerBondScene(x,i){if(!ready()||BOND_ANSWER_BUSY.has(x.id)||!G.
  }else{const d=DUOS.find(v=>v.id===x.data.d),res=d&&d.r[`${x.data.ap}${i}`];if(!res||m.en<1)return;
  text=`${d.n} · ${bName(x.from_char)}: ${d.o[x.data.ap]} / ${m.name}: ${d.o[i]}. `+bFill(res.t,x.from_char,m.id);aRw=res.a;bRw=res.b;neg=x.data.ap!==i;title=d.n;}
  BOND_ANSWER_BUSY.add(x.id);
- try{const{data,error}=await sb.rpc('castle_answer_bond',{p_event:x.id,p_pick:i,p_text:text,p_arw:aRw||{},p_neg:neg});
+ try{const{data,error}=await sb.rpc('castle_answer_bond',{p_event:String(x.id),p_pick:i,p_text:text,p_arw:aRw||{},p_neg:neg});
  if(error)return toast(relServerError(error));if(!data||!data.accepted)return toast('이미 답한 장면이에요.');
  x.status='done';x.data={...x.data,pick:i,text,aRw};if(G.me!==m)return;
  bApplied()[x.id]=1;if(x.kind==='duo')m.en=Math.max(0,m.en-1);const out=give(bRw||{});
@@ -5804,13 +5804,28 @@ function enemyBlockReason(pid){const m=G.me,r=relOf(pid),p=SAMPLES[pid];if(!m||!
   const today=relDay();
   if(BONDS.some(x=>x.kind==='invite'&&ENEMY_IDS.has(x.data&&x.data.iv)&&bOther(x)===pid&&new Date(Date.parse(x.created_at)+9*3600e3).toISOString().slice(0,10)===today))return '이 상대와의 악연 장면 요청은 오늘 이미 한 번 있었어요. 내일 다시 걸 수 있어요.';
   return ''}
-{const old=bondSection;bondSection=function(pid,r){const box=old(pid,r);
+/* 장면 요청 상태 안내 + 보낸 요청 취소. 목록이 다시 그려져도 유지되도록 BOND_REDRAW에도 건다 */
+async function bondCancel(x){if(!G.me||x.from_char!==G.me.id||x.status!=='open')return;
+  const{data,error}=await sb.rpc('castle_cancel_bond',{p_event:String(x.id)});
+  if(error){if(/function|schema cache/.test(String(error.message||'')))return toast('취소 기능을 쓰려면 서버에서 bond_cancel.sql을 먼저 실행해야 해요.');return toast(relServerError(error))}
+  if(!data||!data.cancelled)return toast('이미 대답이 온 장면이에요. 새로고침해 주세요.');
+  x.status='declined';toast('요청을 취소했어요. 이제 새 장면을 걸 수 있어요.');bondRedraw();try{pagerLabel()}catch(e){}}
+function bondPatch(pid,box){try{box.querySelectorAll('[data-bp]').forEach(n=>n.remove());const m=G.me;if(!m)return;
+  const live=x=>x.status==='open'&&bOther(x)===pid&&bAge(x)<(x.kind==='duo'?DUO_TTL:BOND_TTL);
+  const outs=BONDS.filter(x=>x.from_char===m.id&&['invite','duo'].includes(x.kind)&&live(x));
+  const ins=BONDS.filter(x=>x.to_char===m.id&&['invite','duo'].includes(x.kind)&&live(x));
+  const lbl=[...box.querySelectorAll('p')].find(p=>p.textContent.startsWith('대답 기다리는 중: '));
+  let row=null;
+  if(outs.length)row=h('div',{'data-bp':1,class:'wrap',style:'gap:6px;align-items:center'},h('span',{style:'font-size:12.5px;color:var(--bad)'},'대답이 올 때까지 새 장면을 걸 수 없어요. (최대 24시간)'),...outs.map(x=>h('button',{class:'sm ghost',onclick:()=>bondCancel(x)},'요청 취소')));
+  else if(ins.length)row=h('p',{'data-bp':1,style:'margin:0;font-size:12.5px;color:var(--bad)'},'받은 장면에 먼저 대답하거나 거절해야 새 장면을 걸 수 있어요.');
+  if(row){if(lbl)lbl.after(row);else box.prepend(row)}
   const why=enemyBlockReason(pid);
-  if(why)box.append(h('p',{style:'font-size:12.5px;margin:0;color:var(--bad)'},'악연 장면을 지금은 걸 수 없어요 · '+why));
-  box.append(h('p',{class:'dim',style:'font-size:12px'},'악연 전용 장면은 같은 칸에서, 두 사람 사이 하루 한 번 요청할 수 있다. 거절하거나 응답하지 않으면 포인트는 오르지 않는다. 설정에서 수신을 끌 수 있다.'));return box}}
+  if(why)box.append(h('p',{'data-bp':1,style:'font-size:12.5px;margin:0;color:var(--bad)'},'악연 장면을 지금은 걸 수 없어요 · '+why));
+  box.append(h('p',{'data-bp':1,class:'dim',style:'font-size:12px'},'악연 전용 장면은 같은 칸에서, 두 사람 사이 하루 한 번 요청할 수 있다. 거절하거나 응답하지 않으면 포인트는 오르지 않는다. 설정에서 수신을 끌 수 있다.'))}catch(e){}}
+{const bs0=bondSection;bondSection=function(pid){const el=bs0.apply(this,arguments);bondPatch(pid,el);try{const d=BOND_REDRAW;if(typeof d==='function'){BOND_REDRAW=function(){const r=d.apply(this,arguments);bondPatch(pid,el);return r}}}catch(e){}return el}}
 /* 아무 반응 없이 끝나던 곳에 안내를 붙인다 */
 {const bop0=bondOpenPrompt;bondOpenPrompt=function(x){
-  if(x&&x.kind==='invite'&&x.data&&!INVITES.find(v=>v.id===x.data.iv)){toast('새로 추가된 장면이에요. 페이지를 새로고침(캐시 삭제)한 뒤 다시 눌러 주세요.');return}
+  if(x&&x.kind==='invite'&&x.data&&!INVITES.find(v=>v.id===x.data.iv)){openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},bName(x.from_char)),h('button',{class:'ghost',onclick:closeModal},'닫기')),h('p',{style:'margin:0;line-height:1.75'},'새로 추가된 장면이라 이 화면에서는 볼 수 없어요. 페이지를 새로고침(캐시 삭제)한 뒤 다시 열어 주세요. 그때까지 상대가 기다려요.'),h('button',{class:'sm ghost',onclick:()=>{closeModal();bondDecline(x)}},'거절한다')));return}
   const r=bop0.apply(this,arguments);
   try{if(G.me&&x&&x.kind==='invite'&&x.data&&ENEMY_IDS.has(x.data.iv)&&G.me.violenceBlocked){const box=document.querySelector('#modalRoot .stack');if(box)box.insertBefore(h('p',{style:'margin:0;font-size:12.5px;color:var(--bad)'},'내 악연 장면 수신이 꺼져 있어서 대답할 수 없어요. 설정에서 켜거나 거절해 주세요.'),box.children[1]||null)}}catch(e){}
   return r}}
