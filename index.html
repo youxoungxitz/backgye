@@ -5739,12 +5739,17 @@ const ENEMY_SCENES=[
 for(const v of ENEMY_SCENES){v.need=enemySceneAllowed;for(const o of v.o){o.a={};o.b={};o.neg=true}INVITES.push(v)}
 function relServerError(error){const msg=String(error&&error.message||'');
  if(/VIOLENCE_OFF/.test(msg))return '둘 중 한 사람이 악연 장면 수신을 꺼 두었어요.';
- if(/ENEMY_ONLY/.test(msg))return '악연인 상대와 같은 칸에 있을 때만 걸 수 있어요.';
+ if(/ENEMY_ONLY/.test(msg))return '악연인 상대와 같은 칸에 있을 때만 걸고 대답할 수 있어요. 지금 서로 다른 칸이면 거절할 수도 있어요.';
  if(/VIOLENCE_DAILY/.test(msg))return '이 상대와의 악연 장면 요청은 오늘 이미 한 번 있었어요.';
  if(/BOND_PENDING/.test(msg))return '상대와 아직 대답하지 않은 장면이 있어요.';
  if(/EXPIRED|ALREADY_ANSWERED/.test(msg))return '이미 끝났거나 기한이 지난 장면이에요.';
  if(/function|schema cache|column/.test(msg))return '관계 업데이트 SQL을 먼저 적용해야 해요.';
- return '관계 기록을 저장하지 못했어요. 연결을 확인해 주세요.';
+ if(/OTHER_ACCOUNT_REQUIRED/.test(msg))return '같은 계정의 캐릭터끼리는 장면을 주고받을 수 없어요.';
+ if(/RELATION_REQUIRED/.test(msg))return '아직 서로 지인이 아니에요. 새로고침 후 다시 시도해 주세요.';
+ if(/NOT_OWNER|NOT_RECIPIENT/.test(msg))return '이 캐릭터로 로그인되어 있는지 확인해 주세요.';
+ if(/NOT_FOUND/.test(msg))return '이미 사라진 장면이에요. 새로고침해 주세요.';
+ try{console.error('[relServerError]',error)}catch(e){}
+ return '관계 기록을 저장하지 못했어요. ('+(msg.slice(0,40)||'알 수 없음')+')';
 }
 async function recordRelScene(pid,key,text,neg){const m=G.me;if(!m||!relOf(pid).friend)return null;
  const {data,error}=await sb.rpc('castle_record_scene',{p_actor:m.id,p_other:pid,p_key:key,p_text:String(text).slice(0,295),p_neg:!!neg,p_token:crypto.randomUUID()});
@@ -5788,7 +5793,32 @@ async function setViolenceBlocked(value,button){const m=G.me;if(!m||button.disab
 {const old=openSettings;openSettings=function(){const r=old.apply(this,arguments);const box=document.querySelector('#modalRoot .stack');if(box&&G.me){
  const btn=h('button',{class:'sm'},G.me.violenceBlocked?'악연 장면 수신: 꺼짐':'악연 장면 수신: 켜짐');btn.onclick=()=>setViolenceBlocked(!G.me.violenceBlocked,btn);
  box.append(h('div',{class:'stack'},h('b',null,'악연 전용 장면'),h('p',{class:'dim'},'주먹·발 걸기·멱살 장면. 끄면 새 요청과 대기 중인 장면의 진행이 제한된다. 체력 피해는 없다.'),btn));}return r};$('btnSettings').onclick=openSettings}
-{const old=bondSection;bondSection=function(pid,r){const box=old(pid,r);box.append(h('p',{class:'dim',style:'font-size:12px'},'악연 전용 장면은 같은 칸에서, 두 사람 사이 하루 한 번 요청할 수 있다. 거절하거나 응답하지 않으면 포인트는 오르지 않는다. 설정에서 수신을 끌 수 있다.'));return box}}
+const ENEMY_IDS=new Set(ENEMY_SCENES.map(v=>v.id));
+/* 악연 장면이 안 보이거나 안 걸리는 이유를 알려 준다. 악연이 아니면 null, 가능하면 '' */
+function enemyBlockReason(pid){const m=G.me,r=relOf(pid),p=SAMPLES[pid];if(!m||!p||!r.friend||r.name!=='악연')return null;
+  if(m.violenceBlocked)return '내 설정에서 악연 장면 수신이 꺼져 있어요. 켜야 걸 수도, 받을 수도 있어요.';
+  if(p.violenceBlocked)return '상대가 악연 장면 수신을 꺼 두었어요.';
+  if(p.cell!==m.cell)return '지금 서로 다른 칸이에요. 같은 칸에 있을 때만 걸 수 있어요.';
+  const live=x=>x.status==='open'&&bOther(x)===pid&&bAge(x)<(x.kind==='duo'?DUO_TTL:BOND_TTL);
+  if(BONDS.some(x=>['invite','duo'].includes(x.kind)&&live(x)))return '아직 대답하지 않은 장면이 있어요. 끝나야 새 장면을 걸 수 있어요.';
+  const today=relDay();
+  if(BONDS.some(x=>x.kind==='invite'&&ENEMY_IDS.has(x.data&&x.data.iv)&&bOther(x)===pid&&new Date(Date.parse(x.created_at)+9*3600e3).toISOString().slice(0,10)===today))return '이 상대와의 악연 장면 요청은 오늘 이미 한 번 있었어요. 내일 다시 걸 수 있어요.';
+  return ''}
+{const old=bondSection;bondSection=function(pid,r){const box=old(pid,r);
+  const why=enemyBlockReason(pid);
+  if(why)box.append(h('p',{style:'font-size:12.5px;margin:0;color:var(--bad)'},'악연 장면을 지금은 걸 수 없어요 · '+why));
+  box.append(h('p',{class:'dim',style:'font-size:12px'},'악연 전용 장면은 같은 칸에서, 두 사람 사이 하루 한 번 요청할 수 있다. 거절하거나 응답하지 않으면 포인트는 오르지 않는다. 설정에서 수신을 끌 수 있다.'));return box}}
+/* 아무 반응 없이 끝나던 곳에 안내를 붙인다 */
+{const bop0=bondOpenPrompt;bondOpenPrompt=function(x){
+  if(x&&x.kind==='invite'&&x.data&&!INVITES.find(v=>v.id===x.data.iv)){toast('새로 추가된 장면이에요. 페이지를 새로고침(캐시 삭제)한 뒤 다시 눌러 주세요.');return}
+  const r=bop0.apply(this,arguments);
+  try{if(G.me&&x&&x.kind==='invite'&&x.data&&ENEMY_IDS.has(x.data.iv)&&G.me.violenceBlocked){const box=document.querySelector('#modalRoot .stack');if(box)box.insertBefore(h('p',{style:'margin:0;font-size:12.5px;color:var(--bad)'},'내 악연 장면 수신이 꺼져 있어서 대답할 수 없어요. 설정에서 켜거나 거절해 주세요.'),box.children[1]||null)}}catch(e){}
+  return r}}
+{const abs0=answerBondScene;answerBondScene=async function(x,i){
+  if(G.me&&x&&x.to_char===G.me.id){
+    if(x.status!=='open'){toast('이미 끝난 장면이에요.');return}
+    if(x.kind==='invite'&&x.data&&ENEMY_IDS.has(x.data.iv)&&G.me.violenceBlocked){toast('악연 장면 수신이 꺼져 있어요. 설정에서 켜거나 거절해 주세요.');return}}
+  return abs0.apply(this,arguments)}}
 const REP_REACTIONS=['아직 내 이름을 묻는 사람이 많다.','골목 상인이 얼굴을 알아보고 고개를 끄덕였다.','내가 없는 자리에서 내 이름이 오갔다.','길을 묻기도 전에 상인이 나를 알아봤다.','이름을 대자 맞은편 사람이 눈썹을 올렸다.','처음 보는 상인이 내 이름을 안다. 어디서 들었느냐고 묻자, 여기서는 모르는 쪽이 이상하다며 웃는다.','낡은 벽의 낙서 사이에 내 이름이 있다. 언제 적힌 것인지는 아무도 모른다.','이름을 말하기 전에 자리가 비었다. 앉으라는 손짓이 따라왔다.','누군가 오래된 성채 이야기에 내 이름을 끼워 넣었다. 나는 그런 일을 겪은 기억이 없다.'];
 {const old=give;give=function(rw){const m=G.me,before=m?REPN(m.rep||0):null;const out=old.apply(this,arguments);if(m&&G.me===m&&rw&&rw.rep>0&&REPN(m.rep||0)!==before){const i=REP_LEVELS.findIndex(v=>v[1]===REPN(m.rep||0));log(REP_REACTIONS[i],'life');out.push('평판: '+REPN(m.rep||0))}return out}}
 {const old=openSheet;openSheet=function(id){const r=old.apply(this,arguments);if(id==='me'&&G.me){const box=document.querySelector('#modalRoot .sheet');if(box){const pt=G.me.rep||0,next=REP_LEVELS.find(v=>v[0]>pt);box.append(h('div',{class:'stack talkbox'},h('b',null,'평판 · '+REPN(pt)),h('p',{class:'dim'},next?`평판 ${pt} · 「${next[1]}」까지 ${next[0]-pt}`:`평판 ${pt} · 성채에 이름이 남았다.`)))}}return r}}
