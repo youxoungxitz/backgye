@@ -5840,6 +5840,51 @@ const REP_REACTIONS=['아직 내 이름을 묻는 사람이 많다.','골목 상
 {const old=give;give=function(rw){const m=G.me,before=m?REPN(m.rep||0):null;const out=old.apply(this,arguments);if(m&&G.me===m&&rw&&rw.rep>0&&REPN(m.rep||0)!==before){const i=REP_LEVELS.findIndex(v=>v[1]===REPN(m.rep||0));log(REP_REACTIONS[i],'life');out.push('평판: '+REPN(m.rep||0))}return out}}
 {const old=openSheet;openSheet=function(id){const r=old.apply(this,arguments);if(id==='me'&&G.me){const box=document.querySelector('#modalRoot .sheet');if(box){const pt=G.me.rep||0,next=REP_LEVELS.find(v=>v[0]>pt);box.append(h('div',{class:'stack talkbox'},h('b',null,'평판 · '+REPN(pt)),h('p',{class:'dim'},next?`평판 ${pt} · 「${next[1]}」까지 ${next[0]-pt}`:`평판 ${pt} · 성채에 이름이 남았다.`)))}}return r}}
 
+/* ---------- 건의 반영 (10/29): 들어온 이유 · 포장 음식 · 약속 상대 · 작은 식구 털빛 ---------- */
+/* 1. 성채에 들어온 이유: 프로필에 보이고, 시트 고치기에서 바꿀 수 있다 (소속은 그대로) */
+var RSN_EDIT=null;
+function reasonName(id){const r=typeof REASONS!=='undefined'&&REASONS.find(x=>x.id===id);return r?r.n:''}
+{const os12=openSheet;openSheet=function(id){const r=os12.apply(this,arguments);try{const p=id==='me'?G.me:SAMPLES[id];const n=p&&reasonName(p.reason);const dl=document.querySelector('#modalRoot dl');if(n&&dl&&!dl.querySelector('.rsn')){dl.append(h('dt',{class:'mute rsn'},'들어온 이유'),h('dd',{style:'margin:0'},n))}}catch(e){}return r}}
+if(typeof openForm==='function'){const of12=openForm;openForm=function(edit){RSN_EDIT=null;const r=of12.apply(this,arguments);try{if(edit&&G.me&&typeof REASONS!=='undefined'){const form=document.querySelector('#modalRoot form');const anchor=document.getElementById('f-job');if(form&&!document.getElementById('f-reason2')){
+  const myf=G.me.fugitive?'free':G.me.fac;const opts=REASONS.filter(x=>x.id===G.me.reason||(x.fac||[]).includes(myf));const sel=h('select',{id:'f-reason2',onchange:e=>{RSN_EDIT=e.target.value}},opts.map(x=>h('option',{value:x.id},x.n)));sel.value=G.me.reason||'';
+  const box=h('div',{class:'stack',style:'gap:4px'},h('b',{style:'font-size:13px'},'성채에 들어온 이유'),sel,h('span',{class:'mute',style:'font-size:12px'},'지금 소속에 맞는 이유만 고를 수 있어요. 바꿔도 소속과 생업은 그대로예요.'));
+  const f=anchor&&(anchor.closest('.field')||anchor.parentElement);if(f)f.before(box);else form.append(box)}}}catch(e){}return r}}
+if(typeof afterEdit==='function'){const ae12=afterEdit;afterEdit=async function(){try{if(RSN_EDIT&&G.me&&RSN_EDIT!==G.me.reason){G.me.reason=RSN_EDIT;log(`성채에 들어온 이유를 고쳐 적었다: ${reasonName(RSN_EDIT)}`,'life')}}catch(e){}RSN_EDIT=null;return ae12.apply(this,arguments)}}
+
+/* 2. 포장 음식: 차찬텡에서 사서 들고 다니다가 아무 데서나 꺼내 먹는다 */
+var SNACKS=[{id:'bun',n:'파인애플번 봉지',p:6,rw:{hp:12},d:'체력 +12'},{id:'tea',n:'보리차 한 병',p:5,rw:{mind:8},d:'정신 +8'},{id:'sugar',n:'각설탕 봉지',p:5,rw:{en:3},d:'기력 +3'}];
+const SNACK_BUY=2,SNACK_MAX=5;
+function snackBuy(s){const m=G.me;if(!ready())return;const dl=daily();dl.snackBuy=dl.snackBuy||{};m.snacks=m.snacks||{};
+  if((dl.snackBuy[s.id]||0)>=SNACK_BUY)return toast(`「${s.n}」은(는) 오늘 ${SNACK_BUY}개까지만 포장해 줘요.`);if((m.snacks[s.id]||0)>=SNACK_MAX)return toast(`「${s.n}」은(는) ${SNACK_MAX}개까지만 들고 다닐 수 있어요.`);if(m.money<s.p)return toast('돈이 모자라요.');
+  m.money-=s.p;dl.snackBuy[s.id]=(dl.snackBuy[s.id]||0)+1;m.snacks[s.id]=(m.snacks[s.id]||0)+1;save();toast(`「${s.n}」을(를) 포장했어요. 「나」 탭 가방에서 꺼내 먹을 수 있어요.`);closeModal();openTea();render()}
+function snackEat(s){const m=G.me;if(!ready())return;m.snacks=m.snacks||{};if(!(m.snacks[s.id]>0))return;m.snacks[s.id]--;const out=give(s.rw);log(`가방에서 「${s.n}」을(를) 꺼내 먹었다.`,'life');save();toast(`「${s.n}」 · ${out.join(', ')}`);render()}
+if(typeof openTea==='function'){const ot12=openTea;openTea=function(){const r=ot12.apply(this,arguments);try{const st=document.querySelector('#modalRoot .stack');if(st&&!st.querySelector('.snackbox')){const m=G.me,dl=daily();const bought=(dl.snackBuy||{});
+  st.append(h('div',{class:'stack snackbox',style:'gap:6px;border-top:1px solid var(--line);padding-top:10px'},h('span',{class:'lbl'},'포장해 가기 · 들고 다니다 꺼내 먹기'),
+    ...SNACKS.map(s=>h('div',{class:'pl'},h('div',null,h('b',null,s.n),h('div',{class:'mute',style:'font-size:12.5px'},`${s.d} · 오늘 ${Math.max(0,SNACK_BUY-(bought[s.id]||0))}개 더 · 가방에 ${(m.snacks||{})[s.id]||0}/${SNACK_MAX}`)),h('button',{class:'sm',disabled:m.money<s.p||(bought[s.id]||0)>=SNACK_BUY||((m.snacks||{})[s.id]||0)>=SNACK_MAX||null,onclick:()=>snackBuy(s)},`$${s.p}`))),
+    h('p',{class:'dim',style:'margin:0;font-size:11.5px'},`종류마다 하루 ${SNACK_BUY}개까지 포장해 줘요. 가방에는 ${SNACK_MAX}개까지 들어가요.`)))}}catch(e){}return r}}
+{const rl12=renderLeft;renderLeft=function(){const r=rl12.apply(this,arguments);try{const m=G.me,L=$('left');if(m&&L&&!L.querySelector('.bagcard')){const own=SNACKS.filter(s=>(m.snacks||{})[s.id]>0);if(own.length){const first=L.firstElementChild;
+  const c=h('div',{class:'card stack bagcard',style:'gap:6px'},h('span',{class:'lbl'},'가방'),h('div',{class:'wrap',style:'gap:6px'},own.map(s=>h('button',{class:'sm',title:s.d,onclick:()=>snackEat(s)},`${s.n} ×${m.snacks[s.id]} · ${s.d}`))));
+  if(first&&first.nextSibling)L.insertBefore(c,first.nextSibling);else L.append(c)}}}catch(e){}return r}}
+
+/* 3. 약속: 누구와 했는지 효과 설명에 보인다 */
+if(typeof FXDEF!=='undefined'&&FXDEF.promise){const base=FXDEF.promise.d;Object.defineProperty(FXDEF.promise,'d',{configurable:true,get(){try{const pr=G.me&&G.me.promise;if(pr&&pr.id){const nm=(typeof talkName==='function'?talkName(pr.id):'')||(SAMPLES[pr.id]&&SAMPLES[pr.id].name)||'그 사람';const today=dayIdx(T())>=pr.day;return `${nm}과(와) ${today?'오늘':'내일'} 같은 칸에서 만나기로 했다. 만나면 둘 다 보상`}}catch(e){}return base}})}
+
+/* 4. 작은 식구 털빛 */
+var PET_COLORS={
+ cat:[['','회색 줄무늬',null],['cheese','치즈',{g:'#D08A3A',s:'#E8B66A',k:'#5A3A1A'}],['black','까망',{g:'#2A2A2A',s:'#4A4A48',k:'#101010',e:'#9AC84A'}],['white','하양',{g:'#E8E4DA',s:'#F6F2EA',k:'#8A8478',e:'#6A9AD0'}],['calico','삼색',{g:'#E8E4DA',s:'#D08A3A',k:'#2A2A2A'}]],
+ dog:[['','갈색',null],['black','까망',{b:'#2A2622',t:'#4A4238',w:'#C8C0B0'}],['white','하양',{b:'#D8D0C0',t:'#ECE6DA',w:'#FFFFFF',k:'#6A6050'}],['yellow','황구',{b:'#C89040',t:'#E0B060'}]],
+ mouse:[['','잿빛',null],['white','하양',{g:'#E6E2DA',w:'#F4F0E8',p:'#E0A0A0',e:'#B03030'}],['brown','갈색',{g:'#7A5A3A',w:'#B8946A'}]],
+ bird:[['','풀빛',null],['yellow','노랑',{g:'#E0C040',w:'#F0E090',b:'#E08A30'}],['blue','파랑',{g:'#4A7AB0',w:'#C8D8E8'}],['white','하양',{g:'#E8E6DE',w:'#FFFFFF'}]],
+ snake:[['','이끼빛',null],['white','하양',{g:'#E8E4D8',w:'#F4F0E6',e:'#C03040'}],['dark','검붉은',{g:'#3A2A2A',w:'#8A3A30'}],['yellow','노랑',{g:'#D8B040',w:'#F0E0A0'}]],
+ rabbit:[['','회갈색',null],['white','하양',{w:'#F2F0EA',g:'#D8D4CA',e:'#C03040'}],['brown','갈색',{w:'#A07A5A',g:'#7A5A40',p:'#D8A090'}],['black','까망',{w:'#3A3836',g:'#2A2826',p:'#9A6A60'}]],
+ lizard:[['','풀빛',null],['orange','주황',{g:'#D07A3A',s:'#F0B070'}],['teal','청록',{g:'#3A8A80',s:'#9AD0C0'}],['white','하양',{g:'#E0DCCC',s:'#F2EEE2'}]]};
+function petColorOf(pet){const L=PET_COLORS[pet&&pet.kind];if(!L)return null;const v=L.find(x=>x[0]===(pet.color||''));return v&&v[2]}
+if(typeof petDraw==='function'){const pd12=petDraw;petDraw=function(g,kind,p){const pet=p&&p.pet,S=pet&&typeof PET_SPR!=='undefined'&&PET_SPR[pet.kind],ov=petColorOf(pet);if(!S||!ov)return pd12.apply(this,arguments);const c0=S.c;S.c=Object.assign({},c0,ov);try{return pd12.apply(this,arguments)}finally{S.c=c0}}}
+function petColorSet(id){const m=G.me;if(!m||!m.pet)return;m.pet=Object.assign({},m.pet,{color:id});const v=(PET_COLORS[m.pet.kind]||[]).find(x=>x[0]===id);log(`「${m.pet.name}」의 털빛을 다시 보니 ${v?v[1]:'원래 색'}이었다.`,'life');save();closeModal();openRoom();render()}
+if(typeof petPanel==='function'){const pp12=petPanel;petPanel=function(p,isMe){const el=pp12.apply(this,arguments);try{if(el&&isMe&&p&&p.pet&&PET_COLORS[p.pet.kind]){const cur=p.pet.color||'';
+  el.append(h('div',{class:'stack',style:'gap:4px'},h('span',{class:'dim',style:'font-size:11.5px'},'털빛 · 비늘빛'),h('div',{class:'wrap',style:'gap:4px'},PET_COLORS[p.pet.kind].map(([id,n,c])=>{const sw=c?(c.g||c.b||c.w):(PET_SPR[p.pet.kind].c.g||PET_SPR[p.pet.kind].c.b||PET_SPR[p.pet.kind].c.w);
+    return h('button',{type:'button',class:'sm'+(cur===id?' pri':''),onclick:()=>{if(cur!==id)petColorSet(id)}},h('span',{style:`display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1px solid var(--line);background:${sw}`}),n)}))))}}catch(e){}return el}}
+
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
