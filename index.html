@@ -6225,6 +6225,23 @@ if(typeof MMD_SOFT!=='undefined')Object.assign(MMD_SOFT,{
 
 /* 3. 실제로 열린 파티 탐사에 붙은 낡은 안내 문구 */
 {const vn11=typeof viewNight==='function'?viewNight:null;if(vn11){viewNight=function(){const out=vn11.apply(this,arguments);try{for(const el of [].concat(out)){if(el&&el.querySelectorAll)el.querySelectorAll('p').forEach(p=>{if(p.textContent.includes('베타 2에서 열려요'))p.textContent='같은 칸에 지인이 있으면 「같이 둘러보기」로 함께 탐사할 수 있어요.'})}}catch(e){}return out}}}
+/* ---------- 가게 계산대: 지인이 아니어도 살 수 있게 shop_sales 표를 쓴다 (21_shop.sql) ---------- */
+if(typeof bondSend==='function'){const bs12=bondSend;bondSend=async function(pid,kind,data,status){if(!(kind==='gift'&&data&&data.shop))return bs12.apply(this,arguments);
+  if(typeof sameOwner==='function'&&sameOwner(pid)){toast('내 다른 캐릭터의 가게에서는 살 수 없어요.');return null}
+  const{data:row,error}=await sb.from('shop_sales').insert({buyer:G.me.id,seller:pid,data,status:'open'}).select().single();
+  if(error){toast(/relation|does not exist|schema cache/i.test(error.message||'')?'가게 계산대가 아직 없어요. 운영자에게 21_shop.sql 실행을 부탁해 주세요.':'계산하지 못했어요. 잠시 뒤 다시 해 주세요.');return null}return row}}
+/* 주인: 1분마다 계산대를 확인해서 손님이 낸 돈을 받는다. 'open'인 줄만 'done'으로 바꾸고, 바뀐 줄만 받는다 (기기 둘이어도 두 번 안 받음) */
+let SHOP_POLL=0,SHOP_BUSY=false;
+async function shopCollect(force){const m=G.me;if(!m||!m.shop||!m.shop.k||typeof sb==='undefined'||!sb||SHOP_BUSY)return;if(!force&&Date.now()-SHOP_POLL<60e3)return;SHOP_POLL=Date.now();SHOP_BUSY=true;
+  try{const{data,error}=await sb.from('shop_sales').select('id,buyer,data').eq('seller',m.id).eq('status','open').limit(50);if(error||!data||!data.length)return;
+    for(const x of data){const{data:up,error:e2}=await sb.from('shop_sales').update({status:'done'}).eq('id',x.id).eq('status','open').select('id');if(e2||!up||!up.length||G.me!==m)continue;
+      const d=x.data||{},amt=Math.max(0,Math.floor(+d.money||0)),nm=bName(x.buyer);m.money+=amt;const dl=daily();dl.shopCust=(dl.shopCust||0)+1;if((dl.shopRep||0)<10){dl.shopRep=(dl.shopRep||0)+1;m.rep=(m.rep||0)+1}
+      m.shop.cust=m.shop.cust||{};m.shop.cust[nm]=Math.max(m.shop.cust[nm]||0,+d.nth||((m.shop.cust[nm]||0)+1));
+      if(d.buy==='item'&&m.shop.stock){const i=m.shop.stock.findIndex(s=>s.id===d.sid);if(i>=0)m.shop.stock.splice(i,1)}
+      log(`${nm}이(가) 가게에서 ${d.note||'물건'}을(를) 샀다. $${amt}`,'life');toast(`가게 손님 ${nm} · $${amt}`)}
+    save();try{render()}catch(e){}}catch(e){}finally{SHOP_BUSY=false}}
+{const tk14=tick;tick=function(){const r=tk14.apply(this,arguments);try{shopCollect(false)}catch(e){}return r}}
+if(typeof shopManage==='function'){const sm14=shopManage;shopManage=function(){shopCollect(true);return sm14.apply(this,arguments)}}
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
