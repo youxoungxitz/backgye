@@ -5921,7 +5921,7 @@ const supPrice=()=>G.me&&G.me.rank==='white'?20:30;
 function supBuy(){if(!ready())return;const m=G.me,dl=daily(),p=supPrice(),cap=SUP_BUY+(m.rank==='white'?1:0);if((dl.supBuy||0)>=cap)return toast(`돈으로 사 넣는 물자는 하루 ${cap}까지예요.`);if(m.money<p)return toast('돈이 모자라요.');
   if((dl.sup||0)>=SUP_DAY)return toast(`오늘은 물자를 ${SUP_DAY}까지 넘겼어요.`);m.money-=p;dl.supBuy=(dl.supBuy||0)+1;supGive(1,`$${p}를 치렀다.`);save();toast(`$${p} · 물자 1`);closeModal();openSupply();render()}
 function supClaim(){if(!ready())return;const m=G.me,W=supWeek();if(!supWin()||m.supClaimW===W)return;m.supClaimW=W;const f=myF();const out=give(f==='red'?{money:150,merit:10}:{money:150,rep:10});
-  log(`지난주 무명동 줄다리기에서 ${SUP_FN[f]}이(가) 이겼다. 몫을 받았다.`,'fac');closeModal();done('줄다리기 몫',f==='red'?'사무원이 봉투를 내민다. 봉투 안쪽에 무명동 먼지가 묻어 있다. 「이번 주는 우리 쪽 계단이 더 길대.」':f==='sam'?'초소 칠판에 이번 주 순번 대신 「1」이 크게 적혀 있다. 대장이 말없이 봉투를 건넨다. 봉투가 축축하다.':'누가 문틈에 봉투를 밀어 넣고 갔다. 겉봉에 「무소속 몫」이라고만 적혀 있다. 글씨가 내 글씨와 닮았다.',out)}
+  log(`지난주 무명동 줄다리기에서 ${SUP_FN[f]}이 이겼다. 몫을 받았다.`,'fac');closeModal();done('줄다리기 몫',f==='red'?'사무원이 봉투를 내민다. 봉투 안쪽에 무명동 먼지가 묻어 있다. 「이번 주는 우리 쪽 계단이 더 길대.」':f==='sam'?'초소 칠판에 이번 주 순번 대신 「1」이 크게 적혀 있다. 대장이 말없이 봉투를 건넨다. 봉투가 축축하다.':'누가 문틈에 봉투를 밀어 넣고 갔다. 겉봉에 「무소속 몫」이라고만 적혀 있다. 글씨가 내 글씨와 닮았다.',out)}
 /* 물자 창 */
 function supBar(n,max,f,c){return h('div',{class:'stack',style:'gap:3px'},h('div',{class:'row'},h('span',{style:'font-size:13px'},SUP_FN[f]),h('b',{class:'num',style:'font-size:13px'},n)),h('div',{style:'height:8px;background:var(--line);overflow:hidden'},h('div',{style:`height:100%;width:${max?Math.round(n/max*100):0}%;background:${c}`})))}
 const SUP_C={red:'var(--lantern)',sam:'var(--tube)',free:'var(--amber)'};
@@ -6142,6 +6142,89 @@ function mmdPost(){if(!ready())return;const m=G.me,dl=daily();if(dl.mmdPost)retu
    {l:'그대로 둔다',run:()=>{scene=null;render();toast('편지지는 우체통 안에서 기다린다.')}}]})}
 Object.assign(PLACES,{mmdpost:{n:'수로 끝 우체통',btn:'수로 끝 우체통 (기력 1)',act:mmdPost}});
 {const ml10=mmdLayout;mmdLayout=function(day){const L=ml10.apply(this,arguments);try{if(!Object.values(L.host).includes('mmdpost')){const d=day==null?dayIdx(T()):day;const ok=[...Array(MMD_R).keys()].map(j=>mmdKey(4,j)).filter(k=>L.st[k]!=='gone'&&!L.host[k]);if(ok.length)L.host[ok[(d*7+3)%ok.length]]='mmdpost'}}catch(e){}return L}}
+/* ---------- 자잘한 업데이트 (10/29 새벽) ---------- */
+/* 1. 큰 돈·문패 변동 따로 남기기 (state.bigLog, 최근 30줄) */
+const BIG_KEYS=['plate','noname','button','mirror','bowl','lantern','rclock'];
+function bigSnap(m){const it={};for(const k of BIG_KEYS)it[k]=(m.items&&m.items[k])||0;return{money:Math.round(m.money||0),debt:Math.round(m.debt||0),it}}
+function bigPush(text){const m=G.me;if(!m)return;m.bigLog=m.bigLog||[];m.bigLog.unshift({t:T(),text:String(text).slice(0,200)});if(m.bigLog.length>30)m.bigLog.length=30}
+function bigDiff(a,b,why){const out=[];if(Math.abs(b.money-a.money)>=100)out.push(`돈 $${a.money} → $${b.money}`);if(Math.abs(b.debt-a.debt)>=100)out.push(`빚 $${a.debt} → $${b.debt}`);
+  for(const k of BIG_KEYS)if(a.it[k]!==b.it[k])out.push(`${ITEMS[k]?ITEMS[k].n:k} ${a.it[k]} → ${b.it[k]}`);
+  if(out.length){const last=(G.log||[]).slice(0,2).map(x=>x.text.slice(0,50)).join(' / ');bigPush(`${why?why+' · ':''}${out.join(', ')}${last?' · 직전 일지: '+last:''}`)}}
+var BIG_LAST=null,BIG_ID=null;
+{const sv11=save;save=function(){try{const m=G.me;if(m){if(BIG_ID!==m.id){BIG_ID=m.id;BIG_LAST=bigSnap(m)}else{const now=bigSnap(m);bigDiff(BIG_LAST,now,'');BIG_LAST=now}}}catch(e){}return sv11.apply(this,arguments)}}
+/* 2. 다른 기기 진행으로 맞출 때 무엇이 바뀌었는지 남긴다 */
+if(typeof syncAdopt==='function'){const sa11=syncAdopt;syncAdopt=async function(why){const m0=G.me;const before=m0?bigSnap(m0):null;const oldBig=m0&&m0.bigLog;const r=await sa11.apply(this,arguments);
+  try{if(r&&G.me&&before){const after=bigSnap(G.me);if(!G.me.bigLog&&oldBig)G.me.bigLog=oldBig;BIG_ID=G.me.id;BIG_LAST=after;
+    const d=[];if(after.money!==before.money)d.push(`돈 $${before.money} → $${after.money}`);for(const k of BIG_KEYS)if(after.it[k]!==before.it[k])d.push(`${ITEMS[k]?ITEMS[k].n:k} ${before.it[k]} → ${after.it[k]}`);
+    if(d.length){const line=`다른 기기에서 한 진행으로 맞췄다 (${d.join(', ')})`;bigPush(line);log(line,'life');save()}}}catch(e){}return r}}
+
+/* 3. 낡은 안내 문구 · 삼경 대장 승진 */
+const CAP_PATROL=100,CAP_CLEAN=30,CAP_SEAL=3,CAP_REP=300;
+function capReady(m){return m.fac==='sam'&&m.rank==='leader'&&(m.sam.patrol||0)>=CAP_PATROL&&(m.sam.cleanup||0)>=CAP_CLEAN&&(m.sam.seal||0)>=CAP_SEAL&&(m.rep||0)>=CAP_REP}
+function capPromote(){if(!ready())return;const m=G.me;if(!capReady(m))return toast(`대장 승진: 순찰 ${CAP_PATROL}, 현장 수습 ${CAP_CLEAN}, 봉인 ${CAP_SEAL}, 평판 ${CAP_REP}`);
+  m.rank='captain';log('삼경 대장이 되었다.','fac');done('승진','초소 벽에 걸린 손전등 중 가장 낡은 것을 대장이 내려 건넨다. 손잡이에 이름이 열 개 넘게 새겨졌다가 긁혀 있다.\n「마지막 이름 밑에 새겨요. 그리고 기억해요. 대장 이름은 늘 순찰 명단 맨 끝에 적혀요. 마지막까지 남는 사람이라서.」',['삼경 · 대장','하루 한 번 「야간 점호」'])}
+function capRoll(){if(!ready())return;const m=G.me,dl=daily();if(dl.capRoll)return toast('오늘 점호는 끝났어요.');if(!spend(1))return;dl.capRoll=1;const c=chk('nerve',13);const out=c.ok?give({money:ri(30,50),rep:4}):give({mind:-8,rep:1});out.unshift(c.txt);
+  log(c.ok?'야간 점호를 마쳤다.':'야간 점호 인원이 맞지 않았다.','fac');done('야간 점호',c.ok?pick(['초소 앞에 순찰조가 줄을 섰다. 하나씩 이름을 부르고, 하나씩 대답했다. 빠진 사람 없이. 그게 오늘 성채에서 제일 반가운 일이었다.','점호가 끝나고 신참 하나가 손전등을 돌려주며 말했다. 「오늘은 계단이 안 늘었어요.」 그 말이 고마웠다.']):pick(['명단에는 일곱 명, 대답은 여덟 번 돌아왔다.','마지막 이름을 부르자 대답 대신 손전등 하나가 계단에서 굴러 내려왔다. 켜진 채로.']),out,!c.ok)}
+{const fc11=factionCard;factionCard=function(){const el=fc11.apply(this,arguments);try{const m=G.me;if(m&&m.fac==='sam'&&el){const p=[...el.querySelectorAll('p')].find(x=>x.textContent.includes('대장은 베타 2'));
+  if(p&&m.rank==='captain')p.textContent='삼경 대장 · 순찰 명단 맨 끝에 이름이 적힌다.';else if(p){p.textContent=`대장 승진: 순찰 ${m.sam.patrol||0}/${CAP_PATROL} · 현장 수습 ${m.sam.cleanup||0}/${CAP_CLEAN} · 봉인 ${m.sam.seal||0}/${CAP_SEAL} · 평판 ${m.rep||0}/${CAP_REP}`;p.after(h('button',{class:'sm'+(capReady(m)?' pri':''),onclick:capPromote},'대장 승진 신청'))}
+  if(m.rank==='captain')el.append(h('button',{class:'sm',disabled:daily().capRoll||null,onclick:capRoll},daily().capRoll?'오늘 점호는 끝났다':'야간 점호 (기력 1)'))}}catch(e){}return el}}
+
+/* 4. 줄다리기 결과: 주가 바뀐 뒤 처음 접속하면 알려 준다 */
+{const tk11=tick;tick=function(){const r=tk11.apply(this,arguments);try{const m=G.me;if(m&&typeof supWinner==='function'&&SAMPLE_IDS.length){const W=supWeek();if(m.supSeenW==null){m.supSeenW=W}else if(m.supSeenW<W){m.supSeenW=W;const w=supWinner(W-1);
+  const line=w?`지난주 무명동 줄다리기: ${SUP_FN[w]}이 이겼다.${w===myF()?' 이번 주 무명동 판정 +2, 몫을 받을 수 있다.':''}`:'지난주 무명동 줄다리기는 승부가 나지 않았다.';log(line,'fac');setTimeout(()=>toast(line),800);save()}}}catch(e){}return r}}
+
+/* 5. 새 칭호 */
+if(typeof TTL!=='undefined'){TTL_CAT.fac='세력';TTL.push(
+ ['sackman','꾸러미꾼','mmd','무명동 물자 100 넘기기',m=>((m.supply&&m.supply.tot)||0)>=100],
+ ['replied','답장한 사람','mmd','수로 끝 우체통에 답장하기',m=>m.mmdPostAns==='write'],
+ ['boss12','12층 사장','life','무소속 가게 열기',m=>!!(m.shop&&m.shop.k)],
+ ['regular','단골','life','한 가게에서 다섯 번 사기',m=>Object.values(tc(m).shopN||{}).some(n=>n>=5)],
+ ['redstick','붉은 막대','fac','적등방 홍봉 되기',m=>m.rank==='hong'||!!tc(m).wasHong],
+ ['whitefan','흰 부채','fac','적등방 백선 되기',m=>m.rank==='white'||!!tc(m).wasWhite],
+ ['incense','향주','fac','적등방 향주 되기',m=>m.rank==='head'],
+ ['lastname','명단 맨 끝','fac','삼경 대장 되기',m=>m.rank==='captain'])}
+{const tk12=tick;tick=function(){const r=tk12.apply(this,arguments);try{const m=G.me;if(m){if(m.rank==='hong')tc(m).wasHong=1;if(m.rank==='white')tc(m).wasWhite=1}}catch(e){}return r}}
+
+/* 6. 가게 단골: 손님은 몇 번 샀는지 세고, 주인은 단골 이름을 본다 */
+if(typeof shopPay==='function'){const sp11=shopPay;shopPay=async function(pid,price,data){const c=tc(G.me);c.shopN=c.shopN||{};const n=(c.shopN[pid]||0)+1;const ok=await sp11.call(this,pid,price,Object.assign({},data,{nth:n}));if(ok){c.shopN[pid]=n;if(n===5)setTimeout(()=>toast(`「${shopName(SAMPLES[pid])}」 단골이 되었어요.`),600)}return ok}}
+if(typeof bondProcess==='function'){const bp11=bondProcess;bondProcess=function(){try{const m=G.me;if(m&&m.shop){const ap=bApplied();for(const x of BONDS){if(ap[x.id]||x.kind!=='gift'||x.to_char!==m.id||x.status!=='open'||!(x.data&&x.data.shop))continue;
+  m.shop.cust=m.shop.cust||{};const nm=bName(x.from_char);m.shop.cust[nm]=Math.max(m.shop.cust[nm]||0,+x.data.nth||((m.shop.cust[nm]||0)+1));const keys=Object.keys(m.shop.cust);if(keys.length>40){keys.sort((a,b)=>m.shop.cust[a]-m.shop.cust[b]).slice(0,keys.length-40).forEach(k=>delete m.shop.cust[k])}}}}catch(e){}return bp11.apply(this,arguments)}}
+const shopRegs=p=>Object.entries((p.shop&&p.shop.cust)||{}).filter(([,n])=>n>=5).sort((a,b)=>b[1]-a[1]).map(([k])=>k);
+if(typeof shopManage==='function'){const sm11=shopManage;shopManage=function(){const r=sm11.apply(this,arguments);try{const regs=shopRegs(G.me);const st=document.querySelector('#modalRoot .stack');if(st)st.insertBefore(h('p',{class:'mute',style:'margin:0;font-size:12.5px'},regs.length?`단골 · ${regs.slice(0,8).join(', ')}`:'아직 단골이 없어요. 다섯 번 사 간 손님이 단골이 돼요.'),st.children[2]||null)}catch(e){}return r}}
+if(typeof shopVisit==='function'){const sv12=shopVisit;shopVisit=function(pid){const r=sv12.apply(this,arguments);try{const n=(tc(G.me).shopN||{})[pid]||0;const st=document.querySelector('#modalRoot .stack');const regs=shopRegs(SAMPLES[pid]);
+  if(st)st.insertBefore(h('p',{class:'mute',style:'margin:0;font-size:12.5px'},`${n>=5?'단골 · ':''}여기서 ${n}번 샀다${regs.length?` · 이 가게 단골: ${regs.slice(0,5).join(', ')}`:''}`),st.children[2]||null)}catch(e){}return r}}
+
+/* 9. 작은 식구끼리: 같은 칸에 다른 사람의 작은 식구가 있으면 하루 한 번 일지에 */
+const PET_MEET=['{a}이(가) {b}의 냄새를 오래 맡더니 옆에 나란히 앉았다.','{a}과(와) {b}이(가) 서로 꼬리 끝만 보며 한참을 빙빙 돌았다.','{b}이(가) 먼저 다가와 {a}의 귀를 핥았다. {a}은(는) 못 이기는 척 가만히 있었다.','{a}이(가) {b}에게 무언가 물어다 주었다. 자세히 보니 어디서 났는지 모를 단추 하나다.','{a}과(와) {b}이(가) 같은 쪽 빈 벽을 한참 함께 쳐다봤다. 둘 다 꼬리털이 바짝 섰다.','{a}이(가) {b} 옆에서 잠들었다. 둘의 숨 쉬는 박자가 점점 같아졌다.'];
+{const tk13=tick;tick=function(){const r=tk13.apply(this,arguments);try{const m=G.me;if(m&&m.pet&&m.pet.name&&m.cell&&chance(.02)){const dl=daily();if(!dl.petMeet){const ids=SAMPLE_IDS.filter(id=>{const p=SAMPLES[id];return p&&p.pet&&p.pet.name&&p.cell===m.cell&&online(p)});
+  if(ids.length){dl.petMeet=1;const p=SAMPLES[pick(ids)];const line=pick(PET_MEET).replace(/\{a\}/g,`「${m.pet.name}」`).replace(/\{b\}/g,`${p.name}네 「${p.pet.name}」`);log(line,'rel');toast(line);save()}}}}catch(e){}return r}}
+
+/* 7. 새 무명동 사건 결과: 「공포 연출 약하게」 순화본 */
+if(typeof MMD_SOFT!=='undefined')Object.assign(MMD_SOFT,{
+ 'kite.0.no':'줄이 반대로 당겨졌다. 손바닥이 쓸리며 난간까지 끌려갔다. 겨우 놓았을 때 아래에서 누가 아쉽다는 듯 줄을 툭 놓았다.',
+ 'kite.1.r':'세 번 당겼다. 아래가 조용해졌다. 잠시 뒤 끊긴 줄이 내 발치에 떨어졌다.',
+ 'photoalbum.0.no':'덮으려는데 손끝이 빈 장에 달라붙었다. 겨우 떼어 냈을 때 빈 장에 내 지문이 사진처럼 남아 있었다.',
+ 'photoalbum.1.no':'찢는 소리 대신 비명 같은 소리가 났다. 내 목소리 같았다. 찢긴 자리가 저절로 다시 붙었다.',
+ 'babycry.1.ok':'눌렀다. 따뜻했다. 무언가 마주 미는 느낌이 들다가 이윽고 조용해졌다. 손바닥에 벽지 무늬가 남았다.',
+ 'babycry.1.no':'손바닥이 벽 안으로 살짝 들어갔다. 안쪽에서 작은 손이 내 손가락을 쥐었다. 빼낼 때 손끝이 얼얼했다.',
+ 'elevator.0.no':'문이 닫히는 순간 거울 속 내가 웃었다. 정신을 차려 보니 복도 바닥이었다. 손끝이 버튼을 오래 누른 것처럼 저렸다.',
+ 'fireext.1.no':'들자마자 소화기가 바닥으로 쏟아졌다. 하얀 가루 사이로 작고 단단한 것들이 굴러 내 발치에서 멈췄다.',
+ 'butcher.0.no':'주인이 고개를 저었다. 칼끝이 내 팔뚝을 가볍게 짚고 지나갔다. 다치지는 않았는데, 그 자리가 한동안 차가웠다.',
+ 'butcher.1.no':'물러섰는데 바늘이 그대로다. 가게를 나오는 내내 몸이 조금 가벼운 느낌이었다.',
+ 'boatman.0.no':'배가 기울었다. 바닥 쪽에서 아는 얼굴 하나가 나를 봤다. 누구인지 떠올리기 전에 사라졌다.',
+ 'boatman.1.no':'바닥에 적힌 번호 중 하나가 내 방 번호였다.',
+ 'drain2.1.no':'뚜껑이 닫히지 않았다. 안에서 누가 받치고 있는 것 같다.',
+ 'n_roofcall.0.no':'「네.」 내 입이 대답했다. 정신을 차려 보니 아침이었고, 옥상 줄 맨 끝에 서 있었다.',
+ 'n_dinner.0.no':'한 숟갈 떠먹었다. 무언가 딱딱한 것이 씹혔다. 뱉어 보니 작은 돌 같았다. 입안이 한참 얼얼했다.',
+ 'n_dinner.1.no':'의자를 밀어 넣는데 안 들어간다. 누가 앉아 있는 것처럼.',
+ 'n_corridor.0.no':'다리가 엉켜 넘어졌다. 어둠 속에서 누가 내 얼굴 앞에 잠시 머물다, 아니라는 듯 떠났다.',
+ 'n_market.0.no':'주인이 가면을 내 얼굴에 덮었다. 차갑고 축축하다. 겨우 떼어 냈다. 거울 속 얼굴이 내 얼굴이 맞는지 잠깐 헷갈렸다.',
+ 'n_tide.0.ok':'한 걸음씩 헤쳤다. 반대편에 닿았을 때 발목에 감긴 것들 사이에 설계도 조각 셋이 섞여 있었다.',
+ 'n_tide.0.no':'발목을 잡혔다가 가까스로 빠져나왔다. 신발 한 짝이 없다. 수로 저편에서 그 신발로 걷는 소리가 났다.',
+ 'n_tide.1.r':'계단 위에서 기다렸다. 새벽이 되자 다 빠져나갔다. 수로 바닥에 빗 하나가 남았다.'});
+
+/* 3. 실제로 열린 파티 탐사에 붙은 낡은 안내 문구 */
+{const vn11=typeof viewNight==='function'?viewNight:null;if(vn11){viewNight=function(){const out=vn11.apply(this,arguments);try{for(const el of [].concat(out)){if(el&&el.querySelectorAll)el.querySelectorAll('p').forEach(p=>{if(p.textContent.includes('베타 2에서 열려요'))p.textContent='같은 칸에 지인이 있으면 「같이 둘러보기」로 함께 탐사할 수 있어요.'})}}catch(e){}return out}}}
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
