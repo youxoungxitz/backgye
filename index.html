@@ -6401,6 +6401,118 @@ if(typeof SHOP_KIND!=='undefined')Object.assign(SHOP_KIND,{
 if(typeof PET_COLORS!=='undefined'&&PET_COLORS.bird&&!PET_COLORS.bird.some(x=>x[0]==='black'))PET_COLORS.bird.push(['black','까망',{g:'#26262C',w:'#45454F',e:'#D8D4C8',b:'#3A3A40',t:'#1A1A1E'}]);
 /* 방주(운영자가 맡는 NPC)와도 이야기 나누기 · 속 이야기 */
 if(typeof talkEl==='function'){const te16=talkEl;talkEl=function(pid){const p=SAMPLES[pid];if(p&&p.isNpc&&p.owner){p.isNpc=false;try{return te16.apply(this,arguments)}finally{p.isNpc=true}}return te16.apply(this,arguments)}}
+/* ---------- 10/29 오후: 가게 메뉴 · 업종 바꾸기 · 생일 · 방명록 · 성채 신문 · 첫눈 · 작은 식구 산책 ---------- */
+/* 가게 메뉴: [id, 이름, 기본값, 최저, 최고, 효과, 설명] · 주인이 넷까지 골라 판다 */
+var SHOP_MENU={
+ noodle:[['wonton','완탕면',8,5,15,{hp:10,mind:4},'체력 +10 · 정신 +4'],['spicy','매운 탄탄면',9,6,16,{hp:8,mind:6,en:1},'체력 +8 · 정신 +6 · 기력 +1'],['beef','우육면',11,7,18,{hp:15,mind:3},'체력 +15 · 정신 +3'],['charsiu','차슈 국수',10,6,17,{hp:12,mind:4},'체력 +12 · 정신 +4'],['fishball','어묵 국수',7,5,13,{hp:8,mind:5},'체력 +8 · 정신 +5'],['zhajiang','짜장 비빔국수',9,6,15,{hp:11,mind:4},'체력 +11 · 정신 +4']],
+ tea:[['milktea','홍콩식 밀크티',7,5,12,{mind:8,en:1},'정신 +8 · 기력 +1'],['yuanyang','원앙차',8,5,13,{mind:6,en:2},'정신 +6 · 기력 +2'],['lemontea','아이스 레몬티',6,4,11,{mind:7,hp:2},'정신 +7 · 체력 +2'],['soymilk','따뜻한 두유',5,3,9,{hp:4,mind:4},'체력 +4 · 정신 +4'],['chrysan','국화차',5,3,9,{mind:6,hp:3},'정신 +6 · 체력 +3'],['mungbean','녹두탕',6,4,11,{mind:9},'정신 +9'],['herbal','쓴 약초차',7,4,12,{hp:6,mind:-2,en:2},'체력 +6 · 기력 +2 · 정신 -2']],
+ dumpling:[['steamed','찐만두',9,6,16,{hp:12,mind:3},'체력 +12 · 정신 +3'],['xlb','샤오룽바오',11,7,18,{hp:13,mind:5},'체력 +13 · 정신 +5'],['fried','군만두',8,5,14,{hp:11,mind:3},'체력 +11 · 정신 +3'],['hargow','하가우',10,6,16,{hp:10,mind:6},'체력 +10 · 정신 +6'],['siumai','시우마이',8,5,14,{hp:9,mind:5},'체력 +9 · 정신 +5'],['bao','차슈바오',7,5,12,{hp:10,mind:4},'체력 +10 · 정신 +4']],
+ smoke:[['cig','담배 한 개비',4,3,10,{mind:7,hp:-1},'정신 +7 · 체력 -1'],['clove','정향 담배',6,4,12,{mind:9,hp:-2},'정신 +9 · 체력 -2'],['cigar','시가 끄트머리',12,8,20,{mind:14,hp:-3},'정신 +14 · 체력 -3'],['mint','박하사탕 한 줌',3,2,7,{mind:4,en:1},'정신 +4 · 기력 +1'],['matches','성냥 한 갑',2,1,5,{mind:2},'정신 +2']]};
+const MENU_MAX=4,SHOP_DAY3=3;
+function menuOf(p){const L=SHOP_MENU[p.shop.k];if(!L)return null;const sel=p.shop.menu&&typeof p.shop.menu==='object'?p.shop.menu:null;
+  const ids=sel?Object.keys(sel).filter(id=>L.some(x=>x[0]===id)).slice(0,MENU_MAX):[L[0][0]];
+  return ids.map(id=>{const x=L.find(y=>y[0]===id);const pr=sel?+sel[id]:+p.shop.price||x[2];return{id,n:x[1],p:Math.max(x[3],Math.min(x[4],Math.floor(pr||x[2]))),rw:x[5],d:x[6]}})}
+async function shopBuyMenu(pid,iid){if(!ready())return;const m=G.me,p=SAMPLES[pid];if(!shopOk(p))return toast('셔터가 내려가 있어요.');const it=(menuOf(p)||[]).find(x=>x.id===iid);if(!it)return;
+  const dl=daily();dl.shopBuy=dl.shopBuy||{};if((dl.shopBuy[pid]||0)>=SHOP_DAY3)return toast(`이 가게에서는 오늘 ${SHOP_DAY3}번 샀어요.`);
+  if(!await shopPay(pid,it.p,{buy:p.shop.k,item:iid,note:it.n}))return;dl.shopBuy[pid]=(dl.shopBuy[pid]||0)+1;const out=give(it.rw);out.unshift(`-$${it.p}`);
+  log(`「${shopName(p)}」에서 ${it.n}. $${it.p}`,'life');save();closeModal();done(shopName(p),`「${it.n}」\n`+pick(SHOP_KIND[p.shop.k].lines),out)}
+if(typeof shopVisit==='function'){const sv17=shopVisit;shopVisit=function(pid){const r=sv17.apply(this,arguments);try{const p=SAMPLES[pid];const L=p&&menuOf(p);const st=document.querySelector('#modalRoot .stack');if(L&&st){const row=[...st.querySelectorAll('.pl')][0];const dl=daily(),left=SHOP_DAY3-((dl.shopBuy||{})[pid]||0);
+  const box=h('div',{class:'stack',style:'gap:6px'},h('span',{class:'lbl'},`차림표 · 오늘 ${Math.max(0,left)}번 더`),...L.map(it=>h('div',{class:'pl'},h('div',null,h('b',null,it.n),h('div',{class:'mute',style:'font-size:12.5px'},it.d)),h('button',{class:'sm pri',disabled:left<=0||G.me.money<it.p||null,onclick:()=>shopBuyMenu(pid,it.id)},`$${it.p}`))));
+  if(row)row.replaceWith(box);else st.append(box)}}catch(e){}return r}}
+/* 주인: 차림표 고르기 · 업종 바꾸기 */
+const SHOP_SWITCH=200;
+function shopMenuSave(sel){const m=G.me;const ids=Object.keys(sel);if(!ids.length)return toast('메뉴를 하나 이상 골라 주세요.');if(ids.length>MENU_MAX)return toast(`메뉴는 ${MENU_MAX}개까지예요.`);
+  m.shop=Object.assign({},m.shop,{menu:sel,price:Math.min(...Object.values(sel))});save();toast('차림표를 바꿨어요.');closeModal();shopManage()}
+function shopSwitch(k){const m=G.me;if(!m.shop||m.shop.k===k)return;if(m.money<SHOP_SWITCH)return toast('돈이 모자라요.');m.money-=SHOP_SWITCH;
+  if(m.shop.k==='junk'&&m.shop.stock)for(const s of m.shop.stock)m.items[s.k]=(m.items[s.k]||0)+1;
+  m.shop=Object.assign({},m.shop,{k,menu:null,price:SHOP_KIND[k].p[0],stock:[]});log(`가게 업종을 바꿨다: ${SHOP_KIND[k].n}`,'life');save();closeModal();shopManage();render()}
+if(typeof shopManage==='function'){const sm17=shopManage;shopManage=function(){const r=sm17.apply(this,arguments);try{const m=G.me,st=document.querySelector('#modalRoot .stack');if(!st||!m.shop)return r;const L=SHOP_MENU[m.shop.k];
+  if(L){const cur=menuOf(m);const sel={};cur.forEach(x=>sel[x.id]=x.p);
+    const rows=L.map(x=>{const on=sel[x[0]]!=null;const ip=h('input',{type:'number',min:String(x[3]),max:String(x[4]),value:String(on?sel[x[0]]:x[2]),style:'width:64px'});const cb=h('input',{type:'checkbox',style:'width:auto',checked:on||null});
+      return{id:x[0],el:h('label',{class:'pl',style:'gap:8px'},cb,h('div',{style:'flex:1;min-width:0'},h('b',null,x[1]),h('div',{class:'mute',style:'font-size:12px'},`${x[6]} · $${x[3]}~${x[4]}`)),h('span',null,'$'),ip),cb,ip,x}});
+    st.append(h('div',{class:'stack',style:'gap:6px;border-top:1px solid var(--line);padding-top:10px'},h('span',{class:'lbl'},`차림표 · ${MENU_MAX}개까지`),...rows.map(x=>x.el),
+      h('button',{class:'sm pri',onclick:()=>{const s={};for(const x of rows)if(x.cb.checked){s[x.id]=Math.max(x.x[3],Math.min(x.x[4],Math.floor(+x.ip.value||x.x[2])))}shopMenuSave(s)}},'차림표 저장')))}
+  st.append(h('details',{class:'stack',style:'gap:6px'},h('summary',{class:'dim',style:'cursor:pointer;font-size:12.5px'},`업종 바꾸기 · $${SHOP_SWITCH}`),h('div',{class:'wrap',style:'gap:6px;margin-top:6px'},Object.entries(SHOP_KIND).filter(([k])=>k!==m.shop.k).map(([k,K])=>h('button',{class:'sm',disabled:m.money<SHOP_SWITCH||null,onclick:()=>shopSwitch(k)},`${K.zh} ${K.n}`))),
+    h('p',{class:'dim',style:'margin:0;font-size:11.5px'},'간판 이름과 단골은 그대로예요. 고물상 진열대의 물건은 가방으로 돌아와요.')))}catch(e){}return r}}
+if(typeof SHOP_KIND!=='undefined'&&SHOP_KIND.tea)SHOP_KIND.tea.n='찻집·음료 가판';
+if(typeof SHOP_KIND!=='undefined'&&SHOP_KIND.noodle)SHOP_KIND.noodle.n='국숫집';
+
+/* 생일: 프로필에 적어 두면 그날 성채가 안다 */
+if(typeof SHEETK!=='undefined'&&!SHEETK.includes('bday'))SHEETK.push('bday');
+{const pf17=personFromRow;personFromRow=function(r){const p=pf17.apply(this,arguments);try{const s=(r&&r.sheet)||{};p.bday=/^\d{2}-\d{2}$/.test(s.bday||'')?s.bday:''}catch(e){}return p}}
+ITEMS.cake={n:'생일 케이크 한 조각',d:'초가 하나 꽂혀 있다. 방에 두면 밤새 꺼지지 않는다.',v:15};
+if(typeof ROOMFX!=='undefined')ROOMFX.cake='밤새 케이크 위 초 하나가 꺼지지 않았다. 아침에 보니 초가 조금도 줄지 않았다.';
+const bdayMD=()=>{const d=kd(T());return String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0')};
+const isBday=p=>!!(p&&p.bday&&p.bday===bdayMD());
+async function cakeGive(pid){if(!ready())return;const m=G.me,p=SAMPLES[pid];if(!isBday(p))return;const dl=daily();dl.cake=dl.cake||{};if(dl.cake[pid])return toast('오늘은 이미 케이크를 두고 왔어요.');if(m.money<10)return toast('케이크값 $10이 필요해요.');
+  m.money-=10;dl.cake[pid]=1;save();const row=await bondSend(pid,'gift',{item:'cake',note:'생일 축하해'});if(!row){m.money+=10;dl.cake[pid]=0;save();return}
+  log(`${p.name}의 생일. 문 앞에 케이크 한 조각을 두고 왔다.`,'rel');toast(`${p.name}에게 케이크를 두고 왔어요.`);try{bondRedraw()}catch(e){}render()}
+if(typeof bondSection==='function'){const bs17=bondSection;bondSection=function(pid){const el=bs17.apply(this,arguments);try{const p=SAMPLES[pid];if(el&&isBday(p)&&!el.querySelector('.cakebtn')){const done0=(daily().cake||{})[pid];
+  el.prepend(h('div',{class:'banner cakebtn',style:'display:flex;gap:8px;align-items:center;flex-wrap:wrap'},h('span',{style:'flex:1;min-width:0'},`오늘은 ${p.name}의 생일이다.`),h('button',{class:'sm pri',disabled:done0||null,onclick:()=>cakeGive(pid)},done0?'케이크를 두고 왔다':'케이크 두고 오기 ($10)')))}}catch(e){}return el}}
+
+/* 방명록: 놀러 간 방에 한 줄 남긴다 (22_extras.sql) */
+let GB_OFF=false;
+async function gbLoad(rid){try{const{data,error}=await sb.from('guestbook').select('id,writer_char,text,created_at').eq('room_char',rid).order('created_at',{ascending:false}).limit(12);if(error){GB_OFF=true;return[]}return data||[]}catch(e){return[]}}
+async function gbWrite(rid,text){text=String(text||'').trim().slice(0,80);if(!text)return toast('한 줄 적어 주세요.');const dl=daily();dl.gb=dl.gb||{};if(dl.gb[rid])return toast('이 방에는 오늘 이미 남겼어요.');
+  const{error}=await sb.from('guestbook').insert({room_char:rid,writer_char:G.me.id,text});if(error)return toast(/relation|does not exist|schema cache/i.test(error.message||'')?'방명록이 아직 없어요. 운영자에게 22_extras.sql 실행을 부탁해 주세요.':'남기지 못했어요.');
+  dl.gb[rid]=1;save();toast('방명록에 남겼어요.');log(`${bName(rid)}의 방명록에 한 줄 남겼다.`,'rel')}
+async function gbDel(id){const{error}=await sb.from('guestbook').delete().eq('id',id);if(error)return toast('지우지 못했어요.');toast('지웠어요.')}
+function gbBox(rid,mine){const list=h('div',{class:'stack',style:'gap:4px'},h('span',{class:'dim',style:'font-size:12px'},'불러오는 중…'));
+  gbLoad(rid).then(rows=>{list.replaceChildren(...(rows.length?rows.map(x=>h('div',{class:'row',style:'gap:6px;align-items:flex-start'},h('span',{style:'flex:1;min-width:0;font-size:13px'},h('b',null,bName(x.writer_char)+' '),x.text),h('span',{class:'dim',style:'font-size:11px;white-space:nowrap'},String(x.created_at).slice(5,10)),(mine||x.writer_char===G.me.id)?h('button',{class:'sm ghost',onclick:async()=>{await gbDel(x.id);const b=gbBox(rid,mine);box.replaceWith(b)}},'지우기'):null)):[h('span',{class:'dim',style:'font-size:12.5px'},GB_OFF?'방명록은 운영자가 22_extras.sql을 실행하면 열려요.':'아직 아무도 남기지 않았다.')]))});
+  const box=h('div',{class:'stack gbbox',style:'gap:6px;border-top:1px solid var(--line);padding-top:10px'},h('span',{class:'lbl'},'방명록'),list);
+  if(!mine&&(daily().visited||{})[rid]&&!((daily().gb||{})[rid])){const ip=h('input',{maxlength:80,placeholder:'한 줄 남기기 (80자)'});box.append(h('div',{class:'bond-wrap'},ip,h('button',{class:'sm',onclick:async()=>{await gbWrite(rid,ip.value);const b=gbBox(rid,mine);box.replaceWith(b)}},'남기기')))}
+  else if(!mine)box.append(h('span',{class:'dim',style:'font-size:11.5px'},(daily().gb||{})[rid]?'오늘은 남겼어요.':'방에 놀러 간 날 한 줄 남길 수 있어요.'));return box}
+if(typeof visitRoom==='function'){const vr17=visitRoom;visitRoom=function(id){const before=(daily().visit||0);const r=vr17.apply(this,arguments);try{if((daily().visit||0)>before){const dl=daily();dl.visited=dl.visited||{};dl.visited[id]=1;save()}}catch(e){}return r}}
+{const os17=openSheet;openSheet=function(id){const r=os17.apply(this,arguments);try{if(id!=='me'&&typeof sb!=='undefined'&&sb&&SAMPLES[id]){const sh=document.querySelector('#modalRoot .sheet')||document.querySelector('#modalRoot .stack');if(sh&&!sh.querySelector('.gbbox'))sh.append(gbBox(id,false))}}catch(e){}return r}}
+if(typeof openRoom==='function'){const or17=openRoom;openRoom=function(){const r=or17.apply(this,arguments);try{const st=document.querySelector('#modalRoot .stack');if(st&&G.me&&typeof sb!=='undefined'&&sb&&!st.querySelector('.gbbox'))st.append(gbBox(G.me.id,true))}catch(e){}return r}}
+
+/* 첫눈: 운영자가 켜는 날 */
+const snowOn=()=>!!(typeof FLAGS!=='undefined'&&FLAGS.snow&&FLAGS.snow.on);
+{const wx17=weather;weather=function(di){const w=wx17.apply(this,arguments);try{if(snowOn()&&(di==null||di===dayIdx(T()))&&!(typeof gateWeek==='function'&&gateWeek()))return['눈','첫눈이다. 골목 위 좁은 하늘에서 눈이 내려 빨랫줄마다 하얗게 앉는다.']}catch(e){}return w}}
+if(typeof WX_OPEN!=='undefined')WX_OPEN['눈']=['계단참 창틀에 눈이 소복하다. 누가 손가락으로 웃는 얼굴을 그려 두었다.','눈 오는 소리가 너무 조용해서, 형광등 웅웅거리는 소리가 크게 들린다.','처마 끝 고드름에 붉은 등 빛이 비친다.','성채 아이들이 옥상에서 눈을 뭉쳐 아래층 빨랫줄로 던진다. 웃음소리가 계단을 타고 내려온다.','눈 위에 맨발 자국이 이어져 있다. 내 방 문 앞에서 끝난다.'];
+Object.assign(EV,{
+ snowman:{n:'눈사람',w:(d,t)=>t===0&&snowOn(),s:{start:{t:'옥상에 눈이 제법 쌓였다. 누가 만들다 만 눈사람 몸통이 하나 있다. 머리가 없다. 옆에 단추 두 개와 나뭇가지가 가지런히 놓여 있다. 만들던 사람이 곧 돌아올 것처럼.',o:[
+   {l:'머리를 올려 완성해 준다',r:{t:'눈을 굴려 머리를 올리고 단추 눈, 나뭇가지 팔을 꽂았다. 한 발 물러나 보니 꽤 그럴듯하다. 돌아서는데 등 뒤에서 아주 작게 「고마워」. 돌아보니 눈사람 팔 하나가 조금 올라가 있었다. 손 흔드는 것처럼.',rw:{mind:9}}},
+   {l:'옆에 작은 눈사람을 하나 더 만든다',r:{t:'손바닥만 한 눈사람을 옆에 세웠다. 둘이 나란히 서니 식구 같다. 다음 날 옥상에 가 보니 작은 눈사람이 하나 더 늘어 셋이 되어 있었다. 아무도 만들지 않았다고 한다.',rw:{mind:7,en:1}}}]}}},
+ snowsteps:{n:'눈 위 발자국',w:(d,t)=>(t===0||t===3)&&snowOn(),s:{start:{t:'새로 쌓인 눈 위에 발자국이 한 줄 나 있다. 앞으로 걸어간 자국인데, 발끝이 전부 내 쪽을 향해 있다. 누가 뒷걸음으로 걸어갔다. 아니면, 이쪽으로 걸어오는 중이다.',o:[
+   {l:'발자국 위에 내 발을 대 본다',s:'nerve',dc:12,ok:{t:'내 발과 크기가 똑같다. 신발 무늬까지. 발자국 끝에 눈이 조금 파여 있고, 그 안에 설계도 조각이 젖지 않은 채 들어 있었다.',rw:{clue:1,mind:-4}},no:{t:'발을 대는 순간 발자국이 한 칸 더 다가왔다. 내 발끝 바로 앞에 새 발자국이 찍혔다. 아무도 없는데.',rw:{mind:-9},bad:1}},
+   {l:'눈을 쓸어 지운다',r:{t:'빗자루로 발자국을 쓸어 지웠다. 다 쓸고 나서 돌아보니, 내가 걸어온 자리에 발자국이 하나도 없다. 내 것까지.',rw:{mind:-5}}}]}}}});
+if(typeof adminTools==='function'&&typeof setFlag==='function'){const a17=adminTools;adminTools=function(){const el=a17.apply(this,arguments);try{
+  el.prepend(h('label',{class:'row',style:'border-bottom:1px solid var(--line);padding-bottom:10px'},h('span',null,'첫눈',h('div',{class:'mute',style:'font-size:12px'},'켜 두는 동안 날씨가 눈이 되고, 옥상·골목에 눈 괴담이 나와요. 귀문 주간에는 비가 우선이에요.')),
+    h('input',{type:'checkbox',style:'width:auto',checked:snowOn()?true:null,onchange:async e=>{const on=e.target.checked;if(await setFlag('snow',{on,at:new Date().toISOString()})){FLAGS.snow={on};toast(on?'첫눈을 내렸어요.':'눈을 그쳤어요.');render()}else e.target.checked=!on}})))}catch(e){}return el}}
+
+/* 작은 식구 산책: 하루 한 번 */
+function petWalk(){if(!ready())return;const m=G.me;if(!m.pet)return;const dl=daily();if(dl.petWalk)return toast('오늘은 산책을 다녀왔어요.');if(!spend(1))return;dl.petWalk=1;const nm=`「${m.pet.name||PET_KIND[m.pet.kind]}」`;
+  const rw={mind:6};let found='';const r=Math.random();if(r<.12){const k=pick(['button','number','film']);rw.item=k;found=`\n돌아오는 길에 ${nm}이(가) 무언가를 물고 왔다. 「${ITEMS[k].n}」. 어디서 났는지는 끝까지 알려 주지 않았다.`}else if(r<.4){rw.money=ri(3,10);found=`\n${nm}이(가) 계단 틈에 코를 박더니 동전 몇 개를 찾아냈다.`}
+  const out=give(rw);log(`${nm}과(와) 산책했다.`,'life');save();closeModal();
+  done('산책',pick([`${nm}과(와) 계단을 몇 층 오르내렸다. 층마다 냄새를 맡느라 한참 걸렸다. 13층 앞에서만은 한 발짝도 들어가려 하지 않았다.`,`${nm}과(와) 정문 앞까지 나갔다 왔다. 경비실 고양이들이 ${nm}을(를) 보더니 일제히 꼬리를 세웠다. 인사인지 경고인지 모르겠다.`,`${nm}과(와) 옥상에 올라가 바람을 쐬었다. ${nm}이(가) 빨랫줄 그림자를 쫓다가 지쳐서 내 발등 위에서 잠들었다.`,`${nm}과(와) 골목을 한 바퀴 돌았다. 국숫집 주인이 ${nm}에게 고명 하나를 던져 줬다.`])+found,out)}
+if(typeof petPanel==='function'){const pp17=petPanel;petPanel=function(p,isMe){const el=pp17.apply(this,arguments);try{if(el&&isMe&&p&&p.pet&&!el.querySelector('.petwalk')){const dn=daily().petWalk;el.append(h('button',{class:'sm petwalk',disabled:dn||null,onclick:petWalk},dn?'오늘 산책 다녀옴':'산책 가기 (기력 1)'))}}catch(e){}return el}}
+
+/* 성채 신문: 날마다 아침에 한 장 */
+const NEWS_ODD=['13층 엘리베이터가 어제 하루 동안 14번 섰다. 13층에 내린 사람은 없다.','국숫집 4번 테이블 수저가 또 한 벌 늘었다. 주인은 「원래 그랬다」고 말했다.','종루 시계가 3분 빨라졌다. 삼경은 「시계가 아니라 하루가 늦어진 것」이라고 해명했다.','4동 빈집 한 곳에서 밤새 밥 짓는 냄새가 났다. 그 집 가스는 7년 전에 끊겼다.','정문 경비실 고양이가 새끼를 낳았다. 셋인지 넷인지 세는 사람마다 다르다.','공중전화 부스에 「받지 마세요」 쪽지가 붙었다. 누가 붙였는지 아무도 모른다. 쪽지는 안쪽에 붙어 있다.','전당포에 맡겨진 거울이 사흘째 아무것도 비추지 않는다. 주인은 값을 깎지 않겠다고 했다.','옥상 빨랫줄에 주인 없는 셔츠가 또 한 벌 늘었다. 소매에 이름표가 있다. 「내일」.','인쇄소가 어제 부고장을 한 장도 찍지 않았다. 직원들은 오히려 불안해했다.','적등방 장부에서 이름 하나가 저절로 지워졌다. 빚은 다 갚은 상태였다고 한다.'];
+const NEWS_LOST=['검은 우산 하나. 손잡이에 이빨 자국.','왼쪽 신발 한 짝. 오른쪽은 찾지 마세요.','열쇠 꾸러미. 열쇠가 하나 늘었으면 그건 가져가지 마세요.','이름표. 이름이 지워짐. 짐작 가는 분 연락 바람.','손목시계. 거꾸로 감. 원래 그렇습니다.','강아지 목줄. 강아지는 집에 와 있습니다. 목줄만 아직 못 왔습니다.'];
+const NEWS_FORT=['동쪽 계단은 오늘 한 칸 더 길다. 세지 말 것.','오늘 처음 마주친 고양이에게 인사하면 하루가 순하다.','붉은 것을 주우면 그 자리에 두고 올 것.','국수는 2번이나 7번에.','누가 이름을 부르면 두 번째에 대답할 것.','오늘은 거울을 오래 보지 말 것. 거울 쪽이 먼저 지루해한다.','빌린 것은 해 지기 전에 돌려줄 것. 우산이라도.'];
+function newsEl(){const di=dayIdx(T()),R=rng(di*313+11),pk=a=>a[Math.floor(R()*a.length)];const d=kd(T());const wd='일월화수목금토'[d.getUTCDay()];const W=weather();
+  const all=SAMPLE_IDS.map(k=>SAMPLES[k]).filter(p=>p&&!p.isNpc);const dayMs=864e5,now=T();
+  const newbies=all.filter(p=>p.created&&now-p.created<dayMs*1.2).map(p=>p.name);const bdays=[...all,G.me].filter(p=>p&&isBday(p)).map(p=>p.name);
+  const active=all.filter(p=>p.active&&now-p.active<dayMs).length+(G.me?1:0);const shops=all.filter(p=>typeof shopOk==='function'&&shopOk(p));
+  const lines=[];let head='';
+  if(typeof gateHangOpen==='function'&&gateHangOpen()){const n=gateCount().n;head=`붉은 문 앞 등불 ${n}개. 쉰 개까지 ${Math.max(0,GATE_NEED-n)}개`}
+  else if(G.me&&G.me.gateRes&&typeof gateAfter==='function'&&gateAfter())head=G.me.gateRes.ok?'귀문 닫혔다. 벽에 못 자국 쉰 개':'귀문, 다 닫히지 않아. 문틈 주의';
+  else if(bdays.length)head=`오늘은 ${bdays.join(', ')}의 생일`;
+  else if(newbies.length)head=`새 얼굴 ${newbies.length}명 입주`;
+  else head=pk(['증축 소리, 어젯밤 유난히 가까워','계단 수, 오늘도 맞지 않아','성채 하루 평온… 「평온」의 기준은 논란','밤의 구역 공고: '+nightZone().where]);
+  if(newbies.length)lines.push(`입주: ${newbies.slice(0,6).join(', ')}${newbies.length>6?' 외':''}. 「몇 층 사세요?」 하고 물으면 한 층 낮춰 말하는 것이 예의다.`);
+  if(bdays.length&&!head.includes('생일'))lines.push(`생일: ${bdays.join(', ')}. 지인은 문 앞에 케이크 한 조각을.`);
+  if(typeof supTotals==='function'&&typeof mmdOpen==='function'&&mmdOpen()){const{t}=supTotals(supWeek());const arr=Object.entries(t).sort((a,b)=>b[1]-a[1]);if(arr[0][1]>0)lines.push(`무명동 줄다리기: ${SUP_FN[arr[0][0]]} ${arr[0][1]}, ${SUP_FN[arr[1][0]]} ${arr[1][1]}, ${SUP_FN[arr[2][0]]} ${arr[2][1]}.`)}
+  if(typeof mmdGoneYesterday==='function'&&typeof mmdOpen==='function'&&mmdOpen()){const g=[0,1,2,3,4].flatMap(t=>mmdGoneYesterday(t));if(g.length)lines.push(`무명동: 어제 있던 ${g.slice(0,3).join(', ')}이(가) 오늘은 없다. 들어가 있던 사람은 복도에서 눈을 뜬다.`)}
+  if(shops.length){const s=pk(shops);const L=typeof menuOf==='function'?menuOf(s):null;const it=L&&L.length?pk(L):null;lines.push(`광고 · 12층 「${shopName(s)}」${it?` ${it.n} $${it.p}`:''}. 셔터 반쯤 올라가 있으면 영업 중.`)}
+  lines.push('단신: '+pk(NEWS_ODD));lines.push('분실물: '+pk(NEWS_LOST));
+  return h('details',{class:'card stack newscard',style:'gap:6px'},h('summary',{style:'cursor:pointer;list-style:none'},h('div',{class:'row'},h('span',{class:'lbl'},`백계성 신문 · ${d.getUTCMonth()+1}월 ${d.getUTCDate()}일 (${wd}) · ${W[0]}`),h('span',{class:'dim',style:'font-size:11.5px'},`어제 다녀간 주민 ${active}명`)),h('b',{style:'display:block;margin-top:6px;font-size:15px'},head)),
+    h('div',{class:'stack',style:'gap:5px;margin-top:8px'},...lines.map(x=>h('p',{style:'margin:0;font-size:13px;line-height:1.65'},x)),h('p',{class:'hand',style:'margin:4px 0 0;font-size:12.5px;color:var(--amber)'},'오늘의 수칙 풀이 · '+pk(NEWS_FORT))))}
+{const vm17=viewMap;viewMap=function(){const out=vm17.apply(this,arguments);try{if(G.me){const el=newsEl();const i=out.findIndex(e=>e&&e.querySelector&&e.querySelector('.crumb'));out.splice(i>=0?i:0,0,el)}}catch(e){}return out}}
+if(typeof TTL!=='undefined')TTL.push(['walker','산책 친구','life','작은 식구와 산책 10번',m=>(tc(m).walk||0)>=10],['candle','촛불 켠 방','rel','생일 케이크 받기',m=>(m.items&&m.items.cake>0)||(m.room||[]).includes('cake')]);
+{const pw17=petWalk;petWalk=function(){const before=daily().petWalk;const r=pw17.apply(this,arguments);try{if(!before&&daily().petWalk)tcAdd('walk')}catch(e){}return r}}
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
