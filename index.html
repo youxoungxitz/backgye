@@ -6513,6 +6513,39 @@ function newsEl(){const di=dayIdx(T()),R=rng(di*313+11),pk=a=>a[Math.floor(R()*a
 {const vm17=viewMap;viewMap=function(){const out=vm17.apply(this,arguments);try{if(G.me){const el=newsEl();const i=out.findIndex(e=>e&&e.querySelector&&e.querySelector('.crumb'));out.splice(i>=0?i:0,0,el)}}catch(e){}return out}}
 if(typeof TTL!=='undefined')TTL.push(['walker','산책 친구','life','작은 식구와 산책 10번',m=>(tc(m).walk||0)>=10],['candle','촛불 켠 방','rel','생일 케이크 받기',m=>(m.items&&m.items.cake>0)||(m.room||[]).includes('cake')]);
 {const pw17=petWalk;petWalk=function(){const before=daily().petWalk;const r=pw17.apply(this,arguments);try{if(!before&&daily().petWalk)tcAdd('walk')}catch(e){}return r}}
+/* ---------- 날씨 효과: 눈 · 안개 · 흐림 · 맑음 (비는 기존 창문 물방울) ---------- */
+const WX={cv:null,g:null,kind:'',raf:0,w:0,h:0,dpr:1,last:0,ps:[],blobs:[],flick:0,nextFlick:0};
+const wxDay=()=>document.documentElement.dataset.theme==='day';
+const wxStill=()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}};
+function wxSize(){const W=WX;W.dpr=Math.min(2,window.devicePixelRatio||1);W.w=innerWidth;W.h=innerHeight;W.cv.width=W.w*W.dpr;W.cv.height=W.h*W.dpr;W.g.setTransform(W.dpr,0,0,W.dpr,0,0);wxSeed()}
+function wxSeed(){const W=WX,A=W.w*W.h,R=Math.random;
+  if(W.kind==='눈')W.ps=Array.from({length:Math.round(Math.min(240,A/4500))},()=>({x:R()*W.w,y:R()*W.h,r:1+R()*2.8,vy:.35+R()*.9,sw:R()*6.28,sp:.004+R()*.01,a:.45+R()*.5}));
+  else if(W.kind==='맑음')W.ps=Array.from({length:Math.round(Math.min(60,A/18000))},()=>({x:R()*W.w,y:R()*W.h,r:.6+R()*1.4,vx:(R()-.5)*.08,vy:-.02-R()*.06,ph:R()*6.28,a:.2+R()*.4}));
+  else W.ps=[];
+  if(W.kind==='안개')W.blobs=Array.from({length:7},(_,i)=>({x:R()*W.w,y:W.h*(.35+R()*.7),rx:W.w*(.35+R()*.4),ry:W.h*(.12+R()*.12),vx:(.05+R()*.12)*(R()<.5?-1:1),a:.14+R()*.12}));
+  else if(W.kind==='흐림')W.blobs=Array.from({length:3},()=>({x:R()*W.w,y:W.h*R()*.5,rx:W.w*(.45+R()*.3),ry:W.h*(.2+R()*.15),vx:.04+R()*.05,a:.2+R()*.1}));
+  else W.blobs=[]}
+function wxBlob(g,b,col){const gr=g.createRadialGradient(b.x,b.y,0,b.x,b.y,b.rx);gr.addColorStop(0,`rgba(${col},${b.a})`);gr.addColorStop(1,`rgba(${col},0)`);g.save();g.translate(b.x,b.y);g.scale(1,b.ry/b.rx);g.translate(-b.x,-b.y);g.fillStyle=gr;g.beginPath();g.arc(b.x,b.y,b.rx,0,6.283);g.fill();g.restore()}
+function wxFrame(t){const W=WX;if(!W.kind)return;const still=wxStill();if(!still)W.raf=requestAnimationFrame(wxFrame);const dt=Math.min(50,t-(W.last||t))||16;if(!still&&dt<30&&W.last){return}W.last=t;const g=W.g,day=wxDay();g.clearRect(0,0,W.w,W.h);const k=dt/16;
+  if(W.kind==='눈'){for(const p of W.ps){if(!still){p.y+=p.vy*k;p.sw+=p.sp*k;p.x+=Math.sin(p.sw)*.35*k;if(p.y>W.h+4){p.y=-4;p.x=Math.random()*W.w}if(p.x<-4)p.x=W.w+4;if(p.x>W.w+4)p.x=-4}
+      g.fillStyle=day?`rgba(110,130,155,${Math.min(1,p.a*.9)})`:`rgba(240,246,250,${p.a})`;g.beginPath();g.arc(p.x,p.y,p.r,0,6.283);g.fill()}
+    const gr=g.createLinearGradient(0,W.h-26,0,W.h);gr.addColorStop(0,'rgba(240,246,250,0)');gr.addColorStop(1,day?'rgba(200,210,220,.35)':'rgba(230,238,244,.10)');g.fillStyle=gr;g.fillRect(0,W.h-26,W.w,26)}
+  else if(W.kind==='안개'){const col=day?'235,232,225':'190,200,205';for(const b of W.blobs){if(!still){b.x+=b.vx*k;if(b.x-b.rx>W.w)b.x=-b.rx;if(b.x+b.rx<0)b.x=W.w+b.rx}wxBlob(g,b,col)}
+    const gr=g.createLinearGradient(0,W.h*.55,0,W.h);gr.addColorStop(0,`rgba(${col},0)`);gr.addColorStop(1,`rgba(${col},${day?.35:.24})`);g.fillStyle=gr;g.fillRect(0,W.h*.55,W.w,W.h*.45)}
+  else if(W.kind==='흐림'){g.fillStyle=day?'rgba(90,95,105,.07)':'rgba(20,24,30,.12)';g.fillRect(0,0,W.w,W.h);for(const b of W.blobs){if(!still){b.x+=b.vx*k;if(b.x-b.rx>W.w)b.x=-b.rx}wxBlob(g,b,day?'70,70,80':'0,0,0')}
+    if(!still){if(!W.nextFlick)W.nextFlick=t+15000+Math.random()*25000;if(t>W.nextFlick){W.flick=t+90+Math.random()*120;W.nextFlick=t+15000+Math.random()*25000}
+      if(t<W.flick){g.fillStyle=day?'rgba(40,40,50,.10)':'rgba(0,0,0,.22)';g.fillRect(0,0,W.w,W.h)}}}
+  else if(W.kind==='맑음'){const gr=g.createLinearGradient(0,0,W.w*.6,W.h*.8);gr.addColorStop(0,day?'rgba(255,225,150,.28)':'rgba(255,215,140,.13)');gr.addColorStop(.6,'rgba(255,220,150,0)');g.fillStyle=gr;g.fillRect(0,0,W.w,W.h);
+    for(const p of W.ps){if(!still){p.x+=p.vx*k;p.y+=p.vy*k;p.ph+=.02*k;if(p.y<-4){p.y=W.h+4;p.x=Math.random()*W.w}}const a=p.a*(.6+.4*Math.sin(p.ph));g.fillStyle=day?`rgba(170,130,60,${a*.5})`:`rgba(255,226,170,${a})`;g.beginPath();g.arc(p.x,p.y,p.r,0,6.283);g.fill()}}}
+function wxSet(kind){const W=WX;if(kind===W.kind)return;W.kind=kind;cancelAnimationFrame(W.raf);
+  if(kind){if(!W.cv){W.cv=document.createElement('canvas');W.cv.id='wxfx';W.cv.setAttribute('aria-hidden','true');W.cv.style.cssText='position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:4';document.body.append(W.cv);W.g=W.cv.getContext('2d');addEventListener('resize',()=>{if(WX.kind)wxSize()})}
+    W.cv.hidden=false;wxSize();W.last=0;W.raf=requestAnimationFrame(wxFrame)}else if(W.cv){W.cv.hidden=true;W.g.clearRect(0,0,W.w,W.h)}}
+document.addEventListener('visibilitychange',()=>{cancelAnimationFrame(WX.raf);if(!document.hidden&&WX.kind){WX.last=0;WX.raf=requestAnimationFrame(wxFrame)}});
+{const rd18=render;render=function(){const out=rd18.apply(this,arguments);try{const w=weather()[0];const on=G.opts.rainGlass!==false;wxSet(on&&w!=='비'&&['눈','안개','흐림','맑음'].includes(w)?w:'')}catch(e){}return out}}
+/* 설정: 날씨 효과 끄고 켜기 (비 물방울 포함) */
+if(typeof openSettings==='function'){const os18=openSettings;openSettings=function(){const r=os18.apply(this,arguments);try{const st=document.querySelector('#modalRoot .stack');if(st&&!st.querySelector('.wxrow')){
+  const row=h('label',{class:'row wxrow',style:'gap:8px'},h('span',null,'날씨 효과',h('div',{class:'mute',style:'font-size:12px'},'비, 눈, 안개, 흐림, 맑음이 화면에 보여요. 기기가 느리면 꺼 주세요.')),h('input',{type:'checkbox',style:'width:auto',checked:G.opts.rainGlass!==false?true:null,onchange:e=>{G.opts.rainGlass=e.target.checked;save();render()}}));
+  const t=st.querySelector('.themerow');if(t)t.after(row);else{const first=st.querySelector('label');if(first)first.before(row);else st.append(row)}}}catch(e){}return r};try{$('btnSettings').onclick=openSettings}catch(e){}}
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
