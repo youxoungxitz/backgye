@@ -4403,7 +4403,7 @@ function corruptDown(line){const m=G.me;if(!m||!hasFx('corrupt'))return;if((m.co
 /* 말: □ 섞기 */
 function corruptText(v){const m=G.me;if(!m||!hasFx('corrupt')||!v)return v;const lv=Math.min(3,m.corrLv||1),p=[0,.1,.2,.35][lv];let inAct=false,out='',hit=0;
   for(const ch of v){if(ch==='*'){inAct=!inAct;out+=ch;continue}if(!inAct&&!/[\s.,!?~…「」]/.test(ch)&&chance(p)){out+='□';hit++}else out+=ch}
-  if(!hit){const i=[...v].findIndex(c=>/[가-힣A-Za-z0-9]/.test(c));if(i>=0){const a=[...v];a[i]='□';out=a.join('')}}
+  if(!hit){const i=corrFirst(v);if(i>=0){const a=[...v];a[i]='□';out=a.join('')}}
   if(lv>=3&&chance(.3))out+=' '+pick(CORR_LINE);return out.slice(0,FX_CAP())}
 if(typeof fxSpeech==='function'){const sp0=fxSpeech;fxSpeech=function(v){return corruptText(sp0.apply(this,arguments))}}
 /* 2단계부터 정신 회복 절반, 정신이 10 밑으로 떨어지면 하루 한 번 괴이화 */
@@ -5306,11 +5306,11 @@ var CORR5=['문 열어 줘. 나야.','여기 계단 하나 더 있어.','내 이
 function corruptUp(why){const m=G.me;if(!m)return;const before=hasFx('corrupt')?(m.corrLv||1):0;if(before>=CORR_MAX){addFx('corrupt');return}m.corrLv=Math.min(CORR_MAX,before+1);addFx('corrupt');if(m.corrLv>=3)m.blur=T()+ms(FXDEF.corrupt.min);
   const line=m.corrLv>=4?CORR_UP45[m.corrLv]:pick(CORR_UP);log(`${why?why+' ':''}${line} (괴이화 ${m.corrLv}단계)`,'haunt');setTimeout(()=>toast(`괴이화 ${m.corrLv}단계`+(m.corrLv===CORR_MAX?' · 이제 내 말이 나가지 않는다':'')),900);save()}
 function corruptText(v){const m=G.me;if(!m||!hasFx('corrupt')||!v)return v;const lv=Math.min(CORR_MAX,m.corrLv||1);
-  if(lv>=5)return pick(CORR5);
+  if(lv>=5){const acts=v.match(/\*[^*\n]+\*/g)||[];const rest=v.replace(/\*[^*\n]+\*/g,'').trim();return rest?(acts.length?acts.join(' ')+' ':'')+pick(CORR5):v}
   let src=v;if(lv>=4){let inAct=false;src=v.split(/(\s+)/).map(w=>{const st=(w.match(/\*/g)||[]).length;if(st){if(st%2)inAct=!inAct;return w}if(inAct||/^\s+$/.test(w)||!w)return w;return chance(.4)?pick(CORR_WORD):w}).join('')}
   const p=[0,.1,.2,.35,.3][lv];let inAct=false,out='',hit=0;
   for(const ch of src){if(ch==='*'){inAct=!inAct;out+=ch;continue}if(!inAct&&!/[\s.,!?~…「」]/.test(ch)&&chance(p)){out+='□';hit++}else out+=ch}
-  if(!hit){const i=[...src].findIndex(c=>/[가-힣A-Za-z0-9]/.test(c));if(i>=0){const a=[...src];a[i]='□';out=a.join('')}}
+  if(!hit){const i=corrFirst(src);if(i>=0){const a=[...src];a[i]='□';out=a.join('')}}
   if(lv>=4||(lv>=3&&chance(.3)))out+=' '+pick(CORR_LINE);return out.slice(0,FX_CAP())}
 /* 4단계부터 정신 회복이 더 줄어든다 (2단계의 절반에 더해) */
 {const g5=give;give=function(rw){try{if(rw&&rw.mind>0&&G.me&&hasFx('corrupt')&&(G.me.corrLv||1)>=4)rw=Object.assign({},rw,{mind:Math.max(1,Math.round(rw.mind*2/3))})}catch(e){}return g5.call(this,rw)}}
@@ -6698,6 +6698,92 @@ if(typeof TTL!=='undefined'){TTL_CAT.season='계절';TTL.push(['wintercloth','�
 /* 분채 한 그릇: 가방에서 꺼내 먹기 */
 function feastEat(){if(!ready())return;const m=G.me;if(!(m.items.feastbowl>0))return;m.items.feastbowl--;const out=give({hp:20,mind:10,en:5});log('싸 온 분채 한 그릇을 데워 먹었다.','life');save();toast(`분채 한 그릇 · ${out.join(', ')}`);render()}
 {const rl20=renderLeft;renderLeft=function(){const r=rl20.apply(this,arguments);try{const m=G.me,L=$('left');if(m&&L&&m.items&&m.items.feastbowl>0&&!L.querySelector('.feastbag')){const c=h('div',{class:'card stack feastbag',style:'gap:6px'},h('span',{class:'lbl'},'잔치 몫'),h('button',{class:'sm',onclick:feastEat},`분채 한 그릇 먹기 ×${m.items.feastbowl} · 체력 +20, 정신 +10, 기력 +5`));const first=L.firstElementChild;if(first&&first.nextSibling)L.insertBefore(c,first.nextSibling);else L.append(c)}}catch(e){}return r}}
+/* ---------- 새 괴담 장소 · 괴이 · 방 소리 · 도감 소문 · 장소 단골 (11/1) ---------- */
+/* 공통: 평소 → 흔적 → 조우 */
+function hauntPlace(id,title,P){const r=hauntRoll(id);try{dexAdd('pl:'+id)}catch(e){}
+  if(r==='normal'){const x=pick(P.normal);const out=give(x[1]);log(`${title}: ${x[0].split('\n')[0].slice(0,40)}…`,'life');return done(title,x[0],out,false)}
+  if(r==='trace'){addTrace(id);const x=pick(P.trace);const out=give(x[1]);log(`${title}: ${x[0].split('\n')[0].slice(0,40)}…`,'haunt');return done(title,x[0]+fearLine(),out,true)}
+  resetTrace(id);const E=P.enc;try{dexAdd('pl:'+id+':enc')}catch(e){}
+  openScene({id:'pl_'+id,title:title+' · '+E.n,red:true,text:G.opts&&G.opts.soft&&E.soft?E.soft:E.t,choices:E.o.map(o=>({l:o.l,s:o.s,run:()=>{let ok=true,ct='';if(o.s){const c=chk(o.s,o.dc);ok=c.ok;ct=c.txt}const res=o.r||(ok?o.ok:o.no);const out=give(res[1]);if(ct)out.unshift(ct);log(`${title}: ${res[0].split('\n')[0].slice(0,40)}…`,'haunt');done(title+' · '+E.n,res[0],out,!o.r&&!ok)}}))})}
+const HP4={
+ laundromat:{n:'24시 세탁방',cell:'0-3',d:' 골목 끝 24시 세탁방에서 드럼 하나가 늘 돌아간다.',P:{
+  normal:[['동전을 넣고 빨래를 돌렸다. 드럼 소리가 일정해서 졸음이 왔다. 꺼낸 옷이 따뜻하다. 섬유유연제 냄새가 오래 남았다.',{mind:6}],['건조기 앞 의자에서 할머니 둘이 뜨개질을 하며 수다를 떤다. 듣다 보니 내 빨래가 다 말라 있었다.',{mind:5,en:1}],['세탁기 위에 누가 두고 간 동전 몇 개. 「급하면 쓰세요」 쪽지.',{money:6,mind:3}]],
+  trace:[['꺼낸 빨래 사이에 모르는 양말이 한 짝 섞여 있었다. 어린아이 발 크기다. 젖어 있다.',{mind:-5}],['아무도 없는데 드럼 하나가 계속 돈다. 창으로 들여다보니 옷이 아니라 머리카락이 돌고 있다.',{mind:-7}],['「멈추면 꺼내 주세요」 쪽지가 붙은 드럼이 멈춰 있다. 아무도 꺼내지 않았다. 문이 안에서 잠겨 있다.',{mind:-6}]],
+  enc:{n:'덜 마른 것',t:'새벽 세탁방. 드럼 하나가 멈췄다. 쪽지가 붙어 있다. 「멈추면 꺼내 주세요.」 문을 열자 젖은 옷 무더기 속에서 목소리가 났다. 「나 아직 덜 말랐어.」 옷 무더기가 사람 모양으로 웅크리고 있다.',soft:'새벽 세탁방. 「멈추면 꺼내 주세요」 쪽지가 붙은 드럼이 멈췄다. 문을 열자 젖은 옷 무더기 속에서 목소리가 났다. 「나 아직 덜 말랐어.」',
+   o:[{l:'동전을 넣고 한 번 더 돌려 준다',r:['동전을 넣고 문을 닫았다. 드럼이 돌기 시작하자 안에서 작게 「고마워」. 다 말랐을 무렵 들여다보니 드럼은 비어 있고, 바닥에 동전이 내가 넣은 것보다 많이 놓여 있었다.',{money:15,mind:-4}]},
+     {l:'옷 무더기를 꺼낸다',s:'nerve',dc:13,ok:['한 아름 꺼냈다. 무겁고 차갑다. 다 꺼내고 보니 그냥 옷이었다. 맨 아래 주머니에 설계도 조각이 젖은 채 접혀 있었다.',{clue:1,mind:-8}],no:['꺼내는 순간 젖은 소매가 내 손목을 감았다. 겨우 빼냈다. 손목에 축축한 자국이 오래 남았다.',{mind:-12,fx:'wet'}]}]}}},
+ pobox:{n:'우편 사서함 벽',cell:'0-2',d:' 복도 한 면이 전부 우편 사서함이다.',P:{
+  normal:[['내 사서함에 전단지만 잔뜩. 그중 하나는 차찬텡 할인권이다.',{money:5,mind:2}],['사서함 칸 사이로 고양이가 지나간다. 칸 하나에 들어가 몸을 말고 잔다. 제 집인 것처럼.',{mind:6}]],
+  trace:[['열쇠가 없는 칸 하나가 조금 열려 있다. 안에 소인 찍힌 봉투. 날짜가 다음 달이다. 받는 사람 칸은 비어 있다.',{mind:-5}],['사서함 번호를 세다 보니 한 칸이 두 번 나온다. 같은 번호, 다른 자리.',{mind:-6}]],
+  enc:{n:'다음 달 소인',t:'열쇠 없는 사서함이 활짝 열려 있다. 편지 한 통. 받는 사람은 내 이름, 소인은 다음 달, 보낸 사람 칸에는 내 글씨로 「나」.',
+   o:[{l:'뜯어 읽는다',s:'nerve',dc:14,ok:['「다음 달의 내가 말한다. 국숫집 4번 자리에 앉지 마. 그리고 설계도는 거꾸로 봐.」 봉투 안에 설계도 조각이 하나 들어 있었다.',{clue:2,mind:-8}],no:['편지를 펴자 글씨가 하나씩 지워졌다. 마지막까지 남은 건 「미안」 한 단어.',{mind:-14}]},
+     {l:'도로 넣고 닫는다',r:['칸을 닫았다. 손을 떼자 안에서 봉투가 바닥에 떨어지는 소리가 났다. 사서함 바닥은 막혀 있는데.',{mind:-4}]}]}}},
+ barber:{n:'이발소 회전등',cell:'1-3',d:' 골목 이발소 회전등이 가끔 거꾸로 돈다.',P:{
+  normal:[['이발사가 말없이 뒷머리를 다듬어 준다. 가위 소리가 규칙적이다. 거울 속 내가 조금 더 단정해졌다.',{mind:6,money:-5}],['이발소 라디오에서 옛날 노래가 나온다. 이발사가 흥얼거리다 내가 듣는 걸 알고 멈췄다.',{mind:4}]],
+  trace:[['바닥에 쓸어 모은 머리카락 색이 전부 내 머리색이다. 오늘 손님은 나뿐이라고 한다.',{mind:-6}],['회전등이 거꾸로 돈다. 이발사가 「오늘은 손님 머리를 안 자르는 날」이라고 한다. 그럼 무엇을 자르는 날인지는 말하지 않았다.',{mind:-5}]],
+  enc:{n:'거꾸로 도는 날',t:'회전등이 거꾸로 돈다. 이발사가 의자를 돌려 준다. 「뒤통수에 대해 아는 거 있어요?」 가위가 귀 옆에서 사각거린다. 거울을 보니 내 머리만 그대로다. 바닥엔 머리카락이 잔뜩 떨어지는데.',
+   o:[{l:'끝까지 앉아 있는다',s:'nerve',dc:13,ok:['다 깎고 나서 이발사가 수건을 털었다. 「뒤통수에 손바닥 자국이 있었어요. 이제 없어요.」 어깨가 가벼웠다.',{mind:8,clue:1}],no:['거울 속 내가 먼저 일어나 나갔다. 나는 한참 뒤에야 일어날 수 있었다.',{mind:-14,fx:'delirium'}]},
+     {l:'뒤통수를 만져 본다',r:['손끝에 무언가 걸렸다. 잡아당기니 머리카락 한 올. 끝없이 나온다. 이발사가 가위로 끊어 주며 「오래 데리고 다녔네요」 했다.',{mind:-6}]}]}}}};
+for(const[id,X]of Object.entries(HP4)){PLACES[id]={n:X.n,haunt:true,visit:()=>hauntPlace(id,X.n,X.P)};const C=CELLS[X.cell];if(C&&!(C.p||[]).includes(id)){C.p=(C.p||[]).concat(id);C.d+=X.d}}
+/* 종루 시계 기계실: 다음 실패한 판정을 한 번 되감는다 */
+FXDEF.rewind={n:'되감긴 1분',min:360,d:'다음 판정에 실패하면 한 번 다시 굴린다'};
+function clockRoom(){if(!ready())return;const m=G.me,dl=daily();if(dl.clock)return toast('톱니가 오늘은 더 돌아가지 않는다.');if(m.mind<20)return toast('정신이 20은 있어야 시계를 만질 수 있어요.');if(!spend(1))return;dl.clock=1;
+  m.mind-=15;fxGain('rewind','');tcAdd('clock');log('종루 기계실에서 시계를 1분 되돌렸다.','haunt');try{dexAdd('pl:clock')}catch(e){}
+  done('종루 기계실','톱니 사이에 쪽지가 잔뜩 끼어 있다. 「1분만」, 「다시」, 「그때로」. 큰 톱니를 손으로 밀어 분침을 한 칸 뒤로 돌렸다. 종루 전체가 숨을 들이쉬듯 덜컹했다.\n어딘가에서 방금 일어난 일 하나가 없던 일이 되었다. 그 대가로 머릿속 무언가가 1분만큼 비었다.',['정신 -15','되감긴 1분: 다음 실패한 판정을 한 번 다시 굴린다'],false)}
+{const ck21=chk;chk=function(stat,dc){const r=ck21.apply(this,arguments);try{if(r&&!r.ok&&hasFx('rewind')){clearFx('rewind');const r2=ck21.apply(this,arguments);r2.txt='⟲ 되감김 · '+r2.txt;return r2}}catch(e){}return r}}
+/* 빈동 엘리베이터 수동 핸들 */
+function liftHandle(){if(!ready())return;const dl=daily();if((dl.lift||0)>=2)return toast('핸들이 오늘은 너무 뻑뻑하다.');
+  openScene({id:'lifthandle',title:'멈춘 엘리베이터',text:'4동 엘리베이터가 층 사이에 멈춰 있다. 문 옆 철판을 열면 수동 핸들이 있다. 핸들 옆에 누가 칼로 새겼다. 「13 돌리지 말 것.」',choices:[3,7,13].map(n=>({l:`핸들을 ${n}바퀴 돌린다`,run:()=>{const m=G.me;if(!spend(1))return;dl.lift=(dl.lift||0)+1;try{dexAdd('pl:lift')}catch(e){}
+    if(n===3){const out=give({money:ri(5,12),mind:2});return done('멈춘 엘리베이터','세 바퀴. 문이 열리자 바로 아래층이다. 바닥에 누가 흘린 동전이 있다.',out)}
+    if(n===7){const keys=Object.keys(CELLS).filter(k=>!(typeof isMMD==='function'&&isMMD(k))&&k!==m.cell);const to=pick(keys);m.cell=to;const out=give({mind:-4});log(`엘리베이터에서 내리니 ${CELLS[to].n}이었다.`,'haunt');return done('멈춘 엘리베이터',`일곱 바퀴. 문이 열리자 4동이 아니다. ${CELLS[to].n}. 엘리베이터는 동과 동 사이를 다니지 않는다.`,out,true)}
+    const c=chk('nerve',14);const out=give(c.ok?{clue:2,mind:-10,item:chance(.3)?'button':null}:{mind:-16,fx:'followed'});out.unshift(c.txt);tcAdd('lift13');log('엘리베이터 핸들을 열세 바퀴 돌렸다.','haunt');
+    done('13층',c.ok?'열세 바퀴. 문이 열린다. 13층이다. 성채에 13층은 없다. 복도는 길고, 문마다 문패 대신 숫자 버튼이 붙어 있다. 버튼 하나를 떼어 들고 문이 닫히기 전에 돌아왔다.':'열세 바퀴. 문이 열렸다. 복도 끝에서 누가 엘리베이터 버튼을 누르고 있다. 계속, 계속. 문이 닫히는 동안 그 사람이 뛰어오기 시작했다.',out,!c.ok)}})).concat([{l:'그냥 둔다',run:()=>{scene=null;render()}}])})}
+/* 홍등루 다섯 번째 의자 */
+function chair5(){if(!ready())return;const m=G.me,dl=daily();if((dl.chair5||0)>=2)return toast('다섯 번째 의자가 오늘은 비어 있지 않다.');if(!spend(1))return;dl.chair5=(dl.chair5||0)+1;try{dexAdd('pl:chair5')}catch(e){}
+  const c=chk('sen',13);if(c.ok){const out=give({money:ri(30,60),mind:-4});out.unshift(c.txt);tcAdd('chair5');log('홍등루 다섯 번째 의자에 앉아 이겼다.','haunt');return done('다섯 번째 의자','네 명이 치는 마작판 옆에 의자가 하나 더 있다. 앉자 패가 다섯 몫으로 나뉜다. 패가 너무 잘 들어온다. 화료. 맞은편 셋은 웃지 않고 돈을 민다. 넷째 자리는 처음부터 비어 있었다.',out)}
+  const lost=(G.log||[]).length>3?G.log.splice(1+Math.floor(Math.random()*Math.min(30,G.log.length-1)),1)[0]:null;const out=give({mind:-8});out.unshift(c.txt);if(lost)out.push('일지 한 줄 사라짐');log('홍등루 다섯 번째 의자에서 졌다. 판돈은 돈이 아니었다.','haunt');
+  done('다섯 번째 의자',`졌다. 돈을 내밀자 맞은편이 고개를 젓는다. 「여기선 기억으로 내.」 이마에 손이 닿았다 떨어졌다.${lost?`\n\n무엇을 잃었는지 생각나지 않는다. 다만 어딘가에 이런 줄이 있었던 것 같다. 「${String(lost.text).slice(0,30)}…」`:''}`,out,true)}
+Object.assign(PLACES,{clockroom:{n:'종루 기계실',btn:'종루 기계실 · 시계 되돌리기 (기력 1, 정신 15)',act:clockRoom},lifthandle:{n:'멈춘 엘리베이터',btn:'멈춘 엘리베이터 수동 핸들',act:liftHandle},chair5:{n:'다섯 번째 의자',btn:'홍등루 다섯 번째 의자 (기력 1)',act:chair5}});
+for(const[k,id]of[['2-0','clockroom'],['3-2','lifthandle'],['1-3','chair5']]){const C=CELLS[k];if(C&&!(C.p||[]).includes(id))C.p=(C.p||[]).concat(id)}
+
+/* 떠도는 괴이 */
+Object.assign(EV,{
+ delivery:{n:'시킨 적 없는 배달',w:(d,t)=>t>=1&&t<=3,s:{start:{t:'문 앞에 배달 봉투가 놓여 있다. 받는 사람은 내 이름, 주소는 내 방. 영수증 주문 시각은 「내일 새벽 3:00」. 봉투가 아직 따뜻하다.',o:[
+   {l:'열어서 먹는다',s:'nerve',dc:12,ok:{t:'국수와 만두. 맛있다. 다 먹고 나서 영수증을 다시 보니 「결제 완료 · 내일의 손님」. 내일 새벽 3시에 누가 이걸 시킬 테고, 그게 나일 것이다.',rw:{hp:12,mind:-3}},no:{t:'봉투를 열자 국수가 아직 익지 않았다. 아직 주문 전이니까. 면이 그릇 안에서 천천히 꿈틀거렸다.',rw:{mind:-9},bad:1}},
+   {l:'영수증 번호로 전화해 본다',r:{t:'공중전화로 걸었다. 신호가 가고, 받는다. 「네, 주문하시겠어요?」 내 목소리다.',rw:{mind:-6}}},
+   {l:'옆집 문 앞에 옮겨 둔다',r:{t:'옆집 앞에 내려놓고 돌아섰다. 다음 날 아침 봉투는 다시 내 문 앞에 있었다. 이번엔 비어 있었다. 「잘 먹었습니다」 쪽지와 함께.',rw:{mind:-3,money:5}}}]}}},
+ countkid:{n:'층수 세는 아이',w:(d,t)=>t>=1&&t<=3,s:{start:{t:'계단참에서 아이가 손가락을 꼽으며 층수를 센다. 「같이 세요.」 하나, 둘, 셋. 같이 세며 올라가는데 아이가 말하는 숫자와 벽에 적힌 층수가 하나씩 어긋난다.',o:[
+   {l:'끝까지 같이 세 준다',r:{t:'아이 숫자를 따라 셌다. 열둘, 열셋, 열넷. 꼭대기에서 아이가 만족한 얼굴로 사탕을 하나 쥐여 줬다. 「이제 맞았다.」 벽의 층수는 끝까지 하나 모자랐다. 그래도 사탕은 달았다.',rw:{mind:7}}},
+   {l:'「여기는 열한 층이야」 하고 바로잡는다',s:'talk',dc:11,ok:{t:'아이가 벽을 한참 보더니 고개를 끄덕였다. 「아, 내가 하나를 더 셌구나.」 그리고 한 층 내려가 다시 세기 시작했다. 이번엔 맞았다. 아이가 뿌듯해했다.',rw:{mind:5}},no:{t:'아이가 나를 빤히 봤다. 「아니야. 하나 더 있어. 아저씨가 못 보는 거야.」',rw:{mind:-6},bad:1}}]}}},
+ umbswap:{n:'우산 바꾸자는 사람',w:(d,t)=>weather()[0]==='비',s:{start:{t:'처마 밑에서 누가 우산을 내민다. 내 우산과 똑같다. 손잡이 흠집까지. 「바꿔요. 이건 비가 안 새요.」 그 사람 어깨가 하나도 젖지 않았다.',o:[
+   {l:'바꾼다',s:'sen',dc:12,ok:{t:'바꿔 들고 걸었다. 정말 비가 하나도 새지 않는다. 우산 안쪽에 작은 글씨. 「다음 사람에게.」',rw:{mind:6,en:1}},no:{t:'바꿔 펴자 우산 안쪽에서만 비가 내렸다. 밖은 그쳤는데. 집에 올 때까지 나만 젖었다.',rw:{mind:-6,fx:'wet'},bad:1}},
+   {l:'정중히 사양한다',r:{t:'고개를 숙이자 그 사람도 숙였다. 고개를 드니 없었다. 처마 밑에 마른 발자국 둘만 남았다.',rw:{mind:-2}}}]}}},
+ namecall:{n:'내 이름으로 온 무전',w:(d,t)=>true,s:{start:{t:'주머니 속 무전기가 지직거린다. 화면에 내 이름으로 보낸 말이 떠 있다. 「지금 몇 층이야?」 나는 아무것도 보내지 않았다. 같은 칸 사람들이 나를 쳐다본다.',o:[
+   {l:'「12층」이라고 답한다',r:{t:'답을 보내자 곧바로 내 이름으로 또 하나가 왔다. 「거짓말. 한 층 낮춰 말했잖아.」 잘했다는 칭찬 같기도 했다.',rw:{mind:-4,clue:1}}},
+   {l:'무전기를 끈다',r:{t:'껐다. 꺼진 화면에 마지막 글자가 남아 있다. 「…알았어.」 다시 켜니 아무 기록도 없었다.',rw:{mind:-3}}}]}}},
+ catmeet:{n:'고양이 집회',w:(d,t)=>t===0&&isNightH(),s:{start:{t:'밤 옥상. 성채 고양이들이 원을 그리고 앉아 있다. 줄무늬, 삼색, 까망, 한쪽 귀가 접힌 녀석까지. 원 한가운데 딱 한 자리가 비어 있다. 다 같이 나를 본다.',o:[
+   {l:'빈자리에 앉는다',r:{t:'쭈그려 앉았다. 고양이들이 차례로 일어나 한 마리씩 내 무릎을 밟고 지나갔다. 마지막 녀석은 무릎에서 내려가지 않고 그대로 식빵을 구웠다. 집회는 그걸로 끝인 모양이다.',rw:{mind:10,en:1}}},
+   {l:'원 밖에서 조용히 지켜본다',r:{t:'아무 일도 일어나지 않았다. 다들 하늘만 봤다. 한참 뒤 우두머리 같은 녀석이 「냥」 하자 일제히 흩어졌다. 내 발 앞에 생선뼈 하나가 놓여 있었다. 회비인가 보다.',rw:{mind:6}}}]}}}});
+{const pe21=playEv;playEv=function(src,id){const r=pe21.apply(this,arguments);try{if(src===EV&&id==='catmeet')tcAdd('catmeet')}catch(e){}return r}}
+
+/* 방 소리: 장난감·화분도 밤에 기척이 있다 */
+const TOY_NIGHT_C=['「{n}」이(가) 밤사이 침대 머리맡으로 옮겨 와 있었다.','「{n}」 쪽에서 아주 작게 웃는 소리가 났다.','아침에 보니 「{n}」에 먼지가 하나도 없었다. 누가 닦아 준 것처럼.','「{n}」이(가) 창문 쪽으로 돌아앉아 있었다. 바깥 구경을 했나 보다.'];
+const TOY_NIGHT_S=['「{n}」이(가) 밤새 문 쪽을 보고 있었다. 자기 전에는 벽을 보고 있었다.','「{n}」을(를) 들어 보니 아래가 축축했다.','새벽에 「{n}」 쪽에서 누가 숨 쉬는 소리가 났다. 하나 둘, 하나 둘.'];
+const PLANT_NIGHT=['「{n}」 잎이 밤새 창문 쪽으로 돌아가 있었다. 창문은 닫혀 있었다.','「{n}」 화분 흙에 작은 손가락 자국이 다섯 개 찍혀 있었다. 물을 준 흔적처럼 촉촉했다.','「{n}」에 새 잎이 하나 났다. 잎맥 모양이 꼭 계단 같다.'];
+{const rn21=roomNight;roomNight=function(){const m=G.me;try{if(m&&(m.room||[]).length&&typeof TOYS!=='undefined'){const d=dayIdx(T());if(m.roomDay!==d&&hour()<5){const toys=m.room.filter(k=>TOYS[k]&&!ROOMFX[k]);if(toys.length&&chance(.5)){m.roomDay=d;if(!chance(.6))return;const k=pick(toys),n=TOYS[k].n;const plant=/^plant_/.test(k);const cute=plant||chance(.6);
+  const line=pick(plant?PLANT_NIGHT:cute?TOY_NIGHT_C:TOY_NIGHT_S).replace(/\{n\}/g,n);const out=give(cute?{mind:3}:{mind:-3});log(`내 방에서: ${line} (${out.join(', ')})`,cute?'life':'haunt');toast('방에서 무언가 기척이 있었다. 수첩 일지를 보세요.');return}}}}catch(e){}return rn21.apply(this,arguments)}}
+
+/* 도감: 아직 못 본 장에 소문 한 줄 · 새 장소도 도감에 */
+{const da21=dexAll;dexAll=function(){return[...da21.apply(this,arguments),...Object.entries(HP4).flatMap(([id,X])=>[['pl:'+id,X.n],['pl:'+id+':enc',X.n+' · '+X.P.enc.n]]),['pl:clock','종루 기계실'],['pl:lift','멈춘 엘리베이터'],['pl:chair5','다섯 번째 의자']]}}
+{const db21=dexBody;dexBody=function(){const out=db21.apply(this,arguments);try{const all=dexAll(),got=(G.me&&G.me.dex)||{};const grid=out.find(e=>e&&e.style&&String(e.style.display)==='grid');if(grid){const kids=[...grid.children];all.forEach(([k,nm],i)=>{const el=kids[i];if(!el||got[k])return;const ch=[...String(nm)][0]||'？';
+  el.replaceChildren(h('span',null,'？？？'),h('span',{class:'dim',style:'display:block;font-size:11px;margin-top:2px'},`누가 그러는데 「${ch}…」로 시작한대`))})}}catch(e){}return out}}
+/* 괴담 장소 단골: 같은 장소를 7일 연속 가면 그곳이 내 이름을 불러 준다 */
+{const vs21=visit;visit=function(id){const m=G.me;const before=m?m.en:0;const r=vs21.apply(this,arguments);try{if(m&&PLACES[id]&&PLACES[id].haunt&&(scene||result)&&(id==='noodle'||m.en<before)){const d=dayIdx(T());m.preg=m.preg||{};const g=m.preg[id]||{};if(g.last!==d){g.n=g.last===d-1?(g.n||1)+1:1;g.last=d;m.preg[id]=g;
+  if(g.n===7){const out=give({mind:10,money:20});tcAdd('preg');log(`「${PLACES[id].n}」에 이레째 왔다. 그곳이 내 이름을 불렀다. ${out.join(', ')}`,'haunt');setTimeout(()=>toast(`「${PLACES[id].n}」이(가) 내 이름을 불렀다 · ${out.join(', ')}`),900)}save()}}}catch(e){}return r}}
+if(typeof TTL!=='undefined')TTL.push(['rewinder','시간을 빌린 사람','haunt','종루 기계실에서 시계 되돌리기',m=>(tc(m).clock||0)>=1],['floor13b','열세 바퀴','haunt','멈춘 엘리베이터 핸들을 13바퀴 돌리기',m=>(tc(m).lift13||0)>=1],['fifthseat','다섯 번째 손님','gamble','다섯 번째 의자에서 3번 이기기',m=>(tc(m).chair5||0)>=3],
+  ['catclub','고양이 집회 회원','life','고양이 집회에 참석하기',m=>(tc(m).catmeet||0)>=1],['namedplace','이름을 아는 곳','haunt','한 괴담 장소에 이레 연속 가기',m=>(tc(m).preg||0)>=1]);
+
+function corrFirst(s){let ia=false;const a=[...s];for(let i=0;i<a.length;i++){if(a[i]==='*'){ia=!ia;continue}if(!ia&&/[가-힣A-Za-z0-9]/.test(a[i]))return i}return -1}
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
