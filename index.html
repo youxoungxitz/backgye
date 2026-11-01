@@ -3475,7 +3475,7 @@ const DEEP_MARKS=['등에 젖은 손바닥 자국이 지워지지 않는다','�
 const DEEP_START_LIGHT=22,DEEP_LAND=[5,10,15];
 const deepTier=t=>t<=5?1:t<=10?2:t<=15?3:4;
 /* 깊이별 난이도: 11턴부터 어려워지고, 16턴부터는 혼자서는 버틸 수 없다. 다인 탐사가 열리면 deepCrew()로 줄인다 */
-const deepCrew=()=>1;
+const deepCrew=()=>typeof deepCrewN==='function'?deepCrewN():1;
 function deepMod(t){const tr=deepTier(t),solo=deepCrew()<=1;if(tr<=2)return{dc:0,mul:1,drain:0,mind:0};if(tr===3)return{dc:3,mul:1.5,drain:0,mind:0};return solo?{dc:10,mul:2.5,drain:2,mind:10}:{dc:4,mul:1.6,drain:1,mind:3}}
 function deepScale(rw,mul){if(!rw||mul===1)return rw;const o={...rw};for(const k of['hp','mind','light'])if(o[k]<0)o[k]=Math.round(o[k]*mul);return o}
 function deepPool(sp,tier){return[...DR.all[tier].map((r,i)=>'all.'+tier+'.'+i),...DR[sp][tier].map((r,i)=>sp+'.'+tier+'.'+i)]}
@@ -6872,7 +6872,7 @@ function ptyDraw(){const box=document.getElementById('ptyBox');if(!box)return;co
 function ptyInvEl(){return h('div',{class:'stack',style:'gap:6px'},...PTY_INV.map(p=>h('div',{class:'banner',style:'display:flex;gap:8px;align-items:center;flex-wrap:wrap'},h('span',{style:'flex:1;min-width:0'},`${ptyName(p.leader)}의 파티 「${p.name}」 · ${PTY_PLACE[p.place].n}에 같이 가재요.`),h('button',{class:'sm pri',onclick:()=>ptyAnswer(p.id,true)},'같이 간다'),h('button',{class:'sm',onclick:()=>ptyAnswer(p.id,false)},'거절'))))}
 function ptyOpen(){openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'파티'),h('button',{class:'ghost','data-collapse-read':true,onclick:closeModal},'닫기')),h('div',{class:'stack',id:'ptyBox',style:'gap:8px'})));ptyDraw();ptyLoad(true)}
 function ptyCard(){const run=PTY&&PTY.p.status==='run';return h('div',{class:'card stack ptycard',style:'gap:6px;border-color:var(--hp)'},h('div',{class:'row'},h('span',{class:'lbl',style:'color:var(--hp)'},'파티 원정 · 2~4명'),PTY?h('span',{class:'tag'},run?`${PTY.p.room}/${PTY_ROOMS}번째 방`:'모이는 중'):null),
-  PTY_INV.length?ptyInvEl():null,h('p',{class:'mute',style:'margin:0;font-size:12.5px'},PTY?`「${PTY.p.name}」 · ${PTY_PLACE[PTY.p.place].n}`:'지인과 파티를 꾸려 새 계단이나 무명동 깊은 곳까지 함께 들어가요.'),h('button',{class:'sm'+(run?' pri':''),onclick:ptyOpen},PTY?'파티 보기':'파티 꾸리기'))}
+  PTY_INV.length?ptyInvEl():null,h('p',{class:'mute',style:'margin:0;font-size:12.5px'},PTY?`「${PTY.p.name}」 · ${PTY_PLACE[PTY.p.place].n}`:'지인과 파티를 꾸려 원정을 떠나요. 파티원끼리 같은 날 같은 입구로 집중 탐사에 들어가면 가장 깊은 곳도 함께 버틸 수 있어요.'),h('button',{class:'sm'+(run?' pri':''),onclick:ptyOpen},PTY?'파티 보기':'파티 꾸리기'))}
 {const vn23=viewNight;viewNight=function(){const out=[].concat(vn23.apply(this,arguments));try{if(G.me&&typeof sb!=='undefined'&&sb)out.unshift(ptyCard())}catch(e){}return out}}
 {const vm23=viewMap;viewMap=function(){const out=vm23.apply(this,arguments);try{if(G.me&&(PTY_INV.length||(PTY&&PTY.p.status==='run'))){out.unshift(ptyCard())}}catch(e){}return out}}
 if(typeof TTL!=='undefined')TTL.push(['expedition','원정대','rel','파티 원정 마치기',m=>(tc(m).expedition||0)>=1],['carried','업혀 나온 사람','rel','원정에서 쓰러지기 직전 파티원이 끌고 나오기',m=>(tc(m).carried||0)>=1],['veteran','원정 단골','rel','파티 원정 10번 마치기',m=>(tc(m).expedition||0)>=10]);
@@ -6881,6 +6881,27 @@ if(typeof TTL!=='undefined')TTL.push(['expedition','원정대','rel','파티 원
 function ptyCatchUp(P,done){const m=G.me;const last=done?PTY_ROOMS:P.p.room-1;const ins=P.mem.filter(x=>x.status==='in').length;const old=PTY;PTY=P;const lines=[];
   try{for(let r=1;r<=last;r++){const key=`${P.p.id}:${r}`;if(m.pclaim&&m.pclaim[key])continue;if(!P.mv.some(x=>x.room===r&&x.char_id===m.id))continue;const res=ptyResolve(P.p,r,P.mv,ins);const out=ptyClaim(r,res);if(out)lines.push(`${res.ev.n}: ${out.join(', ')}`)}}finally{PTY=old}
   if(lines.length)setTimeout(()=>toast('원정에서 못 받은 몫 · '+lines.join(' / ')),600);if(done&&!(m.pclaim&&m.pclaim[`${P.p.id}:end`]))ptyFinish(P)}
+/* ---------- 집중 탐사 · 파티와 함께: 같은 날 같은 입구로 들어간 파티원이 있으면 깊은 곳도 버틸 수 있다 ---------- */
+if(typeof SHEETK!=='undefined'&&!SHEETK.includes('deepNow'))SHEETK.push('deepNow');
+{const pf24=personFromRow;personFromRow=function(r){const p=pf24.apply(this,arguments);try{const s=(r&&r.sheet)||{};p.deepNow=s.deepNow&&typeof s.deepNow==='object'?s.deepNow:null}catch(e){}return p}}
+function deepMates(){const m=G.me;if(!m||!m.deep||typeof PTY==='undefined'||!PTY)return[];const d=dayIdx(T());
+  return PTY.mem.filter(x=>x.status==='in'&&x.char_id!==m.id).map(x=>SAMPLES[x.char_id]).filter(p=>p&&p.deepNow&&p.deepNow.d===d&&p.deepNow.sp===m.deep.sp&&p.deepNow.on&&(Date.now()-(p.deepNow.at||0)<20*60e3))}
+function deepCrewN(){try{return 1+deepMates().length}catch(e){return 1}}
+/* 내 탐사 상태를 파티원에게 보이게 */
+{const tk24=tick;tick=function(){const r=tk24.apply(this,arguments);try{const m=G.me;if(m){const want=m.deep?{d:m.deep.day,sp:m.deep.sp,turn:Math.min(m.deep.turn,20),light:m.deep.light,on:1}:null;const cur=m.deepNow||null;
+  const same=(!want&&!cur)||(want&&cur&&cur.on&&cur.d===want.d&&cur.sp===want.sp&&cur.turn===want.turn&&cur.light===want.light&&Date.now()-(cur.at||0)<5*60e3);if(!same){m.deepNow=want?Object.assign(want,{at:Date.now()}):null;save()}
+  if(m.deep&&typeof PTY!=='undefined'&&PTY&&(!deepPoll.at||Date.now()-deepPoll.at>30e3))deepPoll()}}catch(e){}return r}}
+async function deepPoll(){deepPoll.at=Date.now();try{const ids=PTY.mem.filter(x=>x.status==='in'&&x.char_id!==G.me.id).map(x=>x.char_id);if(!ids.length)return;const{data}=await sb.from('characters').select('id,sheet').in('id',ids);
+  for(const r of data||[]){if(SAMPLES[r.id]){const s=r.sheet||{};SAMPLES[r.id].deepNow=s.deepNow&&typeof s.deepNow==='object'?s.deepNow:null}}}catch(e){}}
+/* 탐사 화면 제목에 같이 걷는 사람 */
+{const dt24=deepTitle;deepTitle=function(){const t=dt24.apply(this,arguments);try{const ms=deepMates();if(ms.length)return t+` · 함께 ${ms.map(p=>p.name).join(', ')}`}catch(e){}return t}}
+/* 집중 탐사 카드: 파티원 상태 */
+{const dc24=deepCard;deepCard=function(){const el=dc24.apply(this,arguments);try{if(typeof PTY!=='undefined'&&el){const sp=G.me&&G.me.deep?G.me.deep.sp:deepSpace();const d=dayIdx(T());
+  if(PTY){const ms=PTY.mem.filter(x=>x.status==='in'&&x.char_id!==G.me.id).map(x=>SAMPLES[x.char_id]).filter(Boolean);
+    el.append(h('div',{class:'stack',style:'gap:4px;border-top:1px solid var(--line);padding-top:8px'},h('span',{class:'lbl',style:'color:var(--hp)'},`파티 「${PTY.p.name}」와 함께`),
+      ...ms.map(p=>{const n=p.deepNow;const here=n&&n.on&&n.d===d&&n.sp===sp&&Date.now()-(n.at||0)<20*60e3;return h('span',{class:'mute',style:'font-size:12.5px'},`${p.name} · ${here?`같은 입구 ${n.turn}/20 · 등불 ${n.light}`:'아직 안 들어옴'}`)}),
+      h('p',{class:'dim',style:'margin:0;font-size:11.5px'},'같은 날 같은 입구로 파티원이 함께 들어가 있으면, 16턴부터의 가장 깊은 곳에서도 버틸 수 있어요(판정과 피해가 훨씬 덜해요). 각자 자기 화면에서 진행하고, 파티원의 진행 상황이 여기 보여요.')))}
+  else el.append(h('p',{class:'dim',style:'margin:0;font-size:11.5px'},'파티를 꾸려 같은 날 같은 입구로 함께 들어가면 16턴부터의 가장 깊은 곳도 버틸 수 있어요. 파티는 이 탭 맨 위 「파티 원정」 카드에서 꾸려요.'))}}catch(e){}return el}}
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
