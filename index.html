@@ -3472,8 +3472,8 @@ function deepAmb(tier,sp){const soft=!!(G.opts&&G.opts.soft);if(tier>=3&&soft)re
   const ch=[0,.8,1,1,1][tier];if(Math.random()>ch)return'';const spl=(DEEP_AMB_SP[sp]||{})[tier]||[];const pool=[...DEEP_AMB[tier],...spl,...spl];
   let s=pick(pool);const two=tier===4||(tier===3&&Math.random()<.5);if(two){let s2=pick(pool);if(s2!==s)s+='\n'+s2}return s}
 const DEEP_MARKS=['등에 젖은 손바닥 자국이 지워지지 않는다','왼쪽 귀에서 가끔 물소리가 난다','그림자가 반 박자 늦게 따라온다','손톱 하나가 회색으로 굳었다','누가 뒤에서 이름을 부르면 몸이 먼저 돌아간다','입안에서 가끔 시멘트 맛이 난다'];
-const DEEP_START_LIGHT=22,DEEP_LAND=[5,10,15];
-const deepTier=t=>t<=5?1:t<=10?2:t<=15?3:4;
+const DEEP_START_LIGHT=34,DEEP_LAND=[5,10,15,20,24];
+const deepTier=t=>t<=5?1:t<=10?2:t<=15?3:t<=20?4:t<=24?5:6;
 /* 깊이별 난이도: 11턴부터 어려워지고, 16턴부터는 혼자서는 버틸 수 없다. 다인 탐사가 열리면 deepCrew()로 줄인다 */
 const deepCrew=()=>typeof deepCrewN==='function'?deepCrewN():1;
 function deepMod(t){const tr=deepTier(t),solo=deepCrew()<=1;if(tr<=2)return{dc:0,mul:1,drain:0,mind:0};if(tr===3)return{dc:3,mul:1.5,drain:0,mind:0};return solo?{dc:10,mul:2.5,drain:2,mind:10}:{dc:4,mul:1.6,drain:1,mind:3}}
@@ -3495,7 +3495,7 @@ function deepCandleChoice(again){const n=(G.me.deep.pocket.items.candle||0)+(G.m
 function deepScene(text,choices,red){openScene({id:'deep',title:deepTitle(),red:!!red,text:text+`\n\n[주머니] ${deepPocketTxt(G.me.deep.pocket)}`,choices:choices.filter(Boolean)},true)}
 function deepNext(){const m=G.me,d=m.deep;if(!d)return;
   if(d.light<=0)return deepEnd('dark');if(m.hp<=10)return deepEnd('hp');if(m.mind<=5)return deepEnd('mind');
-  if(d.land)return deepLanding();if(d.turn>=20)return deepFinal();deepRoom()}
+  if(d.land)return deepLanding();if(d.turn>=30)return deepFinal();deepRoom()}
 function deepRoom(){const m=G.me,d=m.deep;const id=d.seq[d.turn-1];const R=deepRoomById(id);const tier=deepTier(d.turn);
   const ch=R.o.filter(o=>!o.need||deepHas(o.need)).map(o=>({l:o.l,s:o.s,run:()=>{let txt,rw,ct='',ok=true;
     const M=deepMod(d.turn);if(o.s){const c=chk(o.s,o.dc+M.dc);ct=c.txt;ok=c.ok;[txt,rw]=c.ok?o.ok:o.no}else[txt,rw]=o.r;rw=deepScale(rw,M.mul);const tr=deepTier(d.turn);if(!ok&&rw&&rw.hp<0&&tr>=2&&!(G.opts&&G.opts.soft))txt+='\n'+pick(DEEP_HURT[tr]);
@@ -3520,7 +3520,7 @@ function deepEnd(kind,ftxt,flines){const m=G.me,d=m.deep;if(!d)return;const S=DE
     const fx=pick(['followed','delirium','gum']);lines=['주머니를 모두 잃었다',...give({hp:-25,mind:-20,fx})];
     let mark=null;if(chance(.3)){mark=pick(DEEP_MARKS.filter(x=>!(m.marks||[]).includes(x)))||null;if(mark){m.marks=m.marks||[];m.marks.push(mark);lines.push('흔적: '+mark)}}
     m.cell=homeCell(m);text=`${why}\n\n정신을 차리니 집 칸 바닥이다. 문은 안에서 잠겨 있다. 옷이 젖어 있고, 손톱 밑에 낯선 흙이 끼어 있다.${mark?`\n그날 이후 ${mark}.`:''}`}
-  const rec={day:d.day,sp:d.sp,turn:Math.min(d.turn,20),kind,loot:kind==='win'||kind==='back'?deepPocketTxt(pk):'잃음',log:d.log.slice(-6)};m.deepLog=[rec,...(m.deepLog||[])].slice(0,8);
+  const rec={day:d.day,sp:d.sp,turn:Math.min(d.turn,30),kind,loot:kind==='win'||kind==='back'?deepPocketTxt(pk):'잃음',log:d.log.slice(-6)};m.deepLog=[rec,...(m.deepLog||[])].slice(0,8);
   log(`집중 탐사 · ${S.n}: ${{win:'끝까지 다녀왔다',back:`${rec.turn}턴에서 돌아왔다`,quit:'포기하고 기어 나왔다',dark:'등불이 꺼져 끌려 나왔다',hp:'쓰러져 끌려 나왔다',mind:'정신을 놓고 끌려 나왔다'}[kind]}.`,kind==='win'||kind==='back'?'haunt':'haunt');
   done('집중 탐사 · '+S.n,text,lines,bad)}
 function deepStart(){const m=G.me;if(!ready())return;const dl=daily();if(dl.deep)return toast('집중 탐사는 하루에 한 번만 들어갈 수 있어요.');if(m.work)return toast('일하는 중에는 들어갈 수 없어요. 퇴근한 뒤에 해 주세요.');
@@ -6826,7 +6826,7 @@ function ptyResolve(p,room,moves,size){const ev=ptyRoomEv(p,room);const by=[0,1,
 function ptyRoomReady(room){if(!PTY)return false;const ins=ptyIn();const mv=PTY.mv.filter(x=>x.room===room);if(ins.every(id=>mv.some(x=>x.char_id===id)))return true;const first=Math.min(...mv.map(x=>Date.parse(x.created_at)));return mv.length>0&&Date.now()-first>PTY_WAIT}
 /* 만들기 · 초대 · 수락 · 나가기 */
 async function ptyCreate(name,place,ids){if(!ready())return;if(PTY)return toast('이미 파티에 들어 있어요.');if(!ids.length)return toast('함께 갈 지인을 한 명 이상 골라 주세요.');if(ids.length>PTY_MAX-1)return toast(`파티는 ${PTY_MAX}명까지예요.`);if(place==='mmd'&&!(typeof mmdOpen==='function'&&mmdOpen()))return toast('무명동이 아직 열리지 않았어요.');
-  const{data:p,error}=await sb.from('parties').insert({leader:G.me.id,name:String(name||'').trim().slice(0,20)||`${G.me.name}의 파티`,place,status:'open',room:0}).select().single();if(error)return toast(/relation|does not exist|schema cache/i.test(error.message||'')?'파티 기능이 아직 없어요. 운영자에게 23_party.sql 실행을 부탁해 주세요.':'파티를 만들지 못했어요.');
+  const{data:p,error}=await sb.from('parties').insert({leader:G.me.id,name:String(name||'').trim().slice(0,20)||`${G.me.name}의 파티`,place,status:'open',room:0}).select().single();if(error)return toast(/relation|does not exist|schema cache/i.test(error.message||'')?'파티 기능이 아직 없어요. 운영자에게 23_party.sql 실행을 부탁해 주세요.':`파티를 만들지 못했어요. (${String(error.message||'').slice(0,80)})`);
   const rows=[{party_id:p.id,char_id:G.me.id,status:'in'},...ids.map(id=>({party_id:p.id,char_id:id,status:'invited'}))];const{error:e2}=await sb.from('party_members').insert(rows);if(e2)toast('초대 일부를 보내지 못했어요. 내 다른 캐릭터는 초대할 수 없어요.');
   log(`파티 「${p.name}」을(를) 꾸렸다. ${ids.map(ptyName).join(', ')}에게 같이 가자고 했다.`,'rel');await ptyLoad(true);ptyOpen()}
 async function ptyAnswer(pid,yes){if(yes&&PTY)return toast('이미 다른 파티에 들어 있어요. 먼저 나와 주세요.');const{error}=await sb.from('party_members').update({status:yes?'in':'left'}).eq('party_id',pid).eq('char_id',G.me.id);if(error)return toast('대답하지 못했어요.');
@@ -6902,6 +6902,90 @@ async function deepPoll(){deepPoll.at=Date.now();try{const ids=PTY.mem.filter(x=
       ...ms.map(p=>{const n=p.deepNow;const here=n&&n.on&&n.d===d&&n.sp===sp&&Date.now()-(n.at||0)<20*60e3;return h('span',{class:'mute',style:'font-size:12.5px'},`${p.name} · ${here?`같은 입구 ${n.turn}/20 · 등불 ${n.light}`:'아직 안 들어옴'}`)}),
       h('p',{class:'dim',style:'margin:0;font-size:11.5px'},'같은 날 같은 입구로 파티원이 함께 들어가 있으면, 16턴부터의 가장 깊은 곳에서도 버틸 수 있어요(판정과 피해가 훨씬 덜해요). 각자 자기 화면에서 진행하고, 파티원의 진행 상황이 여기 보여요.')))}
   else el.append(h('p',{class:'dim',style:'margin:0;font-size:11.5px'},'파티를 꾸려 같은 날 같은 입구로 함께 들어가면 16턴부터의 가장 깊은 곳도 버틸 수 있어요. 파티는 이 탭 맨 위 「파티 원정」 카드에서 꾸려요.'))}}catch(e){}return el}}
+/* ---------- 집중 탐사 30턴: 21턴부터 3인 이상, 25턴부터 4인 ---------- */
+const DEEP_TURNS=30,DEEP_NEED={5:3,6:4};
+/* 깊이별 난이도 (파티원 수에 따라) */
+deepMod=function(t){const tr=deepTier(t),c=deepCrew();if(tr<=2)return{dc:0,mul:1,drain:0,mind:0};if(tr===3)return{dc:3,mul:1.5,drain:0,mind:0};
+  if(tr===4)return c<=1?{dc:10,mul:2.5,drain:2,mind:10}:{dc:4,mul:1.6,drain:1,mind:3};
+  if(tr===5)return c>=3?{dc:6,mul:1.9,drain:1,mind:5}:{dc:16,mul:3.5,drain:3,mind:15};
+  return c>=4?{dc:8,mul:2.2,drain:1,mind:6}:{dc:18,mul:4,drain:3,mind:18}};
+/* 더 깊은 방: 21~24턴(五) · 25~29턴(六) */
+DR.all[5]=[
+ {t:'복도 양쪽 벽에 사람이 박혀 있다. 시멘트 속에 반쯤 묻혀, 얼굴만 내놓고. 다들 눈을 감고 있다. 우리가 지나갈 때마다 하나씩 눈을 뜨고, 입 모양으로 숫자를 센다. 우리 수를.',o:[
+  {l:'눈을 맞추지 않고 지나간다',s:'nerve',dc:15,ok:['끝까지 바닥만 보고 걸었다. 마지막 얼굴이 아쉽다는 듯 혀를 찼다. 혀가 시멘트에 붙어 찢어지는 소리가 났다. 발밑에 그 얼굴이 뱉은 동전 하나.',{money:40,mind:-8}],no:['하나와 눈이 마주쳤다. 그 얼굴이 내 얼굴로 바뀌었다. 시멘트 속의 내가 「대신 서 줄래?」 하고 물었다. 대답하기 전에 일행이 끌고 갔다.',{mind:-18,hp:-10}]},
+  {l:'가장 젊은 얼굴의 시멘트를 긁어 준다',s:'str',dc:16,ok:['손톱이 다 깨질 때까지 긁었다. 시멘트 조각과 함께 이가 몇 개, 그리고 설계도 조각이 떨어졌다. 얼굴은 고맙다는 말 대신 마지막 숨을 내쉬었다. 비린내가 났다.',{clue:3,hp:-8,mind:-10}],no:['긁는 손을 얼굴이 물었다. 잇몸밖에 없는 입이 손가락을 오래 빨았다. 빼낸 손가락 끝이 하얗게 불어 있다.',{hp:-14,mind:-12,fx:'gum'}]}]},
+ {t:'정육점 같은 방. 갈고리마다 걸린 건 고기가 아니라 옷이다. 옷 안에 사람 모양으로 공기가 차 있다. 소매 끝에서 핏물이 일정하게 떨어진다. 갈고리 하나가 비어 있다. 이름표가 붙어 있다.',o:[
+  {l:'빈 갈고리의 이름표를 읽는다',s:'sen',dc:15,ok:['처음 보는 이름. 다행이다. 이름표 뒷면에 누가 손톱으로 새긴 지도. 출구 쪽 화살표.',{light:3,clue:1,mind:-6}],no:['우리 중 한 사람 이름이다. 읽는 순간 그 사람 어깨에서 우두둑 소리가 났다. 갈고리 쪽으로 몸이 기운다. 다 같이 붙잡아 끌고 나왔다.',{hp:-18,mind:-14}]},
+  {l:'옷 하나의 단추를 풀어 본다',s:'nerve',dc:16,ok:['단추를 풀자 공기가 빠지며 한숨 소리가 났다. 안주머니에 지폐 다발. 젖어 있다. 뭐에 젖었는지는 묻지 않기로 했다.',{money:70,mind:-10}],no:['단추 아래에 단추가, 그 아래에 또 단추가. 끝까지 풀자 안쪽에 갈비뼈가 단추처럼 줄지어 있었다. 마지막 하나가 내 쪽으로 툭 열렸다.',{mind:-22,fx:'delirium'}]}]},
+ {t:'바닥이 따뜻하다. 발아래가 미세하게 오르내린다. 숨이다. 이 층 전체가 누군가의 배 위에 지어져 있다. 저 앞에서 바닥이 갈라지며 안쪽의 붉은 것이 보인다.',soft:'바닥이 따뜻하고, 미세하게 오르내린다. 이 층 전체가 숨을 쉰다. 저 앞에서 바닥이 갈라져 있다.',o:[
+  {l:'숨을 쉴 때 맞춰 건넌다',s:'agi',dc:15,ok:['들숨에 뛰고 날숨에 멈췄다. 다 건너자 바닥이 길게 한숨을 쉬었다. 갈라진 틈 가장자리에 반짝이는 것. 누가 삼켜졌던 반지.',{money:45,mind:-6}],no:['날숨 때 발을 디뎠다. 바닥이 꿀꺽 삼켰다. 무릎까지 빨려 들어간 다리를 넷이 매달려 뽑아냈다. 신발은 돌아오지 않았다.',{hp:-20,mind:-12}]},
+  {l:'갈라진 틈에 등불을 비춘다',s:'nerve',dc:17,ok:['붉은 것 안쪽에 계단이 있다. 아래로 이어진다. 그 계단 첫 칸에 설계도 다발이 소화되다 만 채로 걸려 있다.',{clue:4,light:-2,mind:-12}],no:['불빛이 닿자 틈이 오므라들었다. 아팠던 모양이다. 층 전체가 몸부림쳤다. 다 같이 벽에 처박혔다.',{hp:-22,light:-3}]}]},
+ {t:'방 한가운데 수술대. 그 위에 누운 사람은 우리 중 하나와 똑같이 생겼다. 배가 열려 있고, 안이 비었다. 수술대 옆 쟁반에 장기가 하나씩 이름표를 달고 놓여 있다. 이름표는 우리 이름이다. 하나씩.',soft:'방 한가운데 수술대. 그 위에 누운 사람은 우리 중 하나와 똑같이 생겼다. 쟁반 위 물건마다 우리 이름표가 달려 있다.',o:[
+  {l:'자기 이름표를 떼어 간다',s:'nerve',dc:16,ok:['내 이름표만 뗐다. 쟁반 위의 그것은 이름을 잃자 그냥 고깃덩어리가 되었다. 안도했다. 그게 무서웠다. 이름표 뒤에 설계도 조각이 붙어 있다.',{clue:2,mind:-14}],no:['떼는 순간 옆구리가 뜨거웠다. 내려다보니 옷에 피가 번지고 있다. 꿰맨 자국은 없는데.',{hp:-24,mind:-10,fx:'anemia'}]},
+  {l:'수술대 위의 그것을 덮어 준다',r:['흰 천을 덮었다. 천 아래에서 「고마워」. 우리 중 하나의 목소리. 그 사람이 한동안 말을 하지 못했다.',{mind:-16,light:2}]}]},
+ {t:'계단 난간이 사람 팔이다. 손에서 손으로 이어 잡은 팔들이 난간이 되어 아래로 끝없이 내려간다. 손을 얹으면 손이 마주 잡는다. 놓아주지 않는다.',o:[
+  {l:'난간을 잡지 않고 내려간다',s:'agi',dc:16,ok:['벽에 등을 붙이고 한 칸씩. 팔들이 우리를 향해 일제히 뻗었다가, 닿지 않자 천천히 거둬들였다. 손 하나가 쥐고 있던 열쇠를 떨어뜨렸다.',{money:35,light:2}],no:['발이 미끄러졌고, 손이 붙잡았다. 손목이 꺾이는 소리. 붙잡힌 채로 일행이 손가락을 하나씩 펴서 떼어 냈다. 하나는 끝내 펴지지 않아 꺾었다.',{hp:-18,mind:-14}]},
+  {l:'팔 하나를 잡고 「놓아 달라」고 말한다',s:'talk',dc:17,ok:['잡은 손이 잠시 망설이더니, 손바닥에 무언가 쥐여 주고 놓았다. 손톱 하나. 손톱 안쪽에 설계도가 새겨져 있다.',{clue:3,mind:-10}],no:['손이 대답 대신 더 세게 쥐었다. 손등으로 손가락이 하나 더 자라났다. 내 손가락을 세듯이 하나씩 쓰다듬었다.',{hp:-12,mind:-18,fx:'nails'}]}]},
+ {t:'식당. 긴 식탁에 사람들이 앉아 있다. 접시 위 음식이 우리를 보고 있다. 눈이 달린 것도, 입이 달린 것도 있다. 빈자리가 우리 수만큼 있다. 앉으라고 의자들이 일제히 뒤로 빠진다.',soft:'긴 식탁에 사람들이 앉아 있다. 접시 위 음식이 우리를 보는 것 같다. 빈자리가 우리 수만큼 있다.',o:[
+  {l:'앉아서 먹는 척만 한다',s:'nerve',dc:16,ok:['포크만 움직였다. 식탁 끝 주인이 만족한 듯 냅킨으로 입을 닦았다. 냅킨에 핏물이 번졌다. 접시 밑에 팁처럼 지폐가 깔려 있었다.',{money:60,mind:-12}],no:['한 입이 들어갔다. 씹히는 것이 마주 씹었다. 삼키기 전에 뱉었다. 혀끝이 조금 없어졌다.',{hp:-16,mind:-16,fx:'gum'}]},
+  {l:'식탁보를 확 걷는다',s:'str',dc:15,ok:['식탁보째 접시가 쏟아졌다. 식탁 아래는 계단이었다. 다들 뛰어 내려갔다. 위에서 사람들이 일제히 박수를 쳤다.',{light:2,mind:-8}],no:['식탁보 아래 식탁이 없었다. 사람들 무릎 위에 접시가 놓여 있었고, 그 무릎은 다 하나로 이어져 있었다.',{mind:-22}]}]}];
+DR.all[6]=[
+ {t:'설계도에 없는 층. 벽이 없다. 대신 사람들이 서 있다. 어깨를 맞대고 빽빽하게, 벽처럼. 다들 눈을 감고 망치 소리에 맞춰 조금씩 몸을 비튼다. 벽이 되는 중이다. 한 자리가 비어 있다. 우리 중 누군가의 키에 딱 맞는.',o:[
+  {l:'빈자리에 등불을 세워 두고 간다',s:'sen',dc:18,ok:['등불을 세워 두자 벽이 그것으로 만족했다. 빈자리에 빛이 박혔다. 우리 등불이 그만큼 어두워졌지만, 아무도 그 자리에 서지 않았다. 벽 하나가 손을 펴 설계도를 내밀었다.',{light:-3,clue:5,mind:-10}],no:['등불을 세우려는데 벽의 팔들이 우리 중 하나를 빈자리로 밀어 넣었다. 다 같이 끌어냈을 때 그 사람 등에 시멘트가 반쯤 굳어 있었다.',{hp:-26,mind:-20}]},
+  {l:'벽 사람들의 이름을 불러 준다',s:'talk',dc:19,ok:['아는 이름이 몇 있었다. 부를 때마다 하나씩 눈을 떴고, 하나씩 울었다. 눈물에서 시멘트 맛이 났다. 마지막 사람이 「고마워, 이제 됐어」 하고 완전히 굳었다.',{clue:4,mind:-18}],no:['이름을 부르자 벽 전체가 동시에 대답했다. 내 이름으로. 귀에서 피가 났다.',{hp:-14,mind:-26,fx:'tinnitus'}]}]},
+ {t:'아주 긴 방. 끝에 거울. 거울 속에는 우리가 넷 서 있다. 그런데 거울 쪽 넷은 이미 많이 다쳤다. 하나는 팔이 없고, 하나는 얼굴이 없다. 거울 속 우리가 다가온다. 바꾸자는 것이다.',soft:'아주 긴 방 끝에 거울. 거울 속 우리는 많이 다쳐 있다. 거울 속 우리가 다가온다. 바꾸자는 것이다.',o:[
+  {l:'거울을 등지고 뒷걸음으로 나간다',s:'agi',dc:18,ok:['한 번도 돌아보지 않았다. 문을 넘자 거울 속 넷이 동시에 주저앉았다. 그 자리에 그들이 들고 있던 것이 떨어졌다. 동전, 열쇠, 설계도.',{money:80,clue:3,mind:-12}],no:['한 사람이 돌아봤다. 거울 속 그 사람과 손이 닿았다. 돌아온 손이 차갑다. 그 사람이 정말 그 사람인지, 오늘 하루 아무도 확신하지 못했다.',{hp:-20,mind:-24,fx:'delirium'}]},
+  {l:'거울을 깬다',s:'str',dc:17,ok:['깨진 조각마다 거울 속 우리가 하나씩 갇혔다. 조각들이 바닥에서 손바닥을 비벼 댔다. 하나를 주워 왔다. 안에서 누가 계속 문을 두드린다.',{item:'mirror',clue:2,mind:-14}],no:['깨진 틈으로 거울 속 손들이 쏟아져 나왔다. 다 피했다. 하나만 빼고. 그 사람 그림자가 오늘 밤 내내 자기를 따라오지 않았다.',{hp:-22,mind:-18,fx:'followed'}]}]},
+ {t:'우물 바닥 같은 원형 방. 바닥에 머리카락이 무릎까지 차 있다. 머리카락 속에서 정수리들이 떠올랐다 가라앉는다. 누가 숨을 쉬러 올라오는 것 같다. 하나가 올라와 우리를 본다. 얼굴 가죽만 있고 안이 없다.',soft:'원형 방 바닥에 머리카락이 무릎까지 차 있다. 그 안에서 무언가 떠올랐다 가라앉는다.',o:[
+  {l:'서로 허리를 묶고 건넌다',s:'str',dc:18,ok:['넷이 줄 하나로 묶여 건넜다. 발목을 잡아당기는 손을 서로가 붙들었다. 건너편에 닿았을 때, 줄 끝에 낯선 매듭이 하나 더 있었다. 매듭에 지폐가 끼워져 있었다.',{money:70,hp:-8,mind:-10}],no:['한 사람이 끌려 들어갔다. 다 같이 줄을 당겼다. 올라온 건 그 사람과, 그 사람 발목을 붙든 얼굴 가죽. 떼어 내자 가죽이 장갑처럼 뒤집혔다.',{hp:-28,mind:-22}]},
+  {l:'얼굴 가죽에게 무엇을 찾느냐고 묻는다',s:'talk',dc:19,ok:['가죽이 입 모양으로 「안」이라고 했다. 자기 안을 찾는 것이다. 설계도 한 장을 내밀자 가죽이 그걸 뒤집어썼다. 만족한 듯 가라앉았다. 바닥에서 설계도 조각들이 떠올랐다.',{clue:5,mind:-16}],no:['가죽이 대답 대신 우리 중 하나의 얼굴에 달라붙었다. 떼어 낼 때 무언가 같이 떨어졌다. 그 사람은 한동안 거울을 보지 못했다.',{hp:-20,mind:-26,fx:'blur'}]}]},
+ {t:'공사 현장. 인부들이 사람을 벽돌처럼 쌓고 있다. 산 사람이다. 사이사이 시멘트 대신 바르는 것은 붉다. 감독이 클립보드를 들고 우리 쪽으로 걸어온다. 「인원 보충 왔나?」',soft:'공사 현장. 인부들이 무언가를 벽돌처럼 쌓고 있다. 감독이 클립보드를 들고 다가온다. 「인원 보충 왔나?」',o:[
+  {l:'「점검 나왔습니다」 하고 버틴다',s:'talk',dc:18,ok:['감독이 우리를 위아래로 훑더니 클립보드에 도장을 찍었다. 「통과.」 클립보드 아래 끼워진 서류 뭉치를 슬쩍 빼 왔다. 설계도 원본이다.',{clue:5,mind:-12}],no:['감독이 우리 수를 셌다. 「넷. 딱 한 줄이네.」 인부들이 다가왔다. 누가 먼저 뛰었는지 모른다. 등 뒤에서 시멘트 붓는 소리가 오래 들렸다.',{hp:-24,mind:-22}]},
+  {l:'쌓인 사람 하나를 빼낸다',s:'str',dc:20,ok:['젖은 벽에서 한 사람을 뽑아냈다. 그 사람은 숨을 한 번 크게 쉬고 가루가 되어 흩어졌다. 손에 남은 건 그 사람 명찰. 이 성채에 처음 들어온 날짜가 적혀 있다. 백 년 전이다.',{clue:4,money:50,mind:-20}],no:['빼내려던 사람이 오히려 우리 손을 잡아끌었다. 벽 안으로 팔꿈치까지 들어갔다. 안은 따뜻하고, 바빴다. 무언가 내 손가락 개수를 세고 있었다.',{hp:-30,mind:-18,fx:'nails'}]}]},
+ {t:'방이 아니다. 누군가의 입속이다. 천장이 입천장이고, 바닥이 혀다. 이빨이 기둥처럼 서 있다. 저 깊은 곳 목구멍에서 등불 빛이 보인다. 먼저 들어간 사람들의 등불이다. 입이 천천히 다물어지는 중이다.',soft:'방이 아니라 거대한 입속 같다. 이빨이 기둥처럼 서 있고, 천천히 다물어지는 중이다. 깊은 곳에서 등불 빛이 보인다.',o:[
+  {l:'다물어지기 전에 뛰어 지나간다',s:'agi',dc:19,ok:['넷이 동시에 뛰었다. 등 뒤에서 이빨이 맞물리는 소리. 마지막 사람 등 뒤 옷자락이 물렸다가 찢겨 나갔다. 목구멍 아래, 먼저 간 사람들이 두고 간 등불을 주웠다.',{light:5,mind:-10}],no:['이빨 사이에 한 사람이 끼었다. 다 같이 턱을 들어 올렸다. 빠져나온 사람 다리에 이 자국이 둥글게 남았다. 이 자국이 숨 쉬듯 붉어졌다 하얘졌다.',{hp:-30,mind:-16}]},
+  {l:'이빨 하나를 뽑아 지렛대로 받친다',s:'str',dc:18,ok:['뽑힌 이빨 자리에서 피가 쏟아졌다. 입이 비명을 질렀다. 그 틈에 지렛대를 받치고 다 같이 지나갔다. 뽑은 이빨 안에 동전이 금니처럼 박혀 있었다.',{money:90,hp:-6,mind:-14}],no:['이빨이 뽑히지 않았다. 대신 우리 중 하나의 이가 하나 빠졌다. 입이 만족한 듯 조금 열어 주었다.',{hp:-14,mind:-20,fx:'gum'}]}]},
+ {t:'아기 울음소리로 가득한 방. 요람이 수십 개. 요람마다 들여다보면 아기 대신 우리가 아는 사람의 어른 얼굴이 아기 몸에 붙어 있다. 우리를 보고 울음을 그친다. 안아 달라고 팔을 뻗는다.',soft:'요람이 수십 개 놓인 방. 요람 속에는 아는 얼굴들이 아기처럼 누워 있다. 우리를 보고 울음을 그친다.',o:[
+  {l:'자장가를 부르며 지나간다',s:'talk',dc:17,ok:['아무도 노래를 잘하지 못했다. 그래도 하나씩 잠들었다. 잠든 얼굴들이 평온해졌다. 마지막 요람에 설계도 조각이 기저귀처럼 접혀 있었다.',{clue:3,mind:-8}],no:['노래가 틀렸다. 가사를 하나 틀리자 요람들이 일제히 다시 울었다. 울음이 귀가 아니라 이빨로 들어왔다.',{hp:-12,mind:-26,fx:'tinnitus'}]},
+  {l:'하나를 안아 준다',s:'nerve',dc:19,ok:['안자 그것이 내 목에 얼굴을 묻고 조용해졌다. 무거웠다. 어른 하나 무게였다. 내려놓자 「또 와」 하고 잠들었다. 품에 남은 온기에서 국수 냄새가 났다. 손에는 동전이 쥐여 있었다.',{money:60,mind:-14}],no:['안는 순간 그것이 목덜미를 물었다. 젖니였다. 떼어 낼 때까지 빨았다. 일행이 떼어 냈을 때 그것은 만족한 얼굴로 다시 아기가 되어 있었다.',{hp:-26,mind:-18,fx:'anemia'}]}]},
+ {t:'계단참. 우리가 넷이 아니라 다섯이다. 등불 아래 서로 얼굴을 확인한다. 다 아는 얼굴이다. 다섯 다. 그런데 처음 들어올 때 분명 넷이었다.',o:[
+  {l:'처음 들어올 때 한 말을 서로 묻는다',s:'sen',dc:18,ok:['한 사람만 대답을 못 했다. 그 사람이 웃었다. 웃는 입이 귀까지 찢어졌다. 그리고 등불 그림자 속으로 흘러내렸다. 그것이 서 있던 자리에 설계도 조각이 다섯 장.',{clue:5,mind:-16}],no:['다 맞혔다. 다섯 모두. 아무도 누가 더해진 건지 몰랐다. 그 뒤로 계단을 내려가는 동안 발소리가 늘 하나 많았다. 지금도 그렇다.',{mind:-28,fx:'followed'}]},
+  {l:'모두 손을 잡고 수를 센다',s:'nerve',dc:17,ok:['손을 잡자 넷이었다. 다섯 번째 손은 누구의 손도 잡지 않고 허공에 떠 있었다. 그 손이 아쉬운 듯 등불 심지를 한 번 쓰다듬고 사라졌다. 등불이 밝아졌다.',{light:4,mind:-10}],no:['손을 잡으니 원이 하나 남았다. 남은 손이 차가웠다. 누구의 손인지 끝까지 아무도 묻지 않았다.',{hp:-10,mind:-24}]}]}];
+for(const sp of Object.keys(DEEP_SP)){if(!DR[sp])DR[sp]={};if(!DR[sp][5])DR[sp][5]=[];if(!DR[sp][6])DR[sp][6]=[]}
+Object.assign(DEEP_AMB,{5:['등불 빛이 닿는 곳마다 벽에 사람 손바닥이 안쪽에서 눌린다. 빛이 지나가면 손이 거둬진다.','천장에서 무언가 뚝뚝 떨어진다. 피가 아니다. 더 진하고, 따뜻하다. 위를 보면 천장이 목젖처럼 움찔한다.','발밑에서 누가 내 발바닥을 혀로 핥는다. 바닥 너머에서.','등불 그림자가 벽에 넷이 아니라 다섯 생긴다. 다섯 번째 그림자만 고개가 뒤로 꺾여 있다.','공기에서 쇠 맛이 난다. 숨 쉴 때마다 이빨 사이에 무언가 낀다. 혀로 빼 보면 남의 손톱이다.','멀리서 망치 소리. 한 번 칠 때마다 누가 짧게 비명을 지른다. 박자가 정확하다.','누가 뒤에서 내 이름을 부른다. 우리 일행 목소리다. 일행은 전부 내 앞에 있다.','벽지 무늬가 사람 피부의 주름이다. 손으로 누르면 벽에 소름이 돋는다.'],
+ 6:['여기서는 등불 빛이 무게를 가진다. 비출 때마다 비친 것이 아파한다.','바닥이 우리 발자국을 하나씩 삼킨다. 돌아보면 온 길이 없다. 처음부터 없었던 것처럼.','어둠 속에서 누가 우리 숨을 하나씩 세어 가져간다. 숨 쉬는 게 점점 어려워진다.','벽에서 망치 소리가 난다. 아니다. 벽이 우리 심장 소리를 흉내 낸다. 박자가 조금씩 빨라진다.','등불 안에서 작은 얼굴이 불꽃을 핥는다. 불이 줄어들 때마다 그 얼굴이 조금씩 배불러 보인다.','동료의 얼굴이 등불 그림자에 따라 바뀐다. 빛이 흔들리는 동안만 낯선 얼굴이다. 아마도.','설계도를 꺼내 보니 지금 우리가 선 곳에 사람 넷이 그려져 있다. 연필로. 지우개 자국과 함께.','아래에서 성채 전체가 숨을 들이쉰다. 우리가 그 숨에 섞여 들어가는 중이다.']});
+Object.assign(DEEP_HURT,{5:['상처 안쪽에서 작은 손가락이 꼼지락거린다. 밀어 넣어도 다시 나온다.','다친 자리에서 시멘트 냄새가 난다. 피가 굳는 게 아니라 마르는 소리가 난다.','찢어진 살 사이로 내 것이 아닌 뼈가 보인다. 하얗고, 가늘고, 아이 것 같다.','피가 바닥에 떨어지지 않고 공중에서 멈춘다. 누가 받아 마시는 소리.'],
+ 6:['상처 위로 다른 사람의 입술이 맞닿아 있다. 떼어 내도 떼어 내도 그 자리에 다시 생긴다.','부러진 자리에서 망치 소리가 난다. 몸 안에서 누가 무언가를 짓고 있다.','피가 흐르는 방향이 바뀌었다. 몸 밖에서 안으로. 무언가가 섞여 들어온다.','손등 살갗이 벽지처럼 들뜬다. 들뜬 틈으로 다른 사람의 손등이 보인다.']});
+if(typeof DEEP_MARKS!=='undefined')DEEP_MARKS.push('손가락 개수를 셀 때마다 하나씩 다르게 나온다','등에 시멘트 굳은 자국이 손바닥만 하게 남았다','거울 속 내가 늘 조금 더 다쳐 있다','자다 깨면 입안에 남의 머리카락이 있다');
+/* 서른 번째 방: 가장 아래 */
+const DEEP_FINAL30={
+ build:{n:'설계자의 아래층',t:'설계실 아래에 층이 하나 더 있다. 아무도 그리지 않은 층. 천장에 매달린 설계도 수천 장이 젖은 빨래처럼 늘어져 있다. 한가운데 의자에 설계자가 앉아 있다. 몸이 연필로 되어 있다. 다 닳아서, 이제 손목까지밖에 남지 않았다. 「대신 그려 줄 사람 왔나.」',
+  o:[{l:'설계도 마지막 장을 받아 든다',s:'nerve',dc:20,ok:['설계자가 남은 손목으로 마지막 장을 밀어 주었다. 받아 들자 설계자는 가루가 되었다. 마지막 장에는 성채가 아니라 우리 넷의 이름이 서명란에 적혀 있다. 아직 연필이다. 지울 수 있다. 아마.',{clue:8,money:150,mind:-20}],no:['설계자가 우리 중 하나의 손을 잡았다. 손가락 끝이 연필심처럼 까매졌다. 끌어내는 동안 그 손가락으로 바닥에 선이 그어졌다. 선이 계단이 되었다. 그 계단으로 겨우 올라왔다.',{clue:3,hp:-30,mind:-28}]},
+   {l:'설계자를 지운다',s:'str',dc:21,ok:['지우개로 문질렀다. 설계자가 고맙다는 얼굴로 지워졌다. 그 자리에 설계도 원본 묶음과 몽당연필이 남았다. 연필이 따뜻하다.',{clue:6,item:'pencil',money:120,mind:-16}],no:['지우개가 설계자 대신 우리 중 하나의 그림자를 지웠다. 그 사람은 지금도 그림자가 없다. 햇빛 아래 서면 아무도 그걸 눈치채지 못한다는 게 더 무섭다.',{hp:-24,mind:-30,fx:'blur'}]}]},
+ f13:{n:'13층의 13층',t:'13층 안의 13층. 복도에 문이 딱 하나. 문패에 우리 넷의 이름이 한 줄로 적혀 있다. 안에서 생일 노래가 들린다. 촛불 넷. 케이크 위에 꽂힌 건 초가 아니라 손가락이다.',soft:'13층 안의 13층. 문패에 우리 넷의 이름이 적힌 문. 안에서 생일 노래가 들리고, 케이크 위에 촛불 넷이 켜져 있다.',
+  o:[{l:'다 같이 촛불을 끈다',s:'nerve',dc:20,ok:['넷이 동시에 불었다. 불이 꺼지자 노래도 끊겼다. 케이크 안에서 설계도 묶음과 금반지 넷이 나왔다. 반지 안쪽에 오늘 날짜.',{clue:7,money:160,mind:-22}],no:['하나가 늦게 불었다. 촛불 하나가 남았다. 그 촛불이 늦은 사람을 오래 쳐다봤다. 「내년에.」',{hp:-28,mind:-30,fx:'followed'}]},
+   {l:'노래를 끝까지 들어 준다',s:'talk',dc:19,ok:['마지막 소절에서 노래하던 목소리들이 하나씩 울었다. 다 울고 나서 조용히 문이 열렸다. 나가는 길이 보였다. 문 옆에 선물 상자. 안에 설계도.',{clue:6,light:5,mind:-18}],no:['노래가 끝나지 않는다. 생일 축하합니다가 백 번, 이백 번. 누가 끌어냈는지 모른다. 지금도 가끔 귀 안쪽에서 마지막 소절이 반복된다.',{hp:-20,mind:-34,fx:'tinnitus'}]}]},
+ drain:{n:'물이 시작되는 곳',t:'수로의 처음. 물이 솟는 샘이다. 들여다보면 물이 아니라 사람들이다. 서로 끌어안고 끝없이 위로 솟아오른다. 성채의 물은 전부 이것이다. 샘 가장자리에서 누가 손짓한다. 「목마르지?」',soft:'수로의 처음. 물이 솟는 샘을 들여다보면 사람들이 서로 끌어안고 끝없이 솟아오른다. 샘 가장자리에서 누가 손짓한다.',
+  o:[{l:'샘을 막는다',s:'str',dc:21,ok:['넷이 철판을 끌어와 샘을 덮었다. 철판 아래에서 두드리는 소리가 한참 이어지다 멎었다. 그날 성채 수도꼭지에서 물이 반나절 나오지 않았다. 철판 위에 설계도와 동전이 쌓여 있었다. 감사 인사처럼.',{clue:6,money:150,mind:-20}],no:['덮기 직전 샘에서 팔들이 솟아 우리 중 하나를 끌어안았다. 다 같이 매달려 떼어 냈다. 그 사람은 그 뒤로 물을 마실 때마다 컵 바닥을 오래 들여다본다.',{hp:-30,mind:-26,fx:'wet'}]},
+   {l:'한 모금 마셔 준다',s:'nerve',dc:20,ok:['손으로 떠서 한 모금. 미지근했다. 사람 체온이었다. 샘 속 사람들이 일제히 고개를 들어 고맙다고 했다. 손을 펴니 물 대신 설계도 조각이 쥐여 있었다.',{clue:8,hp:-10,mind:-22}],no:['한 모금 삼키자 배 속에서 누가 눈을 떴다. 그 뒤로 배가 고프지 않다. 대신 밤마다 배 속에서 작게 노래를 한다.',{hp:-26,mind:-30,fx:'sick'}]}]}};
+/* 30턴으로 늘리기: 순서, 계단참, 마지막 방, 표시 */
+deepSeq=function(sp){const seq=[];const cnt={1:5,2:5,3:5,4:5,5:4,6:5};for(const t of[1,2,3,4,5,6]){const p=deepPool(sp,t).sort(()=>Math.random()-.5);const k=cnt[t];for(let i=0;i<k;i++)seq.push(p[i%p.length])}return seq};
+function deepSeqFix(d){if(d&&d.seq&&d.seq.length<DEEP_TURNS-1){for(let t=d.seq.length+1;t<DEEP_TURNS;t++){const p=deepPool(d.sp,deepTier(t));d.seq.push(p[Math.floor(Math.random()*p.length)])}}}
+{const dn25=deepNext;deepNext=function(){try{deepSeqFix(G.me&&G.me.deep)}catch(e){}return dn25.apply(this,arguments)}}
+deepLanding=function(){const d=G.me.deep,S=DEEP_SP[d.sp];const L=d.turn-1,c=deepCrew();const nextT=deepTier(d.turn),need=DEEP_NEED[nextT]||1;const blocked=c<need;
+  const info=L===10?'\n\n여기부터는 깊은 곳이다. 판정이 훨씬 어려워지고 피해도 커진다.':L===15&&c<=1?'\n\n아래에서 바람이 올라온다. 여러 사람의 숨소리가 섞여 있다. 혼자서는 돌아올 수 없는 깊이다.':L===20?(blocked?`\n\n아래 계단이 사람 수를 센다. 셋이 되지 않으면 열리지 않는다. 지금 함께 걷는 사람은 ${c}명이다.`:'\n\n아래 계단이 사람 수를 센다. 셋. 열렸다. 여기서부터는 성채가 사람을 재료로 쓰는 곳이다.'):L===24?(blocked?`\n\n마지막 계단은 넷이어야 열린다. 지금 함께 걷는 사람은 ${c}명이다.`:'\n\n마지막 계단이 넷을 세고 열렸다. 아래에서 성채 전체가 숨을 들이쉰다.'):'';
+  const go=blocked?{l:`더 내려갈 수 없다 (${need}명 이상 함께해야 열린다)`,run:()=>{toast(`${need}명 이상 같은 입구로 함께 들어와 있어야 해요. 지금 ${c}명.`)}}:{l:`더 들어간다 (${d.turn}~${Math.min(DEEP_TURNS,L+(L===20?4:5)+(L===24?1:0))}턴)`,run:()=>{d.land=false;result=null;save();deepNext()}};
+  deepScene(`계단참 · ${L}턴을 지나왔다.\n${S.land}\n\n여기서 돌아가면 주머니를 모두 챙겨 나갈 수 있다. 더 들어가면 다음 계단참까지는 돌아갈 길이 없다.${info}`,[{l:'주머니를 챙겨 돌아간다',run:()=>deepEnd('back')},go,deepCandleChoice(deepLanding)])};
+deepFinal=function(){const d=G.me.deep,F=DEEP_FINAL30[d.sp]||DEEP_FINAL[d.sp];d.amb=d.amb||{};if(!(DEEP_TURNS in d.amb))d.amb[DEEP_TURNS]=deepAmb(6,d.sp);const soft=G.opts&&G.opts.soft;
+  deepScene(`[${F.n}]\n${soft&&F.soft?F.soft:F.t}`+(d.amb[DEEP_TURNS]?'\n\n'+d.amb[DEEP_TURNS]:''),[...F.o.map(o=>({l:o.l,s:o.s,run:()=>{const M=deepMod(DEEP_TURNS);const c=chk(o.s,o.dc+M.dc);const[txt,rw0]=c.ok?o.ok:o.no;const rw=c.ok?rw0:deepScale(rw0,M.mul);d.light-=1;const lines=[c.txt,...deepApply(rw)];
+    d.log.push(`${DEEP_TURNS}. ${F.n}: ${c.ok?'끝까지 다녀왔다':'겨우 빠져나왔다'}`);d.finalOk=c.ok;if(c.ok)tcAdd('deep30');result=null;deepEnd('win',txt,lines)}})),deepCandleChoice(deepFinal)],true)};
+{const dt25=deepTitle;deepTitle=function(){return dt25.apply(this,arguments).replace(/(\d+)\/20/,(a,n)=>`${Math.min(+G.me.deep.turn,DEEP_TURNS)}/${DEEP_TURNS}`)}}
+/* 21턴 넘어서 끌려 나오면 더 크게 다친다 */
+{const de25=deepEnd;deepEnd=function(kind){const d=G.me&&G.me.deep;const deepT=d?d.turn:0;const r=de25.apply(this,arguments);try{if(deepT>20&&['dark','hp','mind'].includes(kind)){const m=G.me;give({mind:-15});const mk=DEEP_MARKS.filter(x=>!(m.marks||[]).includes(x));if(mk.length){const x=pick(mk);m.marks=m.marks||[];m.marks.push(x);log(`가장 깊은 곳에서 끌려 나왔다. 그날 이후 ${x}.`,'haunt')}if(typeof corruptUp==='function')corruptUp('너무 깊은 곳에서 너무 오래 있었다.');save()}}catch(e){}return r}}
+/* 카드 문구 */
+{const dc25=deepCard;deepCard=function(){const el=dc25.apply(this,arguments);try{const b=el.querySelector('.banner');if(b)b.textContent=`기력 10 · 하루 한 번 · ${DEEP_TURNS}턴. 등불 ${DEEP_START_LIGHT}칸을 들고 들어가고, 한 턴마다 1칸 이상 줄어요. 주운 것은 「주머니」에 들어가고, 무사히 나와야 내 것이 돼요. 5·10·15·20·24턴 뒤 계단참에서만 주머니를 챙겨 돌아갈 수 있어요. 11턴부터 어려워지고, 16턴부터는 혼자 버틸 수 없어요. 21턴부터는 3명 이상, 25턴부터는 4명이 같은 입구로 함께 들어와 있어야 계단이 열려요.`;
+  el.querySelectorAll('.tag,b,span').forEach(x=>{if(/\/20\b/.test(x.textContent)&&x.children.length===0)x.textContent=x.textContent.replace(/\/20\b/g,'/'+DEEP_TURNS)})}catch(e){}return el}}
+if(typeof TTL!=='undefined')TTL.push(['deep30','가장 아래','haunt','집중 탐사 30턴 끝까지 다녀오기',m=>(tc(m).deep30||0)>=1]);
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
