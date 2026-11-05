@@ -4024,7 +4024,7 @@ function toyGet(k,how){const m=G.me;m.toys=m.toys||{};const first=!m.toys[k];m.t
 function toyPull(free){if(!ready())return;const m=G.me;const dl=daily();dl.gacha=dl.gacha||0;
   if(dl.gacha>=TOY_DAY)return toast('기계가 동전을 더 먹지 않는다. 내일 다시.');
   if(!free&&m.money<TOY_PRICE)return toast(`동전이 모자라요. $${TOY_PRICE}`);
-  if(free){if(toyDupes(m)<TOY_SWAP)return;let left=TOY_SWAP;const ks=Object.keys(m.toys).sort((a,b)=>m.toys[b]-m.toys[a]);for(const k of ks){while(left&&m.toys[k]>1){m.toys[k]--;left--}}}
+  if(free){if(toyDupes(m)<TOY_SWAP)return;if(TOY_SEL){for(const k in TOY_SEL)m.toys[k]=Math.max(1,m.toys[k]-TOY_SEL[k]);TOY_SEL=null;const pk=document.getElementById('toyPick');if(pk)pk.remove()}else{let left=TOY_SWAP;const ks=Object.keys(m.toys).filter(k=>!(m.toyLock||{})[k]).sort((a,b)=>m.toys[b]-m.toys[a]);for(const k of ks){while(left&&m.toys[k]>1){m.toys[k]--;left--}}}}
   else m.money-=TOY_PRICE;
   dl.gacha++;const k=toyRoll(),T=TOYS[k];const res=toyGet(k,free?'겹친 것 셋과 바꿈':'');
   const box=document.getElementById('toyOut');if(!box){render();return}
@@ -6775,7 +6775,7 @@ const PLANT_NIGHT=['「{n}」 잎이 밤새 창문 쪽으로 돌아가 있었다
 
 /* 도감: 아직 못 본 장에 소문 한 줄 · 새 장소도 도감에 */
 {const da21=dexAll;dexAll=function(){return[...da21.apply(this,arguments),...Object.entries(HP4).flatMap(([id,X])=>[['pl:'+id,X.n],['pl:'+id+':enc',X.n+' · '+X.P.enc.n]]),['pl:clock','종루 기계실'],['pl:lift','멈춘 엘리베이터'],['pl:chair5','다섯 번째 의자']]}}
-{const db21=dexBody;dexBody=function(){const out=db21.apply(this,arguments);try{const all=dexAll(),got=(G.me&&G.me.dex)||{};const grid=out.find(e=>e&&e.style&&String(e.style.display)==='grid');if(grid){const kids=[...grid.children];all.forEach(([k,nm],i)=>{const el=kids[i];if(!el||got[k])return;const ch=[...String(nm)][0]||'？';
+{const db21=dexBody;dexBody=function(){const out=db21.apply(this,arguments);try{const all=dexAll(),got=(G.me&&G.me.dex)||{};const grid=out.find(e=>e&&e.style&&String(e.style.display)==='grid');if(grid){const kids=[...grid.children];all.forEach(([k,nm],i)=>{const el=kids[i];if(!el||got[k])return;const ch=[...String(nm).split(' · ').pop()][0]||'？';
   el.replaceChildren(h('span',null,'？？？'),h('span',{class:'dim',style:'display:block;font-size:11px;margin-top:2px'},`누가 그러는데 「${ch}…」로 시작한대`))})}}catch(e){}return out}}
 /* 괴담 장소 단골: 같은 장소를 7일 연속 가면 그곳이 내 이름을 불러 준다 */
 {const vs21=visit;visit=function(id){const m=G.me;const before=m?m.en:0;const r=vs21.apply(this,arguments);try{if(m&&PLACES[id]&&PLACES[id].haunt&&(scene||result)&&(id==='noodle'||m.en<before)){const d=dayIdx(T());m.preg=m.preg||{};const g=m.preg[id]||{};if(g.last!==d){g.n=g.last===d-1?(g.n||1)+1:1;g.last=d;m.preg[id]=g;
@@ -6986,6 +6986,59 @@ deepFinal=function(){const d=G.me.deep,F=DEEP_FINAL30[d.sp]||DEEP_FINAL[d.sp];d.
 {const dc25=deepCard;deepCard=function(){const el=dc25.apply(this,arguments);try{const b=el.querySelector('.banner');if(b)b.textContent=`기력 10 · 하루 한 번 · ${DEEP_TURNS}턴. 등불 ${DEEP_START_LIGHT}칸을 들고 들어가고, 한 턴마다 1칸 이상 줄어요. 주운 것은 「주머니」에 들어가고, 무사히 나와야 내 것이 돼요. 5·10·15·20·24턴 뒤 계단참에서만 주머니를 챙겨 돌아갈 수 있어요. 11턴부터 어려워지고, 16턴부터는 혼자 버틸 수 없어요. 21턴부터는 3명 이상, 25턴부터는 4명이 같은 입구로 함께 들어와 있어야 계단이 열려요.`;
   el.querySelectorAll('.tag,b,span').forEach(x=>{if(/\/20\b/.test(x.textContent)&&x.children.length===0)x.textContent=x.textContent.replace(/\/20\b/g,'/'+DEEP_TURNS)})}catch(e){}return el}}
 if(typeof TTL!=='undefined')TTL.push(['deep30','가장 아래','haunt','집중 탐사 30턴 끝까지 다녀오기',m=>(tc(m).deep30||0)>=1]);
+/* ---------- 건의 반영 (11/5): 편지 · 뽑기 겹친 것 고르기 · 도감 힌트 · 탐사 중 가방 ---------- */
+/* 1. 편지: 1동 우편 사서함과 무명동 수로 끝 우체통에서 보낸다 (25_letters.sql) */
+const LT_DAY=3,LT_MAX=400;let LT_UNREAD=0,LT_AT=0,LT_OFF=false;
+async function ltPoll(force){if(typeof sb==='undefined'||!sb||!G.me)return;if(!force&&Date.now()-LT_AT<180e3)return;LT_AT=Date.now();
+  try{const{count,error}=await sb.from('letters').select('id',{count:'exact',head:true}).eq('to_char',G.me.id).is('read_at',null);if(error){LT_OFF=/relation|does not exist|schema cache/i.test(error.message||'');return}LT_OFF=false;const n=count||0;
+    if(n>LT_UNREAD)toast(`사서함에 편지가 ${n}통 와 있다.`);const ch=n!==LT_UNREAD;LT_UNREAD=n;if(ch)try{render()}catch(e){}}catch(e){}}
+{const tk26=tick;tick=function(){const r=tk26.apply(this,arguments);try{ltPoll(false)}catch(e){}return r}}
+function ltPickRandom(){const ids=SAMPLE_IDS.filter(id=>{const p=SAMPLES[id];return p&&!p.isNpc&&!(typeof sameOwner==='function'&&sameOwner(id))});return ids.length?pick(ids):null}
+async function ltSend(to,text,anon,kind){if(!ready())return false;const m=G.me,dl=daily();if((dl.letters||0)>=LT_DAY){toast(`편지는 하루 ${LT_DAY}통까지 보낼 수 있어요.`);return false}
+  text=String(text||'').trim().slice(0,LT_MAX);if(!text){toast('한 줄이라도 적어 주세요.');return false}if(to==='*')to=ltPickRandom();if(!to){toast('받을 사람이 없어요.');return false}
+  const{error}=await sb.from('letters').insert({from_char:m.id,to_char:to,text,anon:!!anon,kind});if(error){toast(/relation|does not exist|schema cache/i.test(error.message||'')?'편지 기능이 아직 없어요. 운영자에게 25_letters.sql 실행을 부탁해 주세요.':/same_owner|row-level/i.test(error.message||'')?'내 다른 캐릭터에게는 보낼 수 없어요.':'보내지 못했어요.');return false}
+  dl.letters=(dl.letters||0)+1;tcAdd('letter');const who=anon||kind==='mmd'?'누군가':bName(to);log(kind==='mmd'?'수로 끝 우체통에 편지를 넣었다. 물 아래로 어디론가 흘러갔다.':`${who}에게 편지를 부쳤다.`,'rel');save();return true}
+function ltWrite(kind,preTo){const mmd=kind==='mmd';const ids=SAMPLE_IDS.filter(id=>SAMPLES[id]&&!SAMPLES[id].isNpc&&!(typeof sameOwner==='function'&&sameOwner(id)));
+  const to=h('select',null,[h('option',{value:'*'},mmd?'물이 데려다주는 곳으로 (아무에게나)':'아무에게나'),...ids.map(id=>h('option',{value:id},SAMPLES[id].name))]);if(preTo)to.value=preTo;
+  const tx=h('textarea',{maxlength:LT_MAX,rows:6,placeholder:mmd?'수로에 띄울 편지 (400자)':'편지 (400자)'});const cnt=h('span',{class:'dim num',style:'font-size:11px'},`0/${LT_MAX}`);tx.addEventListener('input',()=>cnt.textContent=`${tx.value.length}/${LT_MAX}`);
+  const an=h('input',{type:'checkbox',style:'width:auto',checked:mmd?true:null});
+  openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},mmd?'수로 끝 우체통 · 편지 넣기':'우편 사서함 · 편지 쓰기'),h('button',{class:'ghost','data-collapse-read':true,onclick:closeModal},'닫기')),
+    h('p',{class:'mute',style:'margin:0'},mmd?'투입구에 편지를 밀어 넣으면 아래로 물 흐르는 소리가 난다. 누가 받을지는 물이 정한다. 받는 사람의 사서함에 젖은 채로 도착한다.':'1동 사서함 벽. 받는 사람 칸에 번호를 적어 넣으면 다음 우편 때 그 사람 사서함에 들어간다.'),
+    h('div',{class:'bond-wrap'},h('span',{class:'dim',style:'font-size:12.5px'},'받는 사람'),to),tx,h('div',{class:'row'},h('label',{class:'row',style:'gap:6px'},an,h('span',{style:'font-size:13px'},'이름 없이 보내기')),cnt),
+    h('button',{class:'pri',onclick:async()=>{if(await ltSend(to.value,tx.value,an.checked,mmd?'mmd':'pobox')){closeModal();done(mmd?'수로 끝 우체통':'우편 사서함',mmd?'편지가 투입구 안으로 빨려 들어갔다. 한참 뒤, 아주 멀리서 첨벙 소리가 났다.':'사서함 칸에 편지를 밀어 넣었다. 철문이 딸깍 닫혔다.',[`오늘 ${LT_DAY-(daily().letters||0)}통 더 보낼 수 있어요`])}}},'보낸다'),
+    h('p',{class:'dim',style:'margin:0;font-size:11.5px'},`하루 ${LT_DAY}통 · 내 다른 캐릭터에게는 못 보내요 · 이름 없이 보내도 운영자는 볼 수 있어요.`)))}
+async function ltRead(){if(typeof sb==='undefined'||!sb)return;const box=h('div',{class:'stack',style:'gap:10px'},h('span',{class:'dim'},'불러오는 중…'));
+  openModal(h('div',{class:'stack'},h('div',{class:'row'},h('h2',{class:'disp',style:'font-size:22px'},'내 사서함'),h('button',{class:'ghost','data-collapse-read':true,onclick:closeModal},'닫기')),box,h('button',{class:'sm',onclick:()=>{closeModal();ltReplyTo=null;ltWrite('pobox')}},'편지 쓰기')));
+  const{data,error}=await sb.from('letters').select('*').eq('to_char',G.me.id).order('created_at',{ascending:false}).limit(30);if(error){box.replaceChildren(h('p',{class:'mute'},LT_OFF?'편지 기능은 운영자가 25_letters.sql을 실행하면 열려요.':'불러오지 못했어요.'));return}
+  const rows=data||[];box.replaceChildren(...(rows.length?rows.map(x=>{const anon=x.anon||x.kind==='mmd';const who=anon?(x.kind==='mmd'?'물에 젖은 편지 · 보낸 사람 없음':'이름 없는 편지'):`${bName(x.from_char)}에게서`;
+    return h('div',{class:'card stack',style:`gap:6px;${x.read_at?'':'border-color:var(--amber)'}`},h('div',{class:'row'},h('b',{style:'font-size:13px'},who+(x.kind==='reply'?' · 답장':'')),h('span',{class:'dim',style:'font-size:11px'},String(x.created_at).slice(5,16).replace('T',' '))),
+      h('p',{style:'margin:0;white-space:pre-wrap;line-height:1.7'},x.text),h('div',{class:'wrap',style:'gap:6px'},h('button',{class:'sm',onclick:()=>{closeModal();ltWrite(anon?'mmd':'pobox',anon?null:x.from_char);ltReplyTo=anon?x:null}},anon?'답장을 물에 띄운다':'답장 쓰기'),h('button',{class:'sm ghost',onclick:async()=>{await sb.from('letters').delete().eq('id',x.id);closeModal();ltRead()}},'버리기')))}):[h('p',{class:'mute'},'사서함이 비어 있다. 먼지 위에 손가락 자국만 하나.')]));
+  const unread=rows.filter(x=>!x.read_at).map(x=>x.id);if(unread.length){await sb.from('letters').update({read_at:new Date().toISOString()}).in('id',unread);LT_UNREAD=0;tcAdd('letterRead',unread.length);render()}}
+/* 이름 없는 편지에 답장: 보낸 사람에게 이름 없이 돌아간다 */
+let ltReplyTo=null;{const ls26=ltSend;ltSend=async function(to,text,anon,kind){if(ltReplyTo&&kind==='mmd'&&to==='*'){const x=ltReplyTo;ltReplyTo=null;return ls26.call(this,x.from_char,text,true,'reply')}ltReplyTo=null;return ls26.apply(this,arguments)}}
+PLACES.letterbox={n:'내 사서함',btn:'우편 사서함 · 편지 읽기/쓰기',act:()=>ltRead()};{const C=CELLS['0-2'];if(C&&!(C.p||[]).includes('letterbox'))C.p=(C.p||[]).concat('letterbox')}
+if(PLACES.mmdpost){const mp0=PLACES.mmdpost.act;PLACES.mmdpost.btn='수로 끝 우체통';PLACES.mmdpost.act=()=>{if(!ready())return;openScene({id:'mmdpostmenu',title:'수로 끝 우체통',text:'녹슨 우체통. 투입구 안쪽이 축축하다. 귀를 대면 아주 먼 곳에서 물 흐르는 소리가 난다.',choices:[{l:'편지를 꺼낸다 (기력 1)',run:()=>{scene=null;mp0()}},{l:'편지를 넣는다 (누구에게 갈지는 물이 정한다)',run:()=>{scene=null;render();ltReplyTo=null;ltWrite('mmd')}},{l:'그냥 간다',run:()=>{scene=null;render()}}]})}}
+{const rl26=renderLeft;renderLeft=function(){const r=rl26.apply(this,arguments);try{const L=$('left');if(G.me&&L&&LT_UNREAD>0&&!L.querySelector('.ltbadge')){const c=h('div',{class:'card stack ltbadge',style:'gap:6px;border-color:var(--amber)'},h('span',{class:'lbl',style:'color:var(--amber)'},'사서함'),h('button',{class:'sm pri',onclick:ltRead},`편지 ${LT_UNREAD}통이 와 있다`));const f=L.firstElementChild;if(f&&f.nextSibling)L.insertBefore(c,f.nextSibling);else L.append(c)}}catch(e){}return r}}
+if(typeof TTL!=='undefined')TTL.push(['penpal','편지 쓰는 사람','rel','편지 다섯 통 보내기',m=>(tc(m).letter||0)>=5]);
+
+/* 2. 뽑기: 겹친 것 중 아끼는 건 잠그고, 바꿀 셋은 직접 고른다 */
+var TOY_SEL=null;
+function toyLocked(k){return!!((G.me&&G.me.toyLock)||{})[k]}
+function toyPickSwap(){const m=G.me;const box=document.getElementById('toyOut');const dups=Object.keys(m.toys||{}).filter(k=>TOYS[k]&&m.toys[k]>1);const sel={};let n=0;
+  const draw=()=>{const left=TOY_SWAP-n;target.replaceChildren(h('p',{class:'mute',style:'margin:0;font-size:13px'},`바꿀 것 ${TOY_SWAP}개를 골라 주세요. 하나씩은 늘 남아요. 자물쇠를 채운 건 고를 수 없어요. · ${left}개 더`),
+    ...dups.map(k=>{const can=m.toys[k]-1-(sel[k]||0);const lk=toyLocked(k);return h('div',{class:'pl'},h('div',null,h('b',null,TOYS[k].n),h('div',{class:'dim',style:'font-size:12px'},`가진 것 ${m.toys[k]} · 고른 것 ${sel[k]||0}`)),
+      h('div',{class:'wrap',style:'gap:4px'},h('button',{class:'sm ghost',title:'자물쇠',onclick:()=>{m.toyLock=m.toyLock||{};if(lk)delete m.toyLock[k];else{m.toyLock[k]=1;n-=sel[k]||0;delete sel[k]}save();draw()}},lk?'🔒':'🔓'),
+        h('button',{class:'sm',disabled:lk||!sel[k]||null,onclick:()=>{sel[k]--;n--;if(!sel[k])delete sel[k];draw()}},'−'),h('button',{class:'sm',disabled:lk||can<=0||n>=TOY_SWAP||null,onclick:()=>{sel[k]=(sel[k]||0)+1;n++;draw()}},'+')))}),
+    h('div',{class:'wrap',style:'gap:6px'},h('button',{class:'pri',disabled:n!==TOY_SWAP||null,onclick:()=>{TOY_SEL=Object.assign({},sel);toyPull(true)}},'이 셋을 주고 한 판'),h('button',{class:'sm ghost',onclick:()=>{target.remove()}},'그만두기')))};
+  let target=document.getElementById('toyPick');if(!target){target=h('div',{id:'toyPick',class:'stack',style:'gap:6px;border:1px solid var(--line);padding:10px'});(box||document.querySelector('#modalRoot .stack')).before(target)}draw()}
+function toyDupes(m){return Object.entries(m.toys||{}).reduce((a,[k,n])=>a+(((m.toyLock||{})[k])?0:Math.max(0,n-1)),0)}
+if(typeof openGacha==='function'){const og26=openGacha;openGacha=function(){const r=og26.apply(this,arguments);try{const b0=document.getElementById('toyFree');if(b0){const b=b0.cloneNode(true);b0.replaceWith(b);b.onclick=toyPickSwap;b.textContent='겹친 것 셋 골라서 한 판'}}catch(e){}return r}}
+
+/* 4. 집중 탐사 중에도 가방을 연다 (턴은 지나지 않는다) */
+const DEEP_BAG=[['snack:bun','파인애플번 봉지',m=>(m.snacks||{}).bun>0,m=>{m.snacks.bun--;return give({hp:12})}],['snack:tea','보리차 한 병',m=>(m.snacks||{}).tea>0,m=>{m.snacks.tea--;return give({mind:8})}],['snack:sugar','각설탕 봉지',m=>(m.snacks||{}).sugar>0,m=>{m.snacks.sugar--;return give({en:3})}],
+ ['feastbowl','분채 한 그릇',m=>(m.items.feastbowl||0)>0,m=>{m.items.feastbowl--;return give({hp:20,mind:10})}],['anesth','오래된 마취제',m=>(m.items.anesth||0)>0,m=>{m.items.anesth--;return give({hp:15,mind:-3})}],['cake','생일 케이크 한 조각',m=>(m.items.cake||0)>0,m=>{m.items.cake--;return give({mind:12,hp:4})}]];
+{const ds26=deepScene;deepScene=function(text,choices,red){const m=G.me;try{const has=DEEP_BAG.filter(x=>x[2](m));if(has.length){const back=()=>deepScene(text,choices,red);
+  choices=[...choices,{l:`가방을 연다 (턴이 지나지 않는다 · ${has.length}종)`,run:()=>{openScene({id:'deep',title:deepTitle(),red:!!red,text:'등불을 바닥에 내려놓고 가방을 뒤졌다. 어둠이 한 걸음 물러나 기다린다.',choices:[...DEEP_BAG.filter(x=>x[2](m)).map(x=>({l:`${x[1]} 먹기/쓰기`,run:()=>{const out=x[3](m);save();result={title:'',text:`${x[1]}. 잠깐 숨을 돌렸다.`,lines:out,bad:false};back()}})),{l:'가방을 닫는다',run:back}]},true)}}]}}catch(e){}return ds26.call(this,text,choices,red)}}
 /* ---------- 시작 ---------- */
 async function boot(){
   if(!sb){gate(h('div',{class:'card stack'},gateHead(),h('p',null,'Supabase 주소와 공개 키가 아직 들어 있지 않아요. 파일 맨 위의 SUPABASE_URL과 SUPABASE_KEY를 채워 주세요.')));return}
